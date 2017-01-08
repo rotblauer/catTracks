@@ -1,0 +1,29 @@
+{
+  "name": "catTracks",
+  "authors": [
+    "jlanej <jlanej@gmail.com>"
+  ],
+  "description": "Serving markers",
+  "main": "app.yaml",
+  "keywords": [
+    "m"
+  ],
+  "license": "MIT",
+  "homepage": "",
+  "private": true,
+  "ignore": [
+    "**/.*",
+    "node_modules",
+    "bower_components",
+    "test",
+    "tests"
+  ],
+  "dependencies": {
+    "bootstrap": "^3.3.7",
+    "datatables.net": "^1.10.12",
+    "datatables.net-dt": "^1.10.12",
+    "datatables.net-bs": "^1.10.12",
+    "tether": "^1.3.7",
+    "datatables": "^1.10.12"
+  }
+}

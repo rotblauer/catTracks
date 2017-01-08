@@ -24,3 +24,5 @@ _testmain.go
 *.test
 *.prof
 
+bower_components/*
+*DS_Store
