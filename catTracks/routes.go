@@ -18,5 +18,4 @@ var routes = Routes{
 		"/",
 		indexHandler,
 	},
-
 }
