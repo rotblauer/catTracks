@@ -48,6 +48,29 @@
         });
 
         flightPath.setMap(map);
+        initMap2()
+    }
+
+    function initMap2(){
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 3,
+            center: {lat: 38.6270, lng: -90.1994},
+            mapTypeId: 'terrain'
+        });
+        var markers =[]
+        var bounds = new google.maps.LatLngBounds();
+
+        {{range $id, $marker := .TrackPoints}}
+        var position = new google.maps.LatLng({{.LatLong.Lat}}, {{.LatLong.Lng}});
+        bounds.extend(position);
+        marker = new google.maps.Marker({
+            position: position,
+            map: map,
+            title: "h"
+        });
+        map.fitBounds(bounds);
+        {{end}}
+
     }
 </script>
 

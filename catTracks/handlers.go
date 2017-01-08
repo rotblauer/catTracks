@@ -1,11 +1,13 @@
 package catTracks
-
+//Handles
 import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 	"html/template"
 	"net/http"
 	"time"
+	"math/rand"
+
 )
 
 var funcMap = template.FuncMap{
@@ -14,7 +16,7 @@ var funcMap = template.FuncMap{
 	},
 }
 
-var tg = appengine.GeoPoint{Lat: 38.6270, Lng: -90.1994}
+var tg = appengine.GeoPoint{Lat: 38.6270+(rand.Float64()*3.0), Lng: -90.1994+(rand.Float64()*3.0)}
 var test = TrackPoint{Elevation: 100.0, LatLong: tg, Time: time.Now()}
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 

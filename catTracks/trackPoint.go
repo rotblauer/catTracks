@@ -5,7 +5,9 @@ import (
 	"time"
 )
 
+// Stores a snippet of life, love, and location
 type TrackPoint struct {
+	Name      string             `json:"name"`
 	LatLong   appengine.GeoPoint `json:"latLong"`
 	Elevation float64            `json:"elevation"`
 	HeartRate float64            `json:"heartrate"`
