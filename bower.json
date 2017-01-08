@@ -1,7 +1,7 @@
 {
   "name": "catTracks",
   "authors": [
-    "jlanej <jlanej@gmail.com>"
+    "rotblauer <rotblauer@gmail.com>"
   ],
   "description": "Serving markers",
   "main": "app.yaml",
