@@ -2,8 +2,10 @@ package catTracks
 
 import (
 	"google.golang.org/appengine"
+	"google.golang.org/appengine/log"
 	"html/template"
 	"net/http"
+	"time"
 )
 
 var funcMap = template.FuncMap{
@@ -13,14 +15,20 @@ var funcMap = template.FuncMap{
 }
 
 var tg = appengine.GeoPoint{Lat: 38.6270, Lng: -90.1994}
-var test = TrackPoint{Elevation: 100.0, LatLong: tg}
+var test = TrackPoint{Elevation: 100.0, LatLong: tg, Time: time.Now()}
 var templates = template.Must(template.ParseGlob("templates/*.html"))
+
+type Data struct {
+	TrackPoints []TrackPoint
+}
 
 //Welcome
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	storePoint(test, c)
-	templates.Funcs(funcMap)
+	data := Data{TrackPoints: getAllPoints(c)}
+	log.Infof(c, "Done processing results")
 
-	templates.ExecuteTemplate(w, "base", nil)
+	templates.Funcs(funcMap)
+	templates.ExecuteTemplate(w, "base", data)
 }
