@@ -3,7 +3,7 @@
 <html lang="en">
 
 <head>
-    <title>Tracker</title>
+    <title>The travel plans of boots</title>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <meta http-equiv="x-ua-compatible" content="ie=edge">
@@ -16,17 +16,48 @@
 </head>
 
 <body>
-    {{template "index" .}}
-    <script>
-        function myMap() {
-            var mapCanvas = document.getElementById("map");
-            var mapOptions = {
-                center: new google.maps.LatLng(38.6270, -90.1994), zoom: 10
-            };
-            var map = new google.maps.Map(mapCanvas, mapOptions);
-        }
-    </script>
-    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIx8zEL5Q8uN2r5kahv9VyADy5xygfrIQ&callback=myMap"></script>
+{{template "index" .}}
+
+<script>
+
+    // This example creates a 2-pixel-wide red polyline showing the path of William
+    // Kingsford Smith's first trans-Pacific flight between Oakland, CA, and
+    // Brisbane, Australia.
+
+    function initMap() {
+        var map = new google.maps.Map(document.getElementById('map'), {
+            zoom: 3,
+            center: {lat: 38.6270, lng: -90.1994},
+            mapTypeId: 'terrain'
+        });
+
+        var flightPlanCoordinates = [
+            {lat: 38.6270, lng: -90.1994},
+            {lat: 37.772, lng: -122.214},
+            {lat: 21.291, lng: -157.821},
+            {lat: -18.142, lng: 178.431},
+            {lat: -27.467, lng: 153.027},
+            {lat: 44.5365, lng: -122.9070},
+            {lat: 42.9956, lng: -71.4548}
+
+
+        ];
+        var flightPath = new google.maps.Polyline({
+            path: flightPlanCoordinates,
+            geodesic: true,
+            strokeColor: '#FF0000',
+            strokeOpacity: 1.0,
+            strokeWeight: 2
+        });
+
+        flightPath.setMap(map);
+    }
+</script>
+
+<script async defer
+        src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIx8zEL5Q8uN2r5kahv9VyADy5xygfrIQ&callback=initMap">
+</script>
+
 
 </body>
 
