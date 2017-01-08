@@ -17,6 +17,17 @@
 
 <body>
     {{template "index" .}}
+    <script>
+        function myMap() {
+            var mapCanvas = document.getElementById("map");
+            var mapOptions = {
+                center: new google.maps.LatLng(38.6270, -90.1994), zoom: 10
+            };
+            var map = new google.maps.Map(mapCanvas, mapOptions);
+        }
+    </script>
+    <script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIx8zEL5Q8uN2r5kahv9VyADy5xygfrIQ&callback=myMap"></script>
+
 </body>
 
 </html>
