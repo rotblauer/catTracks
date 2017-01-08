@@ -10,4 +10,4 @@ SPEED
 TILT
 NUmber of cats
 cat heartrate
-
+plots
