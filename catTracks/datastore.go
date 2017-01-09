@@ -4,14 +4,14 @@ package catTracks
 import (
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
-	//"google.golang.org/appengine/log"
+	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
 // I think this has something to do with a table,,,,
 var data = "TrackPoints"
 
 //Store a snippit of life
-func storePoint(trackPoint TrackPoint, c context.Context) error {
+func storePoint(trackPoint trackPoint.TrackPoint, c context.Context) error {
 	key := trackPointKey(c)
 	if _, err := datastore.Put(c, key, &trackPoint); err != nil { //store it
 		return err
@@ -25,9 +25,9 @@ func trackPointKey(c context.Context) *datastore.Key {
 }
 
 //get everthing in the db... can do filtering some other day
-func getAllPoints(c context.Context) []TrackPoint {
+func getAllPoints(c context.Context) []trackPoint.TrackPoint {
 	q := datastore.NewQuery(data).Order("-Time")
-	var ms []TrackPoint
+	var ms []trackPoint.TrackPoint
 	q.GetAll(c, &ms)
 	//log.Infof(c, "%#v", ms)
 	return ms

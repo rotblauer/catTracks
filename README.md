@@ -17,3 +17,17 @@ Tracking Cats and generating data
 - pics, first person and third person, upload if not black and with wifi and lots of battery
 
 - First generator on computer desktop, then IOS.
+
+
+### Starting development server
+
+``` bash
+~/bin/go_appengine/dev_appserver.py .
+```
+
+### Uploading to google app engine
+
+```
+ ~/bin/go_appengine/appcfg.py update .
+
+```
