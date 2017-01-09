@@ -15,3 +15,5 @@ Tracking Cats and generating data
 - cat heartrate :heavy_check_mark: db
 - plots, mapper :heavy_check_mark:
 - pics, first person and third person, upload if not black and with wifi and lots of battery
+
+- First generator on computer desktop, then IOS.
