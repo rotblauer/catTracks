@@ -16,8 +16,7 @@ var funcMap = template.FuncMap{
 	},
 }
 
-var tg = appengine.GeoPoint{Lat: 38.6270+(rand.Float64()*3.0), Lng: -90.1994+(rand.Float64()*3.0)}
-var test = TrackPoint{Elevation: 100.0, LatLong: tg, Time: time.Now()}
+
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 type Data struct {
@@ -26,6 +25,9 @@ type Data struct {
 
 //Welcome
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+	var tg = appengine.GeoPoint{Lat: 38.609896+(rand.Float64()*0.1), Lng:  -90.331478+(rand.Float64()*0.1)}
+	var test = TrackPoint{Elevation: 100.0, LatLong: tg, Time: time.Now()}
+
 	c := appengine.NewContext(r)
 	storePoint(test, c)
 	data := Data{TrackPoints: getAllPoints(c)}

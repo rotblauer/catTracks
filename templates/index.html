@@ -2,22 +2,15 @@
 <div class="container">
     <div class="jumbotron">
         <div class="row">
-            <h1>Boots itinerary </h1>
+            <h1>Cat Tracker </h1>
         </div>
 
     </div>
 
 
 </div>
-{{range $id, $marker := .TrackPoints}}
-<tr>
-    <td>{{.LatLong.Lng}}</td>
-    <td>{{.LatLong.Lat}}</td>
-
-</tr>
-{{end}}
 <div class="container">
-    <div id="map" style="width:400px;height:400px;background:white"></div>
+    <div id="map" style="width:600px;height:600px;background:white"></div>
 
 </div>
 

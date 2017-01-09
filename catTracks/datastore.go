@@ -26,7 +26,7 @@ func trackPointKey(c context.Context) *datastore.Key {
 
 //get everthing in the db... can do filtering some other day
 func getAllPoints(c context.Context) []TrackPoint {
-	q := datastore.NewQuery(data)
+	q := datastore.NewQuery(data).Order("-Time")
 	var ms []TrackPoint
 	q.GetAll(c, &ms)
 	//log.Infof(c, "%#v", ms)
