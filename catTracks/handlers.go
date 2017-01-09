@@ -8,6 +8,7 @@ import (
 	"html/template"
 	"net/http"
 	"github.com/rotblauer/trackpoints/trackPoint"
+	"encoding/json"
 )
 
 var funcMap = template.FuncMap{
@@ -16,23 +17,38 @@ var funcMap = template.FuncMap{
 	},
 }
 
+// the html stuff of this thing
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
+//For passing to the template
 type Data struct {
 	TrackPoints []trackPoint.TrackPoint
 }
 
-//
-//var tg = appengine.GeoPoint{Lat: 38.609896 + (rand.Float64() * 0.1), Lng: -90.331478 + (rand.Float64() * 0.1)}
-//var test = trackPoint.TrackPoint{Elevation: 100.0, LatLong: tg, Time: time.Now()}
-//
-//storePoint(test, c)
-
-//Welcome
+//Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
 	data := Data{TrackPoints: getAllPoints(c)}
 	log.Infof(c, "Done processing results")
 	templates.Funcs(funcMap)
 	templates.ExecuteTemplate(w, "base", data)
+}
+
+func populatePoint(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	var trackPoint trackPoint.TrackPoint
+
+	if r.Body == nil {
+		http.Error(w, "Please send a request body", 400)
+		return
+	}
+	err := json.NewDecoder(r.Body).Decode(&trackPoint)
+	if err != nil {
+		http.Error(w, err.Error(), 400)
+		return
+	}
+	errS := storePoint(trackPoint, c)
+	if errS != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
 }

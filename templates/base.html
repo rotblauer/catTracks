@@ -21,27 +21,20 @@
 <script>
 
 
-    function initMap() {
-        initMap2()
-    }
-
-    function initMap2(){
+<!--This thing sucks-->
+    function initMap(){
         var map = new google.maps.Map(document.getElementById('map'), {
             zoom: 3,
             center: {lat: 38.6270, lng: -90.1994},
             mapTypeId: 'terrain'
         });
-//        var tmp = {{.TrackPoints}}
-//        for( i = 0; i < tmp.length; i++ ) {
-//           tmp.Elevation
-//        }
-        var markers =[]
+
         var bounds = new google.maps.LatLngBounds();
         var infoWindow = new google.maps.InfoWindow(), marker, i;
         var i=0;
         var positions =[]
         {{range $id, $marker := .TrackPoints}}
-        var position = new google.maps.LatLng({{.LatLong.Lat}}, {{.LatLong.Lng}});
+        var position = new google.maps.LatLng({{.Lat}}, {{.Lng}});
         bounds.extend(position);
         positions.push(position)
         if(i==0){
@@ -74,22 +67,17 @@
         var flightPath = new google.maps.Polyline({
             path: positions,
             strokeColor: "#0000FF",
-            strokeOpacity: 0.8,
-            strokeWeight: 2
+            strokeOpacity: 0.3,
+            strokeWeight: 3
         });
         flightPath.setMap(map);
         map.fitBounds(bounds);
-
     }
 </script>
 
 <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIx8zEL5Q8uN2r5kahv9VyADy5xygfrIQ&callback=initMap">
 </script>
-
-<!--{{range $id, $marker := .TrackPoints}}-->
-<!--{{.Time}}<br>-->
-<!--{{end}}-->
 
 </body>
 
