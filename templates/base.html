@@ -31,14 +31,19 @@
             center: {lat: 38.6270, lng: -90.1994},
             mapTypeId: 'terrain'
         });
+//        var tmp = {{.TrackPoints}}
+//        for( i = 0; i < tmp.length; i++ ) {
+//           tmp.Elevation
+//        }
         var markers =[]
         var bounds = new google.maps.LatLngBounds();
         var infoWindow = new google.maps.InfoWindow(), marker, i;
         var i=0;
-
+        var positions =[]
         {{range $id, $marker := .TrackPoints}}
         var position = new google.maps.LatLng({{.LatLong.Lat}}, {{.LatLong.Lng}});
         bounds.extend(position);
+        positions.push(position)
         if(i==0){
             marker = new google.maps.Marker({
                 position: position,
@@ -66,6 +71,13 @@
         i++
 
         {{end}}
+        var flightPath = new google.maps.Polyline({
+            path: positions,
+            strokeColor: "#0000FF",
+            strokeOpacity: 0.8,
+            strokeWeight: 2
+        });
+        flightPath.setMap(map);
         map.fitBounds(bounds);
 
     }
