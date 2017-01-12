@@ -138,11 +138,11 @@
         <option value="$PROJECT_DIR$/catTracks/router.go" />
         <option value="$PROJECT_DIR$/templates/index.html" />
         <option value="$PROJECT_DIR$/catTracks/trackPoint.go" />
-        <option value="$PROJECT_DIR$/README.md" />
         <option value="$PROJECT_DIR$/catTracks/routes.go" />
         <option value="$PROJECT_DIR$/catTracks/handlers.go" />
         <option value="$PROJECT_DIR$/catTracks/datastore.go" />
         <option value="$PROJECT_DIR$/templates/base.html" />
+        <option value="$PROJECT_DIR$/README.md" />
       </list>
     </option>
   </component>
