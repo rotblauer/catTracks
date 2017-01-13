@@ -22,13 +22,19 @@ var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 //For passing to the template
 type Data struct {
-	TrackPoints []trackPoint.TrackPoint
+	TrackPoints     []trackPoint.TrackPoint
+	TrackPointsJSON string
 }
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	data := Data{TrackPoints: getAllPoints(c)}
+	allPoints := getAllPoints(c)
+	pointsJSON, e := json.Marshal(allPoints)
+	if e != nil {
+		log.Errorf(c, "Error making json from trackpoints.")
+	}
+	data := Data{TrackPoints: allPoints, TrackPointsJSON: string(pointsJSON)}
 	log.Infof(c, "Done processing results")
 	templates.Funcs(funcMap)
 	templates.ExecuteTemplate(w, "base", data)
