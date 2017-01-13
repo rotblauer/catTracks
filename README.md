@@ -24,6 +24,11 @@ Tracking Cats and generating data
 ``` bash
 ~/bin/go_appengine/dev_appserver.py .
 ```
+or :beer:
+```
+brew install go-app-engine-64
+goapp serve app.yml
+```
 
 ### Uploading to google app engine
 
@@ -31,5 +36,8 @@ Tracking Cats and generating data
  ~/bin/go_appengine/appcfg.py update .
 
 ```
-
-cattracktackpack
+:beers:
+```
+brew install go-app-engine-64
+goapp deploy 
+```

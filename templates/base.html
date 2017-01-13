@@ -20,65 +20,11 @@
 </head>
 
 <body>
+  <p id="trackPointsData" style="display: none;">{{.TrackPointsJSON}}</p>
 {{template "index" .}}
 {{template "poster" .}}
 
   <script>
-
-
-<!--This thing sucks-->
-    function initMap(){
-        console.log("initing map");
-        var map = new google.maps.Map(document.getElementById('map'), {
-            zoom: 3,
-            center: {lat: 38.6270, lng: -90.1994},
-            mapTypeId: 'terrain'
-        });
-
-        var bounds = new google.maps.LatLngBounds();
-        var infoWindow = new google.maps.InfoWindow(), marker, i;
-        var i=0;
-        var positions =[]
-        {{range $id, $marker := .TrackPoints}}
-        var position = new google.maps.LatLng({{.Lat}}, {{.Lng}});
-        bounds.extend(position);
-        positions.push(position)
-        if(i==0){
-            marker = new google.maps.Marker({
-                position: position,
-                map: map,
-                title: "{{.Name}}",
-                animation:google.maps.Animation.BOUNCE
-            });
-        }else{
-            marker = new google.maps.Marker({
-                position: position,
-                map: map,
-                title: "{{.Name}}"
-            });
-        }
-
-//        https://wrightshq.com/playground/placing-multiple-markers-on-a-google-map-using-api-3/
-        google.maps.event.addListener(marker, 'click', (function(marker, i) {
-            return function() {
-                infoContent = "<h3>On this day</h3>, {{.Time}}, the cat was running {{.Speed}} mph at an elevation of {{.Elevation}} ft"
-                infoWindow.setContent(infoContent);
-                infoWindow.open(map, marker);
-                map.setCenter(marker.getPosition());
-            }
-        })(marker, i));
-        i++
-
-        {{end}}
-        var flightPath = new google.maps.Polyline({
-            path: positions,
-            strokeColor: "#0000FF",
-            strokeOpacity: 0.3,
-            strokeWeight: 3
-        });
-        flightPath.setMap(map);
-        map.fitBounds(bounds);
-    }
 
     </script>
 <script async defer
