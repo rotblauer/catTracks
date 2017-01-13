@@ -2,9 +2,10 @@ package catTracks
 
 // Handles saving and loading data
 import (
+	"github.com/rotblauer/trackpoints/trackPoint"
 	"golang.org/x/net/context"
 	"google.golang.org/appengine/datastore"
-	"github.com/rotblauer/trackpoints/trackPoint"
+	"time"
 )
 
 // I think this has something to do with a table,,,,
@@ -13,6 +14,7 @@ var data = "TrackPoints"
 //Store a snippit of life
 func storePoint(trackPoint trackPoint.TrackPoint, c context.Context) error {
 	key := trackPointKey(c)
+	trackPoint.Time = time.Now()
 	if _, err := datastore.Put(c, key, &trackPoint); err != nil { //store it
 		return err
 	}
@@ -28,7 +30,7 @@ func trackPointKey(c context.Context) *datastore.Key {
 func getAllPoints(c context.Context) []trackPoint.TrackPoint {
 	q := datastore.NewQuery(data).Order("-Time") //most recent time first
 	var ms []trackPoint.TrackPoint
-	q.GetAll(c, &ms)//get em... this may be limited to 1000 though
+	q.GetAll(c, &ms) //get em... this may be limited to 1000 though
 	//log.Infof(c, "%#v", ms)
 	return ms
 }

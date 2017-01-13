@@ -61,10 +61,12 @@ function postPoint () {
 
 var bounds;
 var positions = [];
+var markers = [];
 var map;
 
 function initMap() {
   positions = [];
+  markers = [];
   bounds = new google.maps.LatLngBounds();
   map = new google.maps.Map(document.getElementById('map'), {
     zoom: 3,
@@ -84,6 +86,7 @@ function addTrackPointsToMap(map) {
     }
   }
   drawFlightPath(map);
+  var markerCluster = new MarkerClusterer(map, markers, {imagePath: '/ass/images/m'});
   map.fitBounds(bounds);
 }
 
@@ -111,6 +114,8 @@ function addPointMarker (map, index, trackPoint) {
       map.setCenter(marker.getPosition());
     }
   })(marker, index));
+  markers.push(marker); // push to array for clustering
+
 }
 
 function drawFlightPath(map) {
