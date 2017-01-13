@@ -104,7 +104,7 @@ function addTrackPointsToMap(map) {
     }
 
     for (n in uniqueNames) {
-      drawFlightPath(map, namePositions[uniqueNames[n]]);
+      drawFlightPath(map, namePositions[uniqueNames[n]], uniqueNames[n]);
     }
   }
 
@@ -125,7 +125,9 @@ function addPointMarker (map, index, trackPoint) {
   };
   if (trackPoint.name == "jl" || trackPoint.name == "ia") markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + trackPoint.name + ".png"});
 
-  if (index == 0) markerObj = $.extend({}, markerObj, {animation: google.maps.Animation.BOUNCE});
+  //is first in namedPosition
+  var isFirstIndex = namePositions[trackPoint.name].indexOf(position) == 0 ? true : false;
+  if (isFirstIndex) markerObj = $.extend({}, markerObj, {animation: google.maps.Animation.BOUNCE});
   var marker = new google.maps.Marker(markerObj);
 
   //https://wrightshq.com/playground/placing-multiple-markers-on-a-google-map-using-api-3/
@@ -141,10 +143,11 @@ function addPointMarker (map, index, trackPoint) {
 
 }
 
-function drawFlightPath(map, positions) {
+function drawFlightPath(map, positions, name) {
+  var c = name === "jl" ? "#0000ff" : "#ff0000";
   var flightPath = new google.maps.Polyline({
     path: positions,
-    strokeColor: "#0000FF",
+    strokeColor: c,
     strokeOpacity: 0.3,
     strokeWeight: 3
   });
