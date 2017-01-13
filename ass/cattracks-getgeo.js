@@ -7,7 +7,9 @@
          }
      });
 
-     window.onload = function () {
+
+var getGeo = function () {
+         $("#pleasehold").text("kindly still getting your location madam");
          var options = {
              enableHighAccuracy: true,
              timeout: 5000,
@@ -20,7 +22,6 @@
              /* map: "map-canvas",      // interactive map element id (or options object)*/
              /* staticMap: true         // map image URL (boolean or options object)*/
          };
-       $("#pleasehold").text("kindly still getting your location madam");
          geolocator.locate(options, function (err, location) {
              if (err) return console.log(err);
              // console.log(location);
@@ -59,3 +60,7 @@ function gotLocation (location) {
   $("#myLon").val(location.coords.longitude);
 
 }
+
+
+
+window.onload = getGeo;

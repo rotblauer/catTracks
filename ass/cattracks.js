@@ -14,6 +14,7 @@ var latInput = $("#myLat"),
 
 submitBtn.click(postPoint);
 
+  $('#getgeolocation-btn').click(getGeo);
 
 // post to /populate with whatever is in the form
 function postPoint () {
@@ -24,25 +25,35 @@ function postPoint () {
     "name": $("#myName").val(),
     "lat": parseFloat(latInput.val()),
     "long": parseFloat(lngInput.val()),
-    // "time": Date.now(),
     "notes": "json web post"
   };
 
   var jcatdat = JSON.stringify(cataData);
-  console.log("jcatd", jcatdat);
 
   $.post(
     "/populate/",
     jcatdat,
     handlePostSuccess
     );
-
 }
 
   // data is trackpoint obj
   function handlePostSuccess(data, status) {
     alert("REsponser: " + data + "\n" + "status: " + status);
-    //but won't show newpoint because it's not availbe thru gornedered
+
+    // addPointMarker(map, 0, JSON.parse( data )); //can't get this to work.
+
+    //workaround for adding a point to the map wthout requerying the swerver
+    var points = $("#trackPointsData").text();
+    points = JSON.parse(points);
+    data = JSON.parse( data ); //swerver return succesffuly created point
+    if (points !== null) {
+      points.splice(0, 0, data); //put new point in i=0
+    } else {
+      points = [];
+      points.push(data);
+    }
+    $("#trackPointsData").text(JSON.stringify( points )); //and update our go-->js gobetween
     initMap();
   }
 
@@ -50,10 +61,12 @@ function postPoint () {
 
 var bounds;
 var positions = [];
+var map;
 
 function initMap() {
+  positions = [];
   bounds = new google.maps.LatLngBounds();
-  var map = new google.maps.Map(document.getElementById('map'), {
+  map = new google.maps.Map(document.getElementById('map'), {
     zoom: 3,
     center: {lat: 38.6270, lng: -90.1994},
     mapTypeId: 'terrain'
@@ -63,7 +76,7 @@ function initMap() {
 
 function addTrackPointsToMap(map) {
   var pointsData = JSON.parse($("#trackPointsData").text());
-  console.log("JSON parsed .TrackPoints:", pointsData);
+  // console.log("JSON parsed .TrackPoints:", pointsData);
   if (Array.isArray(pointsData)) {
     for (var i = 0; i < pointsData.length; i++) {
       addPointMarker(map, i, pointsData[i]);
@@ -75,6 +88,7 @@ function addTrackPointsToMap(map) {
 }
 
 function addPointMarker (map, index, trackPoint) {
+  console.log("adding point marker for map");
   var infoWindow = new google.maps.InfoWindow(), marker;
   var position = new google.maps.LatLng(trackPoint.lat, trackPoint.long);
   bounds.extend(position);
@@ -91,7 +105,7 @@ function addPointMarker (map, index, trackPoint) {
   //https://wrightshq.com/playground/placing-multiple-markers-on-a-google-map-using-api-3/
   google.maps.event.addListener(marker, 'click', (function(marker, index) {
     return function() {
-      infoContent = "<h3>On this day</h3>, " + trackPoint.time + ", the cat was running " + trackPoint.speed + " mph at an elevation of {{.Elevation}} ft"
+      infoContent = "<h3>On this day</h3>, " + trackPoint.time + ", the cat was running " + trackPoint.speed + " mph at an elevation of" + trackPoint.elevation + " ft";
       infoWindow.setContent(infoContent);
       infoWindow.open(map, marker);
       map.setCenter(marker.getPosition());

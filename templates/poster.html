@@ -1,31 +1,23 @@
 {{define "poster"}}
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
 
-</head>
+    <!-- just to let you know -->
+    <p id="pleasehold"></p>
 
-<body>
-  <p id="pleasehold">
-
-  </p>
-  <div class="poster-holder">
-    <div class="input-group">
-      <input id="myLat" class="form-control" name="" type="number" value=""/>
+    <div class="poster-holder">
+      <div class="input-group">
+        <input id="myLat" class="form-control" name="" type="number" value=""/>
+      </div>
+      <div class="input-group">
+        <input id="myLon" class="form-control" name="" type="number" value=""/>
+      </div>
+      <select class="form-control" id="myName" name="">
+        <option value="jl">jl</option>
+        <option value="ia">ia</option>
+      </select>
+      <button id="submitposter-btn" class="btn btn-primary btn-lg">Post point</button>
+      <button id="getgeolocation-btn" class="btn btn-success btn-lg">Locate me</button>
     </div>
-    <div class="input-group">
-      <input id="myLon" class="form-control" name="" type="number" value=""/>
-    </div>
-    <select class="form-control" id="myName" name="">
-      <option value="jl">jl</option>
-      <option value="ia">ia</option>
-    </select>
-    <button id="submitposter-btn" class="btn btn-primary btn-lg">Trackit</button>
-  </div>
 
 
-</body>
-
-</html>
 {{end}}
