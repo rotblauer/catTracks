@@ -6,7 +6,10 @@ api_version: go1
 handlers:
 - url: /bower_components
   static_dir: bower_components
-  
+
+- url: /ass
+  static_dir: ass
+
 - url: /templates
   static_dir: static/html
 

@@ -5,10 +5,10 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 
+	"encoding/json"
+	"github.com/rotblauer/trackpoints/trackPoint"
 	"html/template"
 	"net/http"
-	"github.com/rotblauer/trackpoints/trackPoint"
-	"encoding/json"
 )
 
 var funcMap = template.FuncMap{
@@ -49,6 +49,10 @@ func populatePoint(w http.ResponseWriter, r *http.Request) {
 	}
 	errS := storePoint(trackPoint, c)
 	if errS != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+	}
+	//return json of trakcpoint if stored succcess
+	if errW := json.NewEncoder(w).Encode(&trackPoint); errW != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
