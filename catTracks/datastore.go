@@ -27,8 +27,11 @@ func trackPointKey(c context.Context) *datastore.Key {
 }
 
 //get everthing in the db... can do filtering some other day
-func getAllPoints(c context.Context) []trackPoint.TrackPoint {
-	q := datastore.NewQuery(data).Order("-Time") //most recent time first
+func getAllPoints(c context.Context, catQ string) []trackPoint.TrackPoint {
+	q := datastore.NewQuery(data).Order("-Time")
+	if catQ != "" {
+		q = datastore.NewQuery(data).Filter("Name =", catQ).Order("-Time")
+	}
 	var ms []trackPoint.TrackPoint
 	q.GetAll(c, &ms) //get em... this may be limited to 1000 though
 	//log.Infof(c, "%#v", ms)

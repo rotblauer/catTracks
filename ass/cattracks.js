@@ -59,13 +59,13 @@ function postPoint () {
 
 });
 
-var bounds;
-var positions = [];
-var markers = [];
-var map;
+var bounds; // google LatLngBounds
+var namePositions = {}; //holds googly lat/long
+var markers = []; //hold googly markers for clustering
+var map; //to become a googlemap
 
 function initMap() {
-  positions = [];
+  namePositions = {};
   markers = [];
   bounds = new google.maps.LatLngBounds();
   map = new google.maps.Map(document.getElementById('map'), {
@@ -76,31 +76,54 @@ function initMap() {
   addTrackPointsToMap(map);
 }
 
+function getUniqueNames(trackPoints) {
+  var flags = [], output = [], l = trackPoints.length, i;
+  for( i=0; i<l; i++) {
+    if( flags[trackPoints[i].name]) continue;
+    flags[trackPoints[i].name] = true;
+    output.push(trackPoints[i].name);
+  }
+  return output;
+}
+
+function initNamedPositions(uniqueNames) {
+  for (n in uniqueNames) {
+    namePositions[uniqueNames[n]] = [];
+  }
+}
+
 function addTrackPointsToMap(map) {
   var pointsData = JSON.parse($("#trackPointsData").text());
-  // console.log("JSON parsed .TrackPoints:", pointsData);
+
   if (Array.isArray(pointsData)) {
+    var uniqueNames = getUniqueNames(pointsData);
+    initNamedPositions(uniqueNames);
+
     for (var i = 0; i < pointsData.length; i++) {
       addPointMarker(map, i, pointsData[i]);
-      console.log("marker: ", pointsData[i]);
+    }
+
+    for (n in uniqueNames) {
+      drawFlightPath(map, namePositions[uniqueNames[n]]);
     }
   }
-  drawFlightPath(map);
+
   var markerCluster = new MarkerClusterer(map, markers, {imagePath: '/ass/images/m'});
   map.fitBounds(bounds);
 }
 
 function addPointMarker (map, index, trackPoint) {
-  console.log("adding point marker for map");
+  // console.log("adding point marker for map");
   var infoWindow = new google.maps.InfoWindow(), marker;
   var position = new google.maps.LatLng(trackPoint.lat, trackPoint.long);
   bounds.extend(position);
-  positions.push(position);
+  namePositions[trackPoint.name].push(position);
   var markerObj = {
     position: position,
     map: map,
     title: trackPoint.name
   };
+  if (trackPoint.name == "jl" || trackPoint.name == "ia") markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + trackPoint.name + ".png"});
 
   if (index == 0) markerObj = $.extend({}, markerObj, {animation: google.maps.Animation.BOUNCE});
   var marker = new google.maps.Marker(markerObj);
@@ -118,7 +141,7 @@ function addPointMarker (map, index, trackPoint) {
 
 }
 
-function drawFlightPath(map) {
+function drawFlightPath(map, positions) {
   var flightPath = new google.maps.Polyline({
     path: positions,
     strokeColor: "#0000FF",

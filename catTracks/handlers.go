@@ -29,7 +29,9 @@ type Data struct {
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	c := appengine.NewContext(r)
-	allPoints := getAllPoints(c)
+	catQ := r.FormValue("cat") //catQ is "" if not there
+	log.Infof(c, "catQ: "+catQ)
+	allPoints := getAllPoints(c, catQ)
 	pointsJSON, e := json.Marshal(allPoints)
 	if e != nil {
 		log.Errorf(c, "Error making json from trackpoints.")
