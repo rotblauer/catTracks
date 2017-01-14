@@ -123,7 +123,19 @@ function addPointMarker (map, index, trackPoint) {
     map: map,
     title: trackPoint.name
   };
-  if (trackPoint.name == "jl" || trackPoint.name == "ia") markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + trackPoint.name + ".png"});
+  console.log(trackPoint.name);
+
+  switch(trackPoint.name) {
+  case "jl":
+    markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + "water_buffalo" + ".png"});
+    console.log("setting jl emoji")
+    break;
+  case "ia":
+    markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + "wolf" + ".png"});
+    break;
+  default:
+    markerObj = $.extend({}, markerObj, {icon: "/ass/images/emoji/" + "smile" + ".png"});
+  }
 
   //is first in namedPosition
   var isFirstIndex = namePositions[trackPoint.name].indexOf(position) == 0 ? true : false;
@@ -144,12 +156,22 @@ function addPointMarker (map, index, trackPoint) {
 }
 
 function drawFlightPath(map, positions, name) {
-  var c = name === "jl" ? "#0000ff" : "#ff0000";
+  var c = getRandomColor();
   var flightPath = new google.maps.Polyline({
     path: positions,
     strokeColor: c,
-    strokeOpacity: 0.3,
+    strokeOpacity: 0.5,
     strokeWeight: 3
   });
   flightPath.setMap(map);
+}
+
+// http://stackoverflow.com/questions/1484506/random-color-generator-in-javascript
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++ ) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
 }
