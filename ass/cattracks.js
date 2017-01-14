@@ -18,7 +18,7 @@ submitBtn.click(postPoint);
 
 // post to /populate with whatever is in the form
 function postPoint () {
-  console.log("poisting pont");
+  console.log("poisting pontificus");
 
   // should matchupcatup to trackPoints
   var cataData = {
