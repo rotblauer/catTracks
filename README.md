@@ -21,21 +21,14 @@ Tracking Cats and generating data
 
 ### Starting development server
 
-``` bash
-~/bin/go_appengine/dev_appserver.py .
-```
-or :beer:
+:beer:
 ```
 brew install go-app-engine-64
-goapp serve app.yml
+goapp serve .
 ```
 
 ### Uploading to google app engine
 
-```
- ~/bin/go_appengine/appcfg.py update .
-
-```
 :beers:
 ```
 brew install go-app-engine-64
