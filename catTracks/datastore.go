@@ -14,7 +14,10 @@ var data = "TrackPoints"
 //Store a snippit of life
 func storePoint(trackPoint trackPoint.TrackPoint, c context.Context) error {
 	key := trackPointKey(c)
-	trackPoint.Time = time.Now()
+	zeroTime := time.Time{}
+	if trackPoint.Time == zeroTime {
+		trackPoint.Time = time.Now()
+	}
 	if _, err := datastore.Put(c, key, &trackPoint); err != nil { //store it
 		return err
 	}

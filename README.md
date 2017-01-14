@@ -28,6 +28,9 @@ or :beer:
 ```
 brew install go-app-engine-64
 goapp serve app.yml
+# or reset dev datastore on swerver start
+goapp serve -clear_datastore app.yaml 
+
 ```
 
 ### Uploading to google app engine

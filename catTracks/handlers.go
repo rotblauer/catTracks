@@ -5,10 +5,13 @@ import (
 	"google.golang.org/appengine"
 	"google.golang.org/appengine/log"
 
+	"encoding/csv"
 	"encoding/json"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"html/template"
 	"net/http"
+	"strconv"
+	"time"
 )
 
 var funcMap = template.FuncMap{
@@ -63,4 +66,50 @@ func populatePoint(w http.ResponseWriter, r *http.Request) {
 	if errW := json.NewEncoder(w).Encode(&trackPoint); errW != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+}
+
+func uploadCSV(w http.ResponseWriter, r *http.Request) {
+	c := appengine.NewContext(r)
+	r.ParseMultipartForm(32 << 30)
+	file, _, err := r.FormFile("uploadfile")
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	defer file.Close()
+
+	lines, err := csv.NewReader(file).ReadAll()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	for _, line := range lines {
+		var tp trackPoint.TrackPoint
+
+		tp.Name = line[0]
+
+		if tp.Time, err = time.Parse(time.UnixDate, line[1]); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if tp.Lat, err = strconv.ParseFloat(line[2], 64); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if tp.Lng, err = strconv.ParseFloat(line[3], 64); err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		errS := storePoint(tp, c)
+		if errS != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+	}
+
+	http.Redirect(w, r, "/", 302) //the 300
+
 }

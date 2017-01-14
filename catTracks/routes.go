@@ -24,4 +24,10 @@ var routes = Routes{
 		"/populate/",
 		populatePoint,
 	},
+	Route{
+		"UploadCSV",
+		"POST",
+		"/upload",
+		uploadCSV,
+	},
 }

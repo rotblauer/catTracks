@@ -20,5 +20,13 @@
       <button id="getgeolocation-btn" class="btn btn-success btn-lg">Locate me</button>
     </div>
 
+    <p class="text-primary">
+      Upload a CSV. No headers. "name", "time", "lat", "long"
+    </p>
+    <form enctype="multipart/form-data" action="/upload" method="post">
+      <input type="file" name="uploadfile" />
+      <input type="submit" value="upload" />
+    </form>
+
 
 {{end}}
