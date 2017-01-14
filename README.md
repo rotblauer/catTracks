@@ -19,6 +19,8 @@ Tracking Cats and generating data
 - First generator on computer desktop, then IOS.
 
 
+### plays well with [https://github.com/rotblauer/bildungs-roamin](https://github.com/rotblauer/bildungs-roamin)
+
 ### Starting development server
 
 :beer:
