@@ -151,7 +151,8 @@ function addPointMarker (map, index, trackPoint) {
       map.setCenter(marker.getPosition());
     }
   })(marker, index));
-  markers.push(marker); // push to array for clustering
+  // only push if not first -- because
+  if (!isFirstIndex) markers.push(marker); // push to array for clustering
 
 }
 
