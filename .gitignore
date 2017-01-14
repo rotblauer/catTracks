@@ -26,3 +26,5 @@ _testmain.go
 
 bower_components/*
 *DS_Store
+
+/.idea
