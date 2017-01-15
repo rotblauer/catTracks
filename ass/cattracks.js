@@ -145,7 +145,7 @@ function addPointMarker (map, index, trackPoint) {
   //https://wrightshq.com/playground/placing-multiple-markers-on-a-google-map-using-api-3/
   google.maps.event.addListener(marker, 'click', (function(marker, index) {
     return function() {
-      infoContent = "<h3>On this day</h3>, " + trackPoint.time + ", the cat was running " + trackPoint.speed + " mph at an elevation of" + trackPoint.elevation + " ft";
+      infoContent = "<h3>On this day</h3>, " + trackPoint.time + ", the cat was running " + trackPoint.speed + " meters per second at an elevation of" + trackPoint.elevation + " meters";
       infoWindow.setContent(infoContent);
       infoWindow.open(map, marker);
       map.setCenter(marker.getPosition());

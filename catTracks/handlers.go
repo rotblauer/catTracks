@@ -50,11 +50,12 @@ func populatePoint(w http.ResponseWriter, r *http.Request) {
 	var trackPoint trackPoint.TrackPoint
 
 	if r.Body == nil {
-		http.Error(w, "Please send a request body", 400)
+		http.Error(w, "Please send a request body", 500)
 		return
 	}
 	err := json.NewDecoder(r.Body).Decode(&trackPoint)
 	if err != nil {
+		log.Errorf(c, "Failed to decode: %v", err)
 		http.Error(w, err.Error(), 400)
 		return
 	}
