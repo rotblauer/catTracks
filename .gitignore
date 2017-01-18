@@ -29,3 +29,6 @@ bower_components/*
 
 /.idea
 .idea/
+
+# ie bolt.db
+*.db
