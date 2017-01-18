@@ -2,15 +2,14 @@ package catTracks
 
 //Handles
 import (
-
 	"encoding/csv"
 	"encoding/json"
+	"fmt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"html/template"
 	"net/http"
 	"strconv"
 	"time"
-	"fmt"
 )
 
 var funcMap = template.FuncMap{
@@ -30,8 +29,11 @@ type Data struct {
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	catQ := r.FormValue("cat") //catQ is "" if not there
-	allPoints := getAllPoints(catQ)
+	// catQ := r.FormValue("cat") //catQ is "" if not there //turn off queryable fur meow
+	allPoints, e := getAllPoints()
+	if e != nil {
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
 	pointsJSON, e := json.Marshal(allPoints)
 	if e != nil {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
@@ -42,6 +44,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "base", data)
 }
 
+//TODO populate a population of points
 func populatePoint(w http.ResponseWriter, r *http.Request) {
 	var trackPoint trackPoint.TrackPoint
 

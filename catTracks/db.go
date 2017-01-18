@@ -1,24 +1,22 @@
 package catTracks
 
 import (
-	"path"
-	"github.com/boltdb/bolt"
 	"fmt"
-	"github.com/rotblauer/trackpoints/trackPoint"
+	"github.com/boltdb/bolt"
+	// "github.com/rotblauer/trackpoints/trackPoint"
+	"path"
 )
 
-
 var (
-	db *bolt.DB
+	db       *bolt.DB
 	trackKey = "tracks"
-
 )
 
 // GetDB is db getter.
 func GetDB() *bolt.DB {
 	return db
-
 }
+
 // InitBoltDB sets up initial stuff, like the file and necesary buckets
 func InitBoltDB() error {
 	//sec := setting.Cfg.Section("server")
@@ -43,23 +41,4 @@ func InitBoltDB() error {
 	}
 	return err
 	// return GetDB()
-}
-
-//Store a snippit of life
-
-//TODO
-func storePoint(trackPoint trackPoint.TrackPoint) error {
-
-	return nil
-}
-
-
-
-//get everthing in the db... can do filtering some other day
-
-//TODO
-func getAllPoints(catQ string) []trackPoint.TrackPoint {
-
-
-	return nil
 }
