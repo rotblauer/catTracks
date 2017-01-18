@@ -32,3 +32,5 @@ bower_components/*
 
 # ie bolt.db
 *.db
+/linux.main # ignore linux.main, darwin.main builds
+/darwin.main
