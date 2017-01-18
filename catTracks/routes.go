@@ -19,7 +19,7 @@ var routes = Routes{
 		indexHandler,
 	},
 	Route{
-		"MarkerPopulate",
+		"PointPopulator",
 		"POST",
 		"/populate/",
 		populatePoint,

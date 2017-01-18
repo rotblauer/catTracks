@@ -2,8 +2,6 @@ package catTracks
 
 //Handles
 import (
-	"google.golang.org/appengine"
-	"google.golang.org/appengine/log"
 
 	"encoding/csv"
 	"encoding/json"
@@ -12,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+	"fmt"
 )
 
 var funcMap = template.FuncMap{
@@ -31,22 +30,19 @@ type Data struct {
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
 	catQ := r.FormValue("cat") //catQ is "" if not there
-	log.Infof(c, "catQ: "+catQ)
-	allPoints := getAllPoints(c, catQ)
+	allPoints := getAllPoints(catQ)
 	pointsJSON, e := json.Marshal(allPoints)
 	if e != nil {
-		log.Errorf(c, "Error making json from trackpoints.")
+		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
 	data := Data{TrackPoints: allPoints, TrackPointsJSON: string(pointsJSON)}
-	log.Infof(c, "Done processing results")
+	fmt.Println("Done processing results")
 	templates.Funcs(funcMap)
 	templates.ExecuteTemplate(w, "base", data)
 }
 
 func populatePoint(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
 	var trackPoint trackPoint.TrackPoint
 
 	if r.Body == nil {
@@ -55,11 +51,10 @@ func populatePoint(w http.ResponseWriter, r *http.Request) {
 	}
 	err := json.NewDecoder(r.Body).Decode(&trackPoint)
 	if err != nil {
-		log.Errorf(c, "Failed to decode: %v", err)
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	errS := storePoint(trackPoint, c)
+	errS := storePoint(trackPoint)
 	if errS != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
@@ -70,7 +65,6 @@ func populatePoint(w http.ResponseWriter, r *http.Request) {
 }
 
 func uploadCSV(w http.ResponseWriter, r *http.Request) {
-	c := appengine.NewContext(r)
 	r.ParseMultipartForm(32 << 30)
 	file, _, err := r.FormFile("uploadfile")
 	if err != nil {
@@ -103,7 +97,7 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		errS := storePoint(tp, c)
+		errS := storePoint(tp)
 		if errS != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
