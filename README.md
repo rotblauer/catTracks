@@ -18,6 +18,7 @@ Tracking Cats and generating data
 
 - First generator on computer desktop, then IOS.
 
+//TODO , need to grap GAE datastore, or maybe just forgetaboutit
 
 ### plays well with [https://github.com/rotblauer/bildungs-roamin](https://github.com/rotblauer/bildungs-roamin)
 
@@ -25,19 +26,8 @@ Tracking Cats and generating data
 
 :beer:
 ```
-brew install go-app-engine-64
-goapp serve app.yml
-# or reset dev datastore on swerver start
-goapp serve -clear_datastore app.yaml
-goapp serve .
+go run main.go
 ```
-
-### Uploading to google app engine
-
-:beers:
-```
-brew install go-app-engine-64
-goapp deploy
-```
+### Frey bay bay
 
 ![does this](./example.png)
