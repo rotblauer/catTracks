@@ -16,6 +16,9 @@ submitBtn.click(postPoint);
 
   $('#getgeolocation-btn').click(getGeo);
 
+  function getRandomDev(i) {
+    return Math.random()*parseFloat(i+1);
+  }
 // post to /populate with whatever is in the form
 function postPoint () {
   console.log("poisting pontificus");
@@ -28,7 +31,18 @@ function postPoint () {
     "notes": "json web post"
   };
 
-  var jcatdat = JSON.stringify(cataData);
+  //one for all
+  var catdatas = [];
+  for (var i = 0; i < 3; i++) {
+    var n = cataData;
+    var r = getRandomDev(i);//randomnotrandom
+    n.lat = cataData.lat + r;
+    n.long = cataData.long + r;
+    catdatas.push(n);
+  }
+
+  var jcatdat = JSON.stringify(catdatas);
+  console.log(jcatdat);
 
   $.post(
     "/populate/",
@@ -48,10 +62,14 @@ function postPoint () {
     points = JSON.parse(points);
     data = JSON.parse( data ); //swerver return succesffuly created point
     if (points !== null) {
-      points.splice(0, 0, data); //put new point in i=0
+      for (i in data) {
+        points.splice(0, 0, data[i]); //put new point in i=0
+      }
     } else {
       points = [];
-      points.push(data);
+      for (i in data) {
+        points.push(data[i]);
+      }
     }
     $("#trackPointsData").text(JSON.stringify( points )); //and update our go-->js gobetween
     initMap();

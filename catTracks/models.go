@@ -1,37 +1,59 @@
 package catTracks
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
-	"strconv"
 	"time"
 )
 
 //Store a snippit of life
 
-//TODO
+// itob returns an 8-byte big endian representation of v.
+func itob(v int) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, uint64(v))
+	return b
+}
+
+func storePoints(trackPoints trackPoint.TrackPoints) error {
+	var err error
+	for _, point := range trackPoints {
+		err = storePoint(point)
+		if err != nil {
+			return err
+		}
+	}
+	return err
+}
+
 func storePoint(trackPoint trackPoint.TrackPoint) error {
 
 	var err error
-	trackPoint.Time = time.Now()
-	trackPoint.ID = strconv.Itoa(int(trackPoint.Time.UnixNano()))
-
-	trackPointJSON, err := json.Marshal(trackPoint)
-	fmt.Println("model trackPoint", trackPoint)
-	fmt.Println("model jsoned trackPointJSON string:", string(trackPointJSON))
-	fmt.Println("model trackPoint.ID string", string(trackPoint.ID))
+	if trackPoint.Time.IsZero() {
+		trackPoint.Time = time.Now()
+	}
 
 	go func() {
 		GetDB().Update(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(trackKey))
-			e := b.Put([]byte(trackPoint.ID), trackPointJSON)
-			if e != nil {
-				fmt.Println("Didn't save post trackPoint in bolt.", e)
-				return e
+
+			id, _ := b.NextSequence()
+			trackPoint.ID = int(id)
+
+			trackPointJSON, err := json.Marshal(trackPoint)
+			if err != nil {
+				return err
 			}
+			err = b.Put(itob(trackPoint.ID), trackPointJSON)
+			if err != nil {
+				fmt.Println("Didn't save post trackPoint in bolt.", err)
+				return err
+			}
+			fmt.Println("Saved trackpoint: ", trackPoint)
 			return nil
 		})
 	}()

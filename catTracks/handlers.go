@@ -45,24 +45,24 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //TODO populate a population of points
-func populatePoint(w http.ResponseWriter, r *http.Request) {
-	var trackPoint trackPoint.TrackPoint
+func populatePoints(w http.ResponseWriter, r *http.Request) {
+	var trackPoints trackPoint.TrackPoints
 
 	if r.Body == nil {
 		http.Error(w, "Please send a request body", 500)
 		return
 	}
-	err := json.NewDecoder(r.Body).Decode(&trackPoint)
+	err := json.NewDecoder(r.Body).Decode(&trackPoints)
 	if err != nil {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	errS := storePoint(trackPoint)
+	errS := storePoints(trackPoints)
 	if errS != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	//return json of trakcpoint if stored succcess
-	if errW := json.NewEncoder(w).Encode(&trackPoint); errW != nil {
+	if errW := json.NewEncoder(w).Encode(&trackPoints); errW != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }

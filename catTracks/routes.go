@@ -22,7 +22,7 @@ var routes = Routes{
 		"PointPopulator",
 		"POST",
 		"/populate/",
-		populatePoint,
+		populatePoints,
 	},
 	Route{
 		"UploadCSV",
