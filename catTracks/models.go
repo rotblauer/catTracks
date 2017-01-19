@@ -122,10 +122,10 @@ func DeleteTestes() error {
 //get everthing in the db... can do filtering some other day
 
 //TODO make queryable ala which cat when
-func getAllPoints() (trackPoint.TrackPoints, error) {
+func getAllPoints() ([]*trackPoint.TrackPoint, error) {
 
 	var err error
-	var trackPoints trackPoint.TrackPoints
+	// var trackPoints trackPoint.TrackPoints
 	var coords []simpleline.Point
 
 	err = GetDB().View(func(tx *bolt.Tx) error {
@@ -139,7 +139,7 @@ func getAllPoints() (trackPoint.TrackPoints, error) {
 				//but if no ids given, return em all
 				var trackPoint trackPoint.TrackPoint
 				json.Unmarshal(trackPointval, &trackPoint)
-				trackPoints = append(trackPoints, trackPoint)
+				// trackPoints = append(trackPoints, trackPoint)
 
 				//rdp
 				coords = append(coords, &trackPoint) //filler up
@@ -152,18 +152,34 @@ func getAllPoints() (trackPoint.TrackPoints, error) {
 		}
 		return err
 	})
-	sort.Sort(trackPoints) //implements interfacing facing methods from trackpoints
+
+	originalCount := len(coords)
 
 	//simpleify line
-	//the slow way //coords are the simple points
 	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
-	results, sErr := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true)
+	results, sErr := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true) //0.001 bring a 3000pt run to prox 300 (cuz scale is lat and lng)
 	if sErr != nil {
 		fmt.Println("Errrrrrr", sErr)
 	}
-	for _, insult := range results {
-		fmt.Println(insult)
-	}
 
-	return trackPoints, err
+	rdpCount := len(results)
+
+	//dis shit is fsck but fsckit
+	//truncater
+	// trackPoints = trackPoints[len(trackPoints)-3:] // lets go crazy with 3
+	var tps trackPoint.TPs
+
+	for _, insult := range results {
+
+		// fmt.Println(insult)
+		o, ok := insult.(*trackPoint.TrackPoint)
+		if !ok {
+			fmt.Println("shittt notok")
+		}
+		tps = append(tps, o)
+	}
+	fmt.Println("Serving points. Original count was ", originalCount, " and post-RDP is ", rdpCount)
+	sort.Sort(tps)
+
+	return tps, err
 }

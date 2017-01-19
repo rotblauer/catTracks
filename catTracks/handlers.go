@@ -23,7 +23,7 @@ var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 //For passing to the template
 type Data struct {
-	TrackPoints     []trackPoint.TrackPoint
+	TrackPoints     []*trackPoint.TrackPoint
 	TrackPointsJSON string
 }
 
