@@ -7,13 +7,31 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
+	"strings"
 	"time"
 )
+
+const (
+	testesPrefix = "testes-------"
+)
+
+var testes = false
+
+// SetTestes run
+func SetTestes(flagger bool) {
+	testes = flagger
+}
+func getTestesPrefix() string {
+	if testes {
+		return testesPrefix
+	}
+	return ""
+}
 
 //Store a snippit of life
 
 // itob returns an 8-byte big endian representation of v.
-func itob(v int) []byte {
+func itob(v int64) []byte {
 	b := make([]byte, 8)
 	binary.BigEndian.PutUint64(b, uint64(v))
 	return b
@@ -30,30 +48,45 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 	return err
 }
 
-func storePoint(trackPoint trackPoint.TrackPoint) error {
+func storePoint(tp trackPoint.TrackPoint) error {
 
 	var err error
-	if trackPoint.Time.IsZero() {
-		trackPoint.Time = time.Now()
+	if tp.Time.IsZero() {
+		tp.Time = time.Now()
 	}
 
 	go func() {
 		GetDB().Update(func(tx *bolt.Tx) error {
 			b := tx.Bucket([]byte(trackKey))
 
-			id, _ := b.NextSequence()
-			trackPoint.ID = int(id)
+			// id, _ := b.NextSequence()
+			// trackPoint.ID = int(id)
+			tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
+			if exists := b.Get(itob(tp.ID)); exists != nil {
+				// make sure it's ours
+				var existingTrackpoint trackPoint.TrackPoint
+				e := json.Unmarshal(exists, &existingTrackpoint)
+				if e != nil {
+					fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
+				}
+				if existingTrackpoint.Name == tp.Name {
+					fmt.Println("Got that trackpoint already. Breaking.")
+					return nil
+				}
+			}
+			// gets "" case nontestesing
+			tp.Name = getTestesPrefix() + tp.Name
 
-			trackPointJSON, err := json.Marshal(trackPoint)
+			trackPointJSON, err := json.Marshal(tp)
 			if err != nil {
 				return err
 			}
-			err = b.Put(itob(trackPoint.ID), trackPointJSON)
+			err = b.Put(itob(tp.ID), trackPointJSON)
 			if err != nil {
 				fmt.Println("Didn't save post trackPoint in bolt.", err)
 				return err
 			}
-			fmt.Println("Saved trackpoint: ", trackPoint)
+			fmt.Println("Saved trackpoint: ", tp)
 			return nil
 		})
 	}()
@@ -62,6 +95,27 @@ func storePoint(trackPoint trackPoint.TrackPoint) error {
 		fmt.Println(err)
 	}
 	return err
+}
+
+// DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke
+func DeleteTestes() error {
+	e := GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var tp trackPoint.TrackPoint
+			e := json.Unmarshal(v, &tp)
+			if e != nil {
+				fmt.Println("Error deleting testes.")
+				return e
+			}
+			if strings.HasPrefix(tp.Name, testesPrefix) {
+				b.Delete(k)
+			}
+		}
+		return nil
+	})
+	return e
 }
 
 //get everthing in the db... can do filtering some other day

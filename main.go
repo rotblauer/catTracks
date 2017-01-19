@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"github.com/rotblauer/catTracks/catTracks"
+	"log"
 	"net/http"
 	"strconv"
 )
@@ -12,13 +13,26 @@ import (
 //Toodle to do , Command line port arg, might mover er to main
 func main() {
 	var porty int
+	var clearDBTestes bool
+	var testesRun bool
+
 	flag.IntVar(&porty, "port", 8080, "port to serve and protect")
+	flag.BoolVar(&clearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") //TODO clear only certain values, ie prefixed with testes based on testesRun
+	flag.BoolVar(&testesRun, "testes", false, "testes run prefixes name with testes-")              //hope that's your phone's name
 	flag.Parse()
 	// Open Bolt DB.
 	// catTracks.InitBoltDB()
 	if bolterr := catTracks.InitBoltDB(); bolterr == nil {
 		defer catTracks.GetDB().Close()
 	}
+	if clearDBTestes {
+		e := catTracks.DeleteTestes()
+		if e != nil {
+			log.Println(e)
+		}
+	}
+	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
+
 	router := catTracks.NewRouter()
 	//File server merveres
 	ass := http.StripPrefix("/ass/", http.FileServer(http.Dir("./ass/")))
