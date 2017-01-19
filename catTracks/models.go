@@ -125,7 +125,6 @@ func DeleteTestes() error {
 func getAllPoints() ([]*trackPoint.TrackPoint, error) {
 
 	var err error
-	// var trackPoints trackPoint.TrackPoints
 	var coords []simpleline.Point
 
 	err = GetDB().View(func(tx *bolt.Tx) error {
@@ -135,50 +134,37 @@ func getAllPoints() ([]*trackPoint.TrackPoint, error) {
 		if b.Stats().KeyN > 0 {
 			c := b.Cursor()
 			for trackPointkey, trackPointval := c.First(); trackPointkey != nil; trackPointkey, trackPointval = c.Next() {
-				//only if trackPoint is in given trackPoints key set (we don't want all trackPoints just feeded times)
-				//but if no ids given, return em all
 				var trackPoint trackPoint.TrackPoint
 				json.Unmarshal(trackPointval, &trackPoint)
-				// trackPoints = append(trackPoints, trackPoint)
-
-				//rdp
 				coords = append(coords, &trackPoint) //filler up
-
 			}
-
 		} else {
-			//cuz its not an error if no trackPoints
-			return nil
+			return nil //cuz its not an error if no trackPoints
 		}
 		return err
 	})
 
-	originalCount := len(coords)
-
 	//simpleify line
 	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
-	results, sErr := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true) //0.001 bring a 3000pt run to prox 300 (cuz scale is lat and lng)
-	if sErr != nil {
-		fmt.Println("Errrrrrr", sErr)
+	originalCount := len(coords)
+	results, err := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
+	if err != nil {
+		fmt.Println("Errrrrrr", err)
+		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
 	}
-
 	rdpCount := len(results)
 
-	//dis shit is fsck but fsckit
-	//truncater
-	// trackPoints = trackPoints[len(trackPoints)-3:] // lets go crazy with 3
 	var tps trackPoint.TPs
-
 	for _, insult := range results {
-
-		// fmt.Println(insult)
 		o, ok := insult.(*trackPoint.TrackPoint)
 		if !ok {
 			fmt.Println("shittt notok")
 		}
 		tps = append(tps, o)
 	}
+
 	fmt.Println("Serving points. Original count was ", originalCount, " and post-RDP is ", rdpCount)
+
 	sort.Sort(tps)
 
 	return tps, err
