@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/deet/simpleline"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
 	"strings"
@@ -125,6 +126,7 @@ func getAllPoints() (trackPoint.TrackPoints, error) {
 
 	var err error
 	var trackPoints trackPoint.TrackPoints
+	var coords []simpleline.Point
 
 	err = GetDB().View(func(tx *bolt.Tx) error {
 		var err error
@@ -138,7 +140,12 @@ func getAllPoints() (trackPoint.TrackPoints, error) {
 				var trackPoint trackPoint.TrackPoint
 				json.Unmarshal(trackPointval, &trackPoint)
 				trackPoints = append(trackPoints, trackPoint)
+
+				//rdp
+				coords = append(coords, &trackPoint) //filler up
+
 			}
+
 		} else {
 			//cuz its not an error if no trackPoints
 			return nil
@@ -146,5 +153,17 @@ func getAllPoints() (trackPoint.TrackPoints, error) {
 		return err
 	})
 	sort.Sort(trackPoints) //implements interfacing facing methods from trackpoints
+
+	//simpleify line
+	//the slow way //coords are the simple points
+	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
+	results, sErr := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true)
+	if sErr != nil {
+		fmt.Println("Errrrrrr", sErr)
+	}
+	for _, insult := range results {
+		fmt.Println(insult)
+	}
+
 	return trackPoints, err
 }
