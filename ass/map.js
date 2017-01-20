@@ -15,7 +15,7 @@ var path = d3.geoPath()
     .projection(projection);
 
 var zoom = d3.zoom()
-    .scaleExtent([3, 300])
+    .scaleExtent([1, 1000])
     .on("zoom", zoomed);
 
 var circles;
@@ -27,12 +27,12 @@ function zoomed() {
     var transform = d3.event.transform;
     svg.selectAll("g").attr("transform", transform);
 
-  projection.translate(transform)
-    .scale(transform);
+    projection.translate(transform)
+        .scale(transform);
 
-  circles.attr("r", function (d) {
-    return 1/transform.k;
-  });
+    circles.attr("r", function(d) {
+        return 1 / transform.k;
+    });
 }
 
 function resetted() {
@@ -77,32 +77,56 @@ function getPoints(eps) {
 }
 
 function drawCircles(points) {
-  // // add circles to svg //http://bl.ocks.org/phil-pedruco/7745589
-  circles = svg.append("g")
-    .selectAll("circle")
-    .data(points)
-    .enter()
-    .append("circle")
-    .attr("transform", function(d) {
-      return "translate(" + projection([d.long, d.lat]) + ")";
-    })
-    .attr("fill", function(d) {
-      if (d.name === "Big Papa") {
-        return "red";
-      }
-      return "blue";
-    })
-    .attr("r", 1);
+    // // add circles to svg //http://bl.ocks.org/phil-pedruco/7745589
+    circles = svg.append("g")
+        .selectAll("circle")
+        .data(points)
+        .enter()
+        .append("circle")
+        .attr("transform", function(d) {
+            return "translate(" + projection([d.long, d.lat]) + ")";
+        })
+        .attr("fill", function(d) {
+            if (d.name === "Big Papa") {
+                return "red";
+            }
+            return "blue";
+        })
+        .attr("r", 1);
 }
+
+function getFitBounds(points) {
+
+    var bounds = path.bounds(points),
+        dx = bounds[1][0] - bounds[0][0],
+        dy = bounds[1][1] - bounds[0][1],
+        x = (bounds[0][0] + bounds[1][0]) / 2,
+        y = (bounds[0][1] + bounds[1][1]) / 2,
+        scale = .9 / Math.max(dx / width, dy / height),
+        translate = [width / 2 - scale * x, height / 2 - scale * y];
+
+    return {
+        t: translate,
+        s: scale
+    };
+}
+
 function gotPoints(err, points) {
     if (err) throw err;
 
-  drawCircles(points);
+    drawCircles(points);
+
+  // var b = getFitBounds(points);
+  // svg.selectAll("g").transition()
+  //   .duration(750)
+  //   .style("stroke-width", 1.5 / b.s + "px")
+  //   .attr("transform", "translate(" + b.t + ")scale(" + b.s + ")");
 
     // add a rectangle to see the bound of the svg
-    svg.append("rect").attr('width', width).attr('height', height)
+    var rect = svg.append("rect").attr('width', width).attr('height', height)
         .style('fill', 'none').style('pointer-events', 'all')
-        .call(zoom);
+          .call(zoom);
+
 }
 
 getMap();
