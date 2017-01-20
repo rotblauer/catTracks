@@ -122,7 +122,7 @@ func DeleteTestes() error {
 //get everthing in the db... can do filtering some other day
 
 //TODO make queryable ala which cat when
-func getAllPoints(epsilon float64  ) ([]*trackPoint.TrackPoint, error) {
+func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
 
 	var err error
 	var coords []simpleline.Point
@@ -133,6 +133,8 @@ func getAllPoints(epsilon float64  ) ([]*trackPoint.TrackPoint, error) {
 
 		// can swap out for- eacher if we figure indexing, or even want it
 		b.ForEach(func(trackPointKey, trackPointVal []byte) error {
+			//query can store other filter rers
+
 			var trackPointCurrent trackPoint.TrackPoint
 			json.Unmarshal(trackPointVal, &trackPointCurrent)
 			coords = append(coords, &trackPointCurrent) //filler up
@@ -145,7 +147,7 @@ func getAllPoints(epsilon float64  ) ([]*trackPoint.TrackPoint, error) {
 	//simpleify line
 	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
 	originalCount := len(coords)
-	results, err := simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
+	results, err := simpleline.RDP(coords, query.Epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
 	if err != nil {
 		fmt.Println("Errrrrrr", err)
 		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...

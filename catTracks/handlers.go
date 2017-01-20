@@ -27,10 +27,38 @@ type Data struct {
 	TrackPointsJSON string
 }
 
+var initEpsi = 0.001
+
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// catQ := r.FormValue("cat") //catQ is "" if not there //turn off queryable fur meow
-	allPoints, e := getAllPoints(0.001)
+	w, data := getData(w, query{Epsilon: initEpsi})
+	fmt.Println("Done processing results")
+	templates.Funcs(funcMap)
+	templates.ExecuteTemplate(w, "base", data)
+}
+
+func receiveAjax(w http.ResponseWriter, r *http.Request) {
+	var query query
+	err := json.NewDecoder(r.Body).Decode(&query)
+	if err != nil {
+		fmt.Println(err.Error())
+		http.Error(w, err.Error()+"HDID", 400)
+		return
+	}
+	pointsJSON, e := json.Marshal(query)
+
+	if e != nil {
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+
+	fmt.Println("Receive ajax post data string ")
+	w.Write([]byte("<h2>" + string(pointsJSON) + "<h2>"))
+
+}
+
+func getData(w http.ResponseWriter, query query) (http.ResponseWriter, Data) {
+	allPoints, e := getAllPoints(query)
 	if e != nil {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
@@ -39,9 +67,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
 	data := Data{TrackPoints: allPoints, TrackPointsJSON: string(pointsJSON)}
-	fmt.Println("Done processing results")
-	templates.Funcs(funcMap)
-	templates.ExecuteTemplate(w, "base", data)
+	return w, data
 }
 
 //TODO populate a population of points

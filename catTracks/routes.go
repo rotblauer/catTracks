@@ -30,4 +30,11 @@ var routes = Routes{
 		"/upload",
 		uploadCSV,
 	},
+
+	Route{
+		"Ajaxer",
+		"POST",
+		"/receive",
+		receiveAjax,
+	},
 }

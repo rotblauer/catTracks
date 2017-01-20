@@ -13,6 +13,23 @@
         <div class="col-lg-4 col-lg-offset-4">
           {{template "poster" .}}
         </div>
+
+
+
+        <div id='result'><h3>before</h3></div><br><br>
+
+        <script>
+            $.ajax({
+                url: 'receive',
+                type: 'post',
+                dataType: 'html',
+                data : JSON.stringify({ "Epsilon": 0.001 }),
+                success : function(data) {
+                    alert('ajax data posted');
+                    $('#result').html(data);
+                },
+            });
+        </script>
     </div>
 </div>
 
