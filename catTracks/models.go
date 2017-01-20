@@ -131,7 +131,7 @@ func DeleteSpain() error {
 				fmt.Println("Error deleting testes.")
 				return e
 			}
-			if tp.Lat < 12.0 && tp.Lat > -10.0 {
+			if tp.Lng < 12.0 && tp.Lng > -10.0 {
 				b.Delete(k)
 			}
 		}
