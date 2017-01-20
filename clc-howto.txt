@@ -3,3 +3,4 @@ ndjson-reduce 'p.features.push(d), p' '{type: FeatureCollection, features: []}' 
 npm install -g topojson
 geo2topo -n tracts=gis.osm_roads_free-geometry.ndjson > berlin-geo-topo.json
 toposimplify -p 1 -f < berlin-geo-topo.json > berlin-geo-topo-simple.json
+open http://download.geofabrik.de/europe/germany/berlin.html
