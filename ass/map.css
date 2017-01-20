@@ -4,18 +4,24 @@
 }
 
 .land {
-    fill: white;
-    stroke: gainsboro;
+    fill: none;
+    /* stroke: gainsboro; */
 }
 .overlay {
   fill: none;
   pointer-events: all;
 }
 
-/* .boundary { */
-/*     fill: none; */
-/*     /\* stroke: antiquewhite; *\/ */
+/* circle { */
+/*     /\* fill: red; *\/ */
+/*     r: 1px; */
 /* } */
+
+.boundary {
+    fill: whitesmoke;
+    stroke: white;
+    stroke-width: 0.2px;
+}
 
 button {
   position: absolute;

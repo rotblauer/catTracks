@@ -15,7 +15,7 @@ var path = d3.geoPath()
     .projection(projection);
 
 var zoom = d3.zoom()
-    .scaleExtent([1, 8])
+    .scaleExtent([3, 300])
     .on("zoom", zoomed);
 
 var circles;
@@ -26,39 +26,20 @@ d3.select("button")
 function zoomed() {
     var transform = d3.event.transform;
     svg.selectAll("g").attr("transform", transform);
-  // circles.attr("transform", transform);
-    // circles.attr("r", "1px");
-    // return "translate(" + t[0] +","+ t[1] + ")scale("+1/scale+")";
 
-    // circles.attr("transform", function(d) {
-    //   var p = projection([d.long, d.lat]);
-    //   // var t = d3.select(this).attr("transform"); //maintain aold marker translate
-    //   console.log(d);
-    //   console.log(p);
-    //     // return "translate(" + transform.applyX(t[0]) +
-    //         // "," + transform.applyY(t[1]) + ")";
-    //     // return "translate(" + transform.applyX(d[0]) + "," + transform.applyY(d[1]) + ")";
-    //     // var t = d3.transform(d3.select(this).)
-    // });
+  projection.translate(transform)
+    .scale(transform);
 
-    // circles.attr("transform", function (d) {
-    //   // var t = d3.transform(d3.select(this).attr("transform")).translate;
-    //   // var p = projection([transform.applyY( d.long ), transform.applyX( d.lat )]);
-    //   // return "translate(" + p[0] + "," + p[1] + ")";
-    //   // return "translate(" + transform.applyX(p[1]) + "," + transform.applyY(p[0]) + ")";
-    //   // return "translate(" + transform.applyX(t[0]) + "," + transform.applyY(t[1]) + ")";
-    //   // return "translate( " + p  +  ")";
-    // });
-
+  circles.attr("r", function (d) {
+    return 1/transform.k;
+  });
 }
 
 function resetted() {
     svg
         .transition()
         .duration(450)
-        .call(zoom.transform, d3.zoomIdentity)
-        .scale(width / 2 / Math.PI)
-        .translate([width / 2, height / 2]);
+        .call(zoom.transform, d3.zoomIdentity);
 }
 
 function gotMap(error, world) {
@@ -71,13 +52,12 @@ function gotMap(error, world) {
         .enter().append("path")
         .attr("d", path);
 
-    // svg.append("g")
-    //     .attr("class", "boundary")
-    //     .selectAll("boundary")
-    //     .data([topojson.feature(world, world.objects.countries)])
-    //     .enter().append("path")
-    //     .attr("d", path);
-
+    svg.append("g")
+        .attr("class", "boundary")
+        .selectAll("boundary")
+        .data([topojson.feature(world, world.objects.countries)])
+        .enter().append("path")
+        .attr("d", path);
 
     //it's ugly to put this here but until i janker around wif $.Deferred()
     //that's what i'm goin to do
@@ -96,45 +76,29 @@ function getPoints(eps) {
     return d3.json(u, gotPoints);
 }
 
+function drawCircles(points) {
+  // // add circles to svg //http://bl.ocks.org/phil-pedruco/7745589
+  circles = svg.append("g")
+    .selectAll("circle")
+    .data(points)
+    .enter()
+    .append("circle")
+    .attr("transform", function(d) {
+      return "translate(" + projection([d.long, d.lat]) + ")";
+    })
+    .attr("fill", function(d) {
+      if (d.name === "Big Papa") {
+        return "red";
+      }
+      return "blue";
+    })
+    .attr("r", 1);
+}
 function gotPoints(err, points) {
     if (err) throw err;
-    console.log("received " + points.length + " points from ajaxery");
 
-    console.log("the first ten look like dis ", points.slice(0, 10));
-    console.log("projected:");
-    for (i in points.slice(0, 10)) {
-        var p = points[i];
-        var c = [p.lat, p.long];
-        console.log(projection(c));
-    }
+  drawCircles(points);
 
-    // // add circles to svg //http://bl.ocks.org/phil-pedruco/7745589
-    circles = svg.append("g")
-        .selectAll("circle")
-        .data(points)
-        .enter()
-        .append("circle")
-
-    // // http://gis.stackexchange.com/questions/34769/how-can-i-render-latitude-longitude-coordinates-on-a-map-with-d3
-    // // ooohhhhh lng,lat, not backbackwards ?
-    .attr("transform", function(d) {
-            return "translate(" + projection([d.long, d.lat]) + ")";
-        })
-        // .attr("transform", transform)
-
-    .attr("r", "1px")
-        .attr("fill", "red");
-
-    // //http://stackoverflow.com/questions/14492284/center-a-map-in-d3-given-a-geojson-object
-    // Compute the bounds of a feature of interest, then derive scale & translate.
-    var b = path.bounds(points),
-        s = .95 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height),
-        t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
-
-    // Update the projection to use computed scale & translate.
-    projection
-        .scale(s)
-        .translate(t);
     // add a rectangle to see the bound of the svg
     svg.append("rect").attr('width', width).attr('height', height)
         .style('fill', 'none').style('pointer-events', 'all')
@@ -142,14 +106,3 @@ function gotPoints(err, points) {
 }
 
 getMap();
-
-//try to get us states too for more microcosmic
-// d3.json("https://d3js.org/us-10m.v1.json", function (err, us) {
-//   if (err) throw err;
-//   // svg.append("g")
-//   //   .attr("class", "boundary")
-//   //   .selectAll("boundary")
-//   //   .data([topojson.feature(us, us.objects.states)])
-//   //   .enter().append("path")
-//   //   .attr("d", path);
-// });
