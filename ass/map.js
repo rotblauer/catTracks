@@ -18,19 +18,39 @@ var zoom = d3.zoom()
     .scaleExtent([1, 8])
     .on("zoom", zoomed);
 
+var circles;
+
 d3.select("button")
     .on("click", resetted);
 
-
-svg.call(zoom);
-
 function zoomed() {
-    svg.selectAll("g").attr("transform", d3.event.transform);
+    var transform = d3.event.transform;
+    svg.selectAll("g").attr("transform", transform);
+    // circles.attr("r", "1px");
+    // var t = d3.transform(d3.select(this).attr("transform")).translate;//maintain aold marker translate
+    // return "translate(" + t[0] +","+ t[1] + ")scale("+1/scale+")";
+    //circles.attr("transform", function(d) {
+    // var p = projection([d.long, d.lat]);
+    // return "translate(" + transform.applyX(p[0]) +
+    // "," + transform.applyY(p[1]) + ")";
+    // return "translate(" + transform.applyX(d[0]) + "," + transform.applyY(d[1]) + ")";
+    // var t = d3.transform(d3.select(this).)
+    // });
+
+    // circles.attr("transform", function (d) {
+    //   // var t = d3.transform(d3.select(this).attr("transform")).translate;
+    //   // var p = projection([transform.applyY( d.long ), transform.applyX( d.lat )]);
+    //   // return "translate(" + p[0] + "," + p[1] + ")";
+    //   // return "translate(" + transform.applyX(p[1]) + "," + transform.applyY(p[0]) + ")";
+    //   // return "translate(" + transform.applyX(t[0]) + "," + transform.applyY(t[1]) + ")";
+    //   // return "translate( " + p  +  ")";
+    // });
+
 }
 
 function resetted() {
     svg.transition()
-        .duration(750)
+        .duration(450)
         .call(zoom.transform, d3.zoomIdentity);
 }
 
@@ -58,7 +78,7 @@ function gotMap(error, world) {
 }
 
 function getMap() {
-    return d3.json("https://d3js.org/world-50m.v1.json", gotMap);
+    return d3.json("https://d3js.org/world-110m.v1.json", gotMap); //50m
 }
 
 function getPoints(eps) {
@@ -82,54 +102,36 @@ function gotPoints(err, points) {
     }
 
     // // add circles to svg //http://bl.ocks.org/phil-pedruco/7745589
-    svg.append("g")
+    circles = svg.append("g")
         .selectAll("circle")
         .data(points)
         .enter()
         .append("circle")
 
-    // // ?? this puts in wrong spot //...
-    //     .attr("cx", function (d) {
-    //       var c = [d.lat, d.long];
-    //       return projection(c)[0];
-    //     })
-    //     .attr("cy", function (d) {
-    //       var c = [d.lat, d.long];
-    //       return projection(c)[1];
-    //     })
-
-
-    // http://gis.stackexchange.com/questions/34769/how-can-i-render-latitude-longitude-coordinates-on-a-map-with-d3
-    // ooohhhhh lng,lat, not backbackwards ?
+    // // http://gis.stackexchange.com/questions/34769/how-can-i-render-latitude-longitude-coordinates-on-a-map-with-d3
+    // // ooohhhhh lng,lat, not backbackwards ?
     .attr("transform", function(d) {
-        return "translate(" + projection([d.long, d.lat]) + ")";
-    })
+            return "translate(" + projection([d.long, d.lat]) + ")";
+        })
+        // .attr("transform", transform)
 
     .attr("r", "1px")
         .attr("fill", "red");
 
-    // create a first guess for the projection
-  var center = d3.geoCentroid(points);
-    var scale = 150;
-    var offset = [width / 2, height / 2];
-    // using the path determine the bounds of the current map and use 
-    // these to determine better values for the scale and translation
-    var bounds = path.bounds(points);
-    var hscale = scale * width / (bounds[1][0] - bounds[0][0]);
-    var vscale = scale * height / (bounds[1][1] - bounds[0][1]);
-    var scale = (hscale < vscale) ? hscale : vscale;
-    var offset = [width - (bounds[0][0] + bounds[1][0]) / 2,
-        height - (bounds[0][1] + bounds[1][1]) / 2
-    ];
+    // //http://stackoverflow.com/questions/14492284/center-a-map-in-d3-given-a-geojson-object
+    // Compute the bounds of a feature of interest, then derive scale & translate.
+    var b = path.bounds(points),
+        s = .95 / Math.max((b[1][0] - b[0][0]) / width, (b[1][1] - b[0][1]) / height),
+        t = [(width - s * (b[1][0] + b[0][0])) / 2, (height - s * (b[1][1] + b[0][1])) / 2];
 
-    // new projection
-    projection = d3.geoMercator().center(center)
-        .scale(scale).translate(offset);
-    path = path.projection(projection);
-
+    // Update the projection to use computed scale & translate.
+    projection
+        .scale(s)
+        .translate(t);
     // add a rectangle to see the bound of the svg
     svg.append("rect").attr('width', width).attr('height', height)
-        .style('stroke', 'black').style('fill', 'none');
+        .style('fill', 'none').style('pointer-events', 'all')
+        .call(zoom);
 }
 
 getMap();

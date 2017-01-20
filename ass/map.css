@@ -11,9 +11,10 @@
   fill: none;
   pointer-events: all;
 }
+
 /* .boundary { */
 /*     fill: none; */
-/*     stroke: antiquewhite; */
+/*     /\* stroke: antiquewhite; *\/ */
 /* } */
 
 button {
