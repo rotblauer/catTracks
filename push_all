@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+env GOOS=linux go build -o linux.main main.go
+./push_front
+rsync -avz -L --progress -h\
+ ./linux.main freya:~/track.areteh.co/
