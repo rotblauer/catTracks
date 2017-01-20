@@ -26,15 +26,19 @@ d3.select("button")
 function zoomed() {
     var transform = d3.event.transform;
     svg.selectAll("g").attr("transform", transform);
+  // circles.attr("transform", transform);
     // circles.attr("r", "1px");
-    // var t = d3.transform(d3.select(this).attr("transform")).translate;//maintain aold marker translate
     // return "translate(" + t[0] +","+ t[1] + ")scale("+1/scale+")";
-    //circles.attr("transform", function(d) {
-    // var p = projection([d.long, d.lat]);
-    // return "translate(" + transform.applyX(p[0]) +
-    // "," + transform.applyY(p[1]) + ")";
-    // return "translate(" + transform.applyX(d[0]) + "," + transform.applyY(d[1]) + ")";
-    // var t = d3.transform(d3.select(this).)
+
+    // circles.attr("transform", function(d) {
+    //   var p = projection([d.long, d.lat]);
+    //   // var t = d3.select(this).attr("transform"); //maintain aold marker translate
+    //   console.log(d);
+    //   console.log(p);
+    //     // return "translate(" + transform.applyX(t[0]) +
+    //         // "," + transform.applyY(t[1]) + ")";
+    //     // return "translate(" + transform.applyX(d[0]) + "," + transform.applyY(d[1]) + ")";
+    //     // var t = d3.transform(d3.select(this).)
     // });
 
     // circles.attr("transform", function (d) {
@@ -49,9 +53,12 @@ function zoomed() {
 }
 
 function resetted() {
-    svg.transition()
+    svg
+        .transition()
         .duration(450)
-        .call(zoom.transform, d3.zoomIdentity);
+        .call(zoom.transform, d3.zoomIdentity)
+        .scale(width / 2 / Math.PI)
+        .translate([width / 2, height / 2]);
 }
 
 function gotMap(error, world) {
