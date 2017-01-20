@@ -37,4 +37,16 @@ var routes = Routes{
 		"/receive",
 		receiveAjax,
 	},
+	Route{
+		"Map",
+		"GET",
+		"/map",
+		getMap,
+	},
+	Route{
+		"GetPointsJSON",
+		"GET",
+		"/v1",
+		getPointsJSON,
+	},
 }

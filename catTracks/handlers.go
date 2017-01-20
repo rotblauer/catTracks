@@ -34,6 +34,29 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "base", nil)
 }
 
+func getPointsJSON(w http.ResponseWriter, r *http.Request) {
+	var query query
+	q := r.URL.Query()
+	e := q.Get("epsilon")
+	if e == "" {
+		e = "0.001"
+	}
+	eps, er := strconv.ParseFloat(e, 64)
+	if er != nil {
+		fmt.Println("shit parsefloat eps")
+		query.Epsilon = 0.001
+	} else {
+		query.Epsilon = eps
+	}
+
+	data, eq := getData(query)
+	if eq != nil {
+		http.Error(w, eq.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Receive ajax get data string ")
+	w.Write([]byte(data))
+}
+
 func receiveAjax(w http.ResponseWriter, r *http.Request) {
 	var query query
 	err := json.NewDecoder(r.Body).Decode(&query)
@@ -52,18 +75,21 @@ func receiveAjax(w http.ResponseWriter, r *http.Request) {
 
 }
 
+func getMap(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "map", nil)
+}
 
-func getData( query query) ( []byte,error) {
+func getData(query query) ([]byte, error) {
 	var data []byte
 	allPoints, e := getAllPoints(query)
 	if e != nil {
-		return  data,e
+		return data, e
 	}
 	data, err := json.Marshal(allPoints)
 	if err != nil {
-		return  data,err
+		return data, err
 	}
-	return data ,nil
+	return data, nil
 }
 
 //TODO populate a population of points
