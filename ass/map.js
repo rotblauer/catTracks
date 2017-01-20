@@ -15,20 +15,17 @@ var path = d3.geoPath()
     .projection(projection);
 
 var zoom = d3.zoom()
-    .scaleExtent([1, 40])
-    .translateExtent([
-        [-100, -100],
-        [width + 90, height + 100]
-    ])
+    .scaleExtent([1, 8])
     .on("zoom", zoomed);
 
 d3.select("button")
-  .on("click", resetted);
+    .on("click", resetted);
+
 
 svg.call(zoom);
 
 function zoomed() {
-  svg.selectAll("g").attr("transform", d3.event.transform);
+    svg.selectAll("g").attr("transform", d3.event.transform);
 }
 
 function resetted() {
@@ -111,6 +108,28 @@ function gotPoints(err, points) {
     .attr("r", "1px")
         .attr("fill", "red");
 
+    // create a first guess for the projection
+  var center = d3.geoCentroid(points);
+    var scale = 150;
+    var offset = [width / 2, height / 2];
+    // using the path determine the bounds of the current map and use 
+    // these to determine better values for the scale and translation
+    var bounds = path.bounds(points);
+    var hscale = scale * width / (bounds[1][0] - bounds[0][0]);
+    var vscale = scale * height / (bounds[1][1] - bounds[0][1]);
+    var scale = (hscale < vscale) ? hscale : vscale;
+    var offset = [width - (bounds[0][0] + bounds[1][0]) / 2,
+        height - (bounds[0][1] + bounds[1][1]) / 2
+    ];
+
+    // new projection
+    projection = d3.geoMercator().center(center)
+        .scale(scale).translate(offset);
+    path = path.projection(projection);
+
+    // add a rectangle to see the bound of the svg
+    svg.append("rect").attr('width', width).attr('height', height)
+        .style('stroke', 'black').style('fill', 'none');
 }
 
 getMap();
