@@ -89,8 +89,10 @@ function drawCircles(points) {
         .attr("fill", function(d) {
             if (d.name === "Big Papa") {
                 return "red";
+            } else if (d.name === "RyePhone") {
+              return "blue";
             }
-            return "blue";
+            return "green";
         })
         .attr("r", 1);
 }
