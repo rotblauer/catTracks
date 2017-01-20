@@ -12,30 +12,26 @@ import (
 	"time"
 )
 
-var funcMap = template.FuncMap{
-	"eq": func(a, b interface{}) bool {
-		return a == b
-	},
-}
+//var funcMap = template.FuncMap{
+//	"eq": func(a, b interface{}) bool {
+//		return a == b
+//	},
+//}
 
 // the html stuff of this thing
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
-//For passing to the template
-type Data struct {
-	TrackPoints     []*trackPoint.TrackPoint
-	TrackPointsJSON string
-}
-
-var initEpsi = 0.001
+////For passing to the template , might not need to pass?
+//type Data struct {
+//	TrackPoints     []*trackPoint.TrackPoint
+//	TrackPointsJSON []byte
+//}
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-	// catQ := r.FormValue("cat") //catQ is "" if not there //turn off queryable fur meow
-	w, data := getData(w, query{Epsilon: initEpsi})
-	fmt.Println("Done processing results")
-	templates.Funcs(funcMap)
-	templates.ExecuteTemplate(w, "base", data)
+
+	//templates.Funcs(funcMap)
+	templates.ExecuteTemplate(w, "base", nil)
 }
 
 func receiveAjax(w http.ResponseWriter, r *http.Request) {
@@ -43,31 +39,31 @@ func receiveAjax(w http.ResponseWriter, r *http.Request) {
 	err := json.NewDecoder(r.Body).Decode(&query)
 	if err != nil {
 		fmt.Println(err.Error())
-		http.Error(w, err.Error()+"HDID", 400)
+		http.Error(w, err.Error(), 400)
 		return
 	}
-	pointsJSON, e := json.Marshal(query)
+	data, e := getData(query)
 
 	if e != nil {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
-
 	fmt.Println("Receive ajax post data string ")
-	w.Write([]byte("<h2>" + string(pointsJSON) + "<h2>"))
+	w.Write([]byte(data))
 
 }
 
-func getData(w http.ResponseWriter, query query) (http.ResponseWriter, Data) {
+
+func getData( query query) ( []byte,error) {
+	var data []byte
 	allPoints, e := getAllPoints(query)
 	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
+		return  data,e
 	}
-	pointsJSON, e := json.Marshal(allPoints)
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
+	data, err := json.Marshal(allPoints)
+	if err != nil {
+		return  data,err
 	}
-	data := Data{TrackPoints: allPoints, TrackPointsJSON: string(pointsJSON)}
-	return w, data
+	return data ,nil
 }
 
 //TODO populate a population of points
