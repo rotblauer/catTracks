@@ -30,7 +30,7 @@ type Data struct {
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
 	// catQ := r.FormValue("cat") //catQ is "" if not there //turn off queryable fur meow
-	allPoints, e := getAllPoints()
+	allPoints, e := getAllPoints(0.001)
 	if e != nil {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
