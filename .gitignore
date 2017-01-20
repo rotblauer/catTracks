@@ -34,3 +34,5 @@ bower_components/*
 *.db
 *.main
 
+/ass/berlin1
+/ass/berlin2

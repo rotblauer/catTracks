@@ -61,9 +61,25 @@ function gotMap(error, world) {
 
     //it's ugly to put this here but until i janker around wif $.Deferred()
     //that's what i'm goin to do
-    getPoints();
+  getBerlin();
 }
 
+function gotBerlin(err, berlin) {
+  if (err) throw err;
+
+  svg.append("g")
+    .attr("class", "road")
+    .selectAll("road")
+    .data([topojson.feature(berlin, berlin.objects.tracts)])
+    .enter().append("path")
+    .attr("d", path);
+
+  //noncallback
+  getPoints();
+}
+function getBerlin() {
+  return d3.json("/ass/berlin2/berlin-geo-topo-simple-quant.json", gotBerlin);
+}
 function getMap() {
     return d3.json("https://d3js.org/world-110m.v1.json", gotMap); //50m
 }
