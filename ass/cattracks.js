@@ -77,14 +77,8 @@ function postPoint () {
     initMap();
   }
 
-});
-
-var bounds; // google LatLngBounds
-var namePositions = {}; //holds googly lat/long
-var markers = []; //hold googly markers for clustering
-var map; //to become a googlemap
-
-$('input[type="range"]').rangeslider({
+  console.log("RAGNER RAGNER -- ", $("input#daRslider").length);
+  $('input#daRslider').rangeslider({
 
     // Feature detection the default is `true`.
     // Set this to `false` if you want to use
@@ -100,16 +94,38 @@ $('input[type="range"]').rangeslider({
     fillClass: 'rangeslider__fill',
     handleClass: 'rangeslider__handle',
 
+    //TODO its not calling any of these callbacks. idk.
     // Callback function
-    onInit: function() {},
+    onInit: function() {
+      console.log('ranger inited');
+    },
 
     // Callback function
-    onSlide: function(position, value) {},
+    onSlide: function(position, value) {
+      console.log('ranger sliding"');
+    },
 
     // Callback function
-    onSlideEnd: function(position, value) {}
+    onSlideEnd: function(position, value) {
+      console.log('slide ended. doing stuff');
+      $("#epsilonvalue").text(value);
+      // remove all points...
+      //TODO
+      // getData for value as eps
+      getData(map, value);
+      //--> and gD does do that, namely populate points from returned q
+    }
+  });
+
 });
 
+var bounds; // google LatLngBounds
+var namePositions = {}; //holds googly lat/long
+var markers = []; //hold googly markers for clustering
+var map; //to become a googlemap
+
+
+//called from googler igniter
 function initMap() {
   namePositions = {};
   markers = [];
@@ -144,13 +160,13 @@ function initNamedPositions(uniqueNames) {
 }
 
 function getData(map,epsilon){
-
    return $.ajax({
-        url: 'receive',
-        type: 'POST',
+     url: 'v1?epsilon=' + parseFloat(epsilon).toString(),
+        type: 'GET',
         dataType: 'json',
-        data : JSON.stringify({ "Epsilon": epsilon}),
+        // data : JSON.stringify({ "Epsilon": epsilon}),
         success: function (data) {
+          alert("got data" + JSON.stringify(data));
            addTrackPointsToMap(map,data);
        }
     });
