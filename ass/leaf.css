@@ -1,0 +1,28 @@
+body {
+    font-size: 12px;
+}
+
+text {
+    fill: white;
+}
+
+svg {
+    position: relative;
+}
+
+path {
+    fill: #ffd800;
+    fill-opacity: .2;
+}
+
+path:hover {
+    fill: brown;
+    fill-opacity: .7;
+}
+
+#map {
+    position: absolute;
+    height: 100%;
+    width: 100%;
+    background-color: #333;
+}
