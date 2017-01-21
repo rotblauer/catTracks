@@ -145,7 +145,9 @@ d3.json(u, function(error, incidents) {
     var tile_ex = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"; //attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     var os_tile_bw = "http://korona.geog.uni-heidelberg.de/tiles/roadsg/x={x}&y={y}&z={z}";
     // L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png").addTo(leafletMap);
-    L.tileLayer(os_tile_bw).addTo(leafletMap);
+    L.tileLayer(os_tile_bw, {
+        maxZoom: 19
+    }).addTo(leafletMap);
 
     var svg = d3.select(leafletMap.getPanes().overlayPane).append("svg");
     var g = svg.append("g").attr("class", "leaflet-zoom-hide");
@@ -170,17 +172,21 @@ d3.json(u, function(error, incidents) {
     function fitMapToAllPoints() {
         var arrayOfLatLngs = [];
         geoData.features.map(function(d, i) {
-          //the world is upsidedown
-          arrayOfLatLngs.push([d.geometry.coordinates[1], d.geometry.coordinates[0]]);
+            //the world is upsidedown
+            arrayOfLatLngs.push([d.geometry.coordinates[1], d.geometry.coordinates[0]]);
         });
-        console.log("aoll", arrayOfLatLngs);
+        // console.log("aoll", arrayOfLatLngs);
         var bs = new L.LatLngBounds(arrayOfLatLngs);
-        console.log("bs", bs);
-      leafletMap.fitBounds([bs.getNorthWest(), bs.getSouthEast()]);
-      leafletMap.panTo(bs.getCenter());
-      mapmove();
+        // console.log("bs", bs);
+        leafletMap.fitBounds([bs.getNorthWest(), bs.getSouthEast()]);
+        leafletMap.panTo(bs.getCenter());
+        mapmove();
+
+
     }
     fitMapToAllPoints();
+    var resetViewButton = document.getElementById("resetView");
+    resetViewButton.onclick = fitMapToAllPoints;
 
     function getZoomScale() {
         var mapWidth = leafletMap.getSize().x;
@@ -239,20 +245,15 @@ d3.json(u, function(error, incidents) {
 
     }
 
-    var counter = 0;
 
     function mapmove(e) {
         var mapBounds = leafletMap.getBounds();
-        console.log('mapbounds', mapBounds);
+        // console.log('mapbounds', mapBounds);
 
         var subset = search(qtree, mapBounds.getWest(), mapBounds.getSouth(), mapBounds.getEast(), mapBounds.getNorth());
-        console.log("subset.length: " + subset.length);
+        console.log("subset length: " + subset.length);
 
         redrawSubset(subset);
-        if (counter === 0) {
-            leafletMap.fit
-        }
-        counter++;
     }
 
 });
