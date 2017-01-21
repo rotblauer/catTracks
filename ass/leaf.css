@@ -21,6 +21,7 @@ path {
     /* fill: #ffd800; */
     /* fill: blue; */
     fill-opacity: .2;
+    z-index: 10; // so it doesn't get covere with tiles
 }
 
 path:hover {
