@@ -130,11 +130,11 @@ d3.json(u, function(error, incidents) {
     //-------------------------------------------------------------------------------------
     MercatorXofLongitude = function(lon) {
         return lon * 20037508.34 / 180;
-    }
+    };
 
     MercatorYofLatitude = function(lat) {
         return (Math.log(Math.tan((90 + lat) * Math.PI / 360)) / (Math.PI / 180)) * 20037508.34 / 180;
-    }
+    };
     var cscale = d3.scale.linear().domain([1, 3]).range(["#ff0000", "#ff6a00", "#ffd800", "#b6ff00", "#00ffff", "#0094ff"]); //"#00FF00","#FFA500"
 
     var leafletMap = L.map('map').setView([13.4, 52.5], 2);
