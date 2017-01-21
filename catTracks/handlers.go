@@ -78,6 +78,9 @@ func receiveAjax(w http.ResponseWriter, r *http.Request) {
 func getMap(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "map", nil)
 }
+func getLeaf(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "leaf", nil)
+}
 
 func getData(query query) ([]byte, error) {
 	var data []byte

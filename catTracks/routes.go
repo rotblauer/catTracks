@@ -49,4 +49,10 @@ var routes = Routes{
 		"/v1",
 		getPointsJSON,
 	},
+	Route{
+		"Leaf",
+		"GET",
+		"/leaf",
+		getLeaf,
+	},
 }
