@@ -143,7 +143,7 @@ func DeleteSpain() error {
 //get everthing in the db... can do filtering some other day
 
 //TODO make queryable ala which cat when
-func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
+func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
 
 	var err error
 	var coords []simpleline.Point

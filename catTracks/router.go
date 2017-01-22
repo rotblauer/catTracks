@@ -15,12 +15,11 @@ func NewRouter() *mux.Router {
 		handler = route.HandlerFunc
 
 		router.
-		Methods(route.Method).
+			Methods(route.Method).
 			Path(route.Pattern).
 			Name(route.Name).
 			Handler(handler)
 	}
-	SetDataAPI(router)
 	//File server merveres
 	ass := http.StripPrefix("/ass/", http.FileServer(http.Dir("./ass/")))
 	router.PathPrefix("/ass/").Handler(ass)

@@ -21,7 +21,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {
-	query := parseQuery(r)
+	query := parseQuery(r, w)
 
 	data, eq := getData(query)
 	if eq != nil {
@@ -38,7 +38,7 @@ func getLeaf(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "leaf", nil)
 }
 
-func getData(query query) ([]byte, error) {
+func getData(query *query) ([]byte, error) {
 	var data []byte
 	allPoints, e := getAllPoints(query)
 	if e != nil {

@@ -1,8 +1,9 @@
 var baseurl = "/api/data/";
 var version = "v1";
-var eps = 0.001;
+var eps = 0.0001;
 var q = {
-    epsilon: eps
+    epsilon: eps,
+    isbounded:false
 }
 
 //will take baseurl and version for granted as global var
@@ -279,18 +280,18 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
       //   console.log('qBound', bounds);
       //   q = $.extend({}, q, bounds);
       //   console.log("q", q);
-
-        // var qurl = buildApiQueryUrl(q);
-        // console.log("queryurl", qurl);
-
-      //itworks!
-      //it borken
-
-        // $.getJSON(qurl, function(res) {
-        //     console.log(res);
-        // }, function(err) {
-        //     console.log(err);
-        // });
+      //
+      //   var qurl = buildApiQueryUrl(q);
+      //   console.log("queryurl", qurl);
+      //
+      // // itworks!
+      // // it borken
+      //
+      //   $.getJSON(qurl, function(res) {
+      //       console.log(res);
+      //   }, function(err) {
+      //       console.log(err);
+      //   });
 
     }
 

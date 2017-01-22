@@ -2,9 +2,9 @@ package catTracks
 
 import (
 	"fmt"
+	"github.com/creack/httpreq"
 	"github.com/gorilla/mux"
 	"net/http"
-	"strconv"
 )
 
 type query struct {
@@ -20,6 +20,9 @@ type query struct {
 //    lat float64
 //    lng float64
 // }
+
+// Seems like non-trad form pass json is mux more mux friendly
+
 type bounds struct {
 	// NorthEast coords //etc
 	// SouthWest coords
@@ -29,79 +32,29 @@ type bounds struct {
 	SouthWestLng float64 `json:"southwestlng"`
 }
 
-//SetDataAPI gets queries from request data
-func SetDataAPI(router *mux.Router) {
-	var h1 http.HandlerFunc
-	h1 = getPointsJSON // I don't know why you must cast this
+func parseQuery(r *http.Request, w http.ResponseWriter) *query {
 
-	router.
-		Methods("GET").
-		Path("/api/data/{version}").
-		Name("getPointsJSON").
-		Handler(h1).Queries("epsilon", "{epsilon}")
-}
+	query := &query{}
 
-func parseQuery(r *http.Request) query {
-	var query query
 	vars := mux.Vars(r)
-	query.Version = vars["version"] // not that anything ever changes
+	query.Version = vars["version"]
 
-	epsilon := vars["epsilon"]
-
-	if epsilon == "" {
-		epsilon = "0.001"
-	}
-	eps, er := strconv.ParseFloat(epsilon, 64)
-	if er != nil {
-		fmt.Println("shit parsefloat eps")
-		query.Epsilon = 0.001
-	} else {
-		query.Epsilon = eps
+	if err := r.ParseForm(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return nil
 	}
 
-	var isBounded = false
-	fmt.Println("qisbound=", vars["isbounded"])
-	fmt.Println("vars-", vars)
-	if vars["isbounded"] != "" {
-		isBounded = true
-	}
-	query.IsBounded = isBounded
-
-	//i hoped it wouldn't come to this...
-	if isBounded {
-		bq := r.URL.Query()
-		var nela, nelo, swla, swlo float64
-		var e error
-		var bounds bounds
-		if qnela := bq.Get("northeastlast"); qnela != "" {
-			nela, e = strconv.ParseFloat(qnela, 64)
-			if e != nil {
-				fmt.Println(e)
-			}
-		}
-		if qnelo := bq.Get("northeastlng"); qnelo != "" {
-			nelo, e = strconv.ParseFloat(qnelo, 64)
-			if e != nil {
-				fmt.Println(e)
-			}
-		}
-		if qswla := bq.Get("southwestlat"); qswla != "" {
-			swla, e = strconv.ParseFloat(qswla, 64)
-			if e != nil {
-				fmt.Println(e)
-			}
-		}
-		if qswlo := bq.Get("southwestlng"); qswlo != "" {
-			swlo, e = strconv.ParseFloat(qswlo, 64)
-			if e != nil {
-				fmt.Println(e)
-			}
-		}
-		bounds.NorthEastLat = nela
-		bounds.NorthEastLng = nelo
-		bounds.SouthWestLat = swla
-		bounds.SouthWestLng = swlo
-		query.Bounds = bounds
+	//Still not that great
+	if err := httpreq.NewParsingMap().
+		Add("isbounded", httpreq.ToBool, &query.IsBounded).
+		Add("epsilon", httpreq.ToFloat64, &query.Epsilon).
+		Add("northeastlast", httpreq.ToFloat64, &query.Bounds.NorthEastLat).
+		Add("northeastlng", httpreq.ToFloat64, &query.Bounds.NorthEastLng).
+		Add("southwestlat", httpreq.ToFloat64, &query.Bounds.SouthWestLat).
+		Add("southwestlng", httpreq.ToFloat64, &query.Bounds.SouthWestLng).
+		Parse(r.Form); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return nil
 	}
 
 	fmt.Println("Processed query params as: ")

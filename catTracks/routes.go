@@ -9,7 +9,6 @@ type Route struct {
 	HandlerFunc http.HandlerFunc
 }
 
-
 type Routes []Route
 
 var routes = Routes{
@@ -30,6 +29,13 @@ var routes = Routes{
 		"POST",
 		"/upload",
 		uploadCSV,
+	},
+
+	Route{
+		"getPointsJSON",
+		"GET",
+		"/api/data/{version}",
+		getPointsJSON,
 	},
 	Route{
 		"Map",
