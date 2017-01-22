@@ -161,9 +161,10 @@ function initNamedPositions(uniqueNames) {
 
 function getData(map,epsilon){
    return $.ajax({
-     url: 'v1?epsilon=' + parseFloat(epsilon).toString(),
+     url: '/v1',
         type: 'GET',
         dataType: 'json',
+        data: 'epsilon=' + parseFloat(epsilon).toString(),
         // data : JSON.stringify({ "Epsilon": epsilon}),
         success: function (data) {
           alert("got data" + JSON.stringify(data));

@@ -49,6 +49,8 @@ func main() {
 	bower := http.StripPrefix("/bower_components/", http.FileServer(http.Dir("./bower_components/")))
 	router.PathPrefix("/bower_components/").Handler(bower)
 
+	catTracks.SetUpAPI(router)
+
 	http.Handle("/", router)
 
 	http.ListenAndServe(":"+strconv.Itoa(porty), nil)

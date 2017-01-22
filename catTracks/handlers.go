@@ -12,20 +12,8 @@ import (
 	"time"
 )
 
-//var funcMap = template.FuncMap{
-//	"eq": func(a, b interface{}) bool {
-//		return a == b
-//	},
-//}
-
 // the html stuff of this thing
 var templates = template.Must(template.ParseGlob("templates/*.html"))
-
-////For passing to the template , might not need to pass?
-//type Data struct {
-//	TrackPoints     []*trackPoint.TrackPoint
-//	TrackPointsJSON []byte
-//}
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
@@ -35,19 +23,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {
-	var query query
-	q := r.URL.Query()
-	e := q.Get("epsilon")
-	if e == "" {
-		e = "0.001"
-	}
-	eps, er := strconv.ParseFloat(e, 64)
-	if er != nil {
-		fmt.Println("shit parsefloat eps")
-		query.Epsilon = 0.001
-	} else {
-		query.Epsilon = eps
-	}
+	query := parseQuery(r)
 
 	data, eq := getData(query)
 	if eq != nil {
@@ -57,24 +33,6 @@ func getPointsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
-func receiveAjax(w http.ResponseWriter, r *http.Request) {
-	var query query
-	err := json.NewDecoder(r.Body).Decode(&query)
-	if err != nil {
-		fmt.Println(err.Error())
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	data, e := getData(query)
-
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	fmt.Println("Receive ajax post data string ")
-	w.Write([]byte(data))
-
-}
-
 func getMap(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "map", nil)
 }
@@ -82,7 +40,7 @@ func getLeaf(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "leaf", nil)
 }
 
-func getData(query query) ([]byte, error) {
+func getData(query queryAPI) ([]byte, error) {
 	var data []byte
 	allPoints, e := getAllPoints(query)
 	if e != nil {

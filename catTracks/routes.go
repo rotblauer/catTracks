@@ -9,6 +9,7 @@ type Route struct {
 	HandlerFunc http.HandlerFunc
 }
 
+
 type Routes []Route
 
 var routes = Routes{
@@ -30,25 +31,13 @@ var routes = Routes{
 		"/upload",
 		uploadCSV,
 	},
-
-	Route{
-		"Ajaxer",
-		"POST",
-		"/receive",
-		receiveAjax,
-	},
 	Route{
 		"Map",
 		"GET",
 		"/map",
 		getMap,
 	},
-	Route{
-		"GetPointsJSON",
-		"GET",
-		"/v1",
-		getPointsJSON,
-	},
+
 	Route{
 		"Leaf",
 		"GET",
