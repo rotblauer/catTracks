@@ -57,24 +57,6 @@ func getPointsJSON(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(data))
 }
 
-func receiveAjax(w http.ResponseWriter, r *http.Request) {
-	var query query
-	err := json.NewDecoder(r.Body).Decode(&query)
-	if err != nil {
-		fmt.Println(err.Error())
-		http.Error(w, err.Error(), 400)
-		return
-	}
-	data, e := getData(query)
-
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	fmt.Println("Receive ajax post data string ")
-	w.Write([]byte(data))
-
-}
-
 func getMap(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "map", nil)
 }

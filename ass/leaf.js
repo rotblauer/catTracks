@@ -1,5 +1,5 @@
-var eps = 0.001
-var u = "/v1?" + encodeURIComponent("epsilon=" + eps);
+var eps = 0.0001
+var u = "/v1?epsilon=" + eps
 d3.json(u, function(error, incidents) {
 
     console.log("incidents count: ", incidents.length);
