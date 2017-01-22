@@ -253,7 +253,6 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
             }
         });
 
-
         console.log("updated at  " + new Date().setTime(new Date().getTime() - start.getTime()) + " ms ");
 
     }
@@ -271,6 +270,7 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
       //test for sending queryable bounds
         var bounds = {
+          isbounded: true,
             northeastlat: mapBounds.getNorthEast().lat,
             northeastlng: mapBounds.getNorthEast().lng,
             southwestlat: mapBounds.getSouthWest().lat,
@@ -284,11 +284,12 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
         console.log("queryurl", qurl);
 
       //itworks!
-        // $.getJSON(qurl, function(res) {
-        //     console.log(res);
-        // }, function(err) {
-        //     console.log(err);
-        // });
+
+        $.getJSON(qurl, function(res) {
+            console.log(res);
+        }, function(err) {
+            console.log(err);
+        });
 
     }
 

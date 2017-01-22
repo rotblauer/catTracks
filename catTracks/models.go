@@ -158,6 +158,19 @@ func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
 
 			var trackPointCurrent trackPoint.TrackPoint
 			json.Unmarshal(trackPointVal, &trackPointCurrent)
+
+			if query.IsBounded {
+				// only grab if coords are in bounds
+				var isInNEBounds = trackPointCurrent.Lat < query.Bounds.NorthEastLat && trackPointCurrent.Lng < query.Bounds.NorthEastLng
+				var isInSWBounds = trackPointCurrent.Lat > query.Bounds.SouthWestLat && trackPointCurrent.Lng > query.Bounds.SouthWestLng
+				if isInNEBounds && isInSWBounds {
+					coords = append(coords, &trackPointCurrent) //filler up
+					return nil
+				}
+				return nil //if isBounded but is out of specified bounds
+			}
+
+			//else no bounds
 			coords = append(coords, &trackPointCurrent) //filler up
 			return nil
 		})
