@@ -161,7 +161,7 @@ function initNamedPositions(uniqueNames) {
 
 function getData(map,epsilon){
    return $.ajax({
-     url: '/v1',
+     url: '/api/data/v1',
         type: 'GET',
         dataType: 'json',
         data: 'epsilon=' + parseFloat(epsilon).toString(),

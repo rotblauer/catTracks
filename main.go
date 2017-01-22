@@ -42,14 +42,6 @@ func main() {
 	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
 
 	router := catTracks.NewRouter()
-	//File server merveres
-	ass := http.StripPrefix("/ass/", http.FileServer(http.Dir("./ass/")))
-	router.PathPrefix("/ass/").Handler(ass)
-
-	bower := http.StripPrefix("/bower_components/", http.FileServer(http.Dir("./bower_components/")))
-	router.PathPrefix("/bower_components/").Handler(bower)
-
-	catTracks.SetUpAPI(router)
 
 	http.Handle("/", router)
 

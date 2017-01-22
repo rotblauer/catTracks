@@ -143,7 +143,7 @@ func DeleteSpain() error {
 //get everthing in the db... can do filtering some other day
 
 //TODO make queryable ala which cat when
-func getAllPoints(query queryAPI) ([]*trackPoint.TrackPoint, error) {
+func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
 
 	var err error
 	var coords []simpleline.Point
@@ -154,7 +154,7 @@ func getAllPoints(query queryAPI) ([]*trackPoint.TrackPoint, error) {
 
 		// can swap out for- eacher if we figure indexing, or even want it
 		b.ForEach(func(trackPointKey, trackPointVal []byte) error {
-			//queryAPI can store other filter rers
+			//query can store other filter rers
 
 			var trackPointCurrent trackPoint.TrackPoint
 			json.Unmarshal(trackPointVal, &trackPointCurrent)

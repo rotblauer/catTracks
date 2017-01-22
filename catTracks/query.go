@@ -7,30 +7,32 @@ import (
 	"strconv"
 )
 
-var epsilonAPI = "epsilon"
 
-type queryAPI struct {
+type query struct {
 	Epsilon float64 `json:"epsilon"`
+	Version string 	`json:"string"`
 }
 
-func SetUpAPI(router *mux.Router) {
+func SetDataAPI(router *mux.Router) {
 	var h1 http.HandlerFunc
-	h1 =getPointsJSON // I don't know wh
+	h1 =getPointsJSON // I don't know why you must cast this
 
 	router.
 	Methods("GET").
-		Path("/{version}").
+		Path("/api/data/{version}").
 		Name("getPointsJSON").
 		Handler(h1).Queries("epsilon", "{epsilon}")
 
 }
 
-func parseQuery(r *http.Request) queryAPI {
-	var query queryAPI
+func parseQuery(r *http.Request) query {
+	var query query
 	vars := mux.Vars(r)
-	version := vars["version"]
+	query.Version = vars["version"] // not that anything ever changes
+
+
 	epsilon := vars["epsilon"]
-	fmt.Println("API version " + version +" with epsilon "+epsilon)
+
 	if epsilon == "" {
 		epsilon = "0.001"
 	}
@@ -41,6 +43,7 @@ func parseQuery(r *http.Request) queryAPI {
 	} else {
 		query.Epsilon = eps
 	}
+	fmt.Println("API version " + query.Version  +" with epsilon "+ query.Version)
 
 	return query
 }

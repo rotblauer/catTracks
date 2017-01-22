@@ -17,8 +17,6 @@ var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
-
-	//templates.Funcs(funcMap)
 	templates.ExecuteTemplate(w, "base", nil)
 }
 
@@ -40,7 +38,7 @@ func getLeaf(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "leaf", nil)
 }
 
-func getData(query queryAPI) ([]byte, error) {
+func getData(query query) ([]byte, error) {
 	var data []byte
 	allPoints, e := getAllPoints(query)
 	if e != nil {

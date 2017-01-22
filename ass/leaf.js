@@ -1,5 +1,6 @@
 var eps = 0.001
-var u = "/v1?" + encodeURIComponent("epsilon=" + eps);
+// encodeURIComponent("epsilon=" + eps) was giving such as /api/data/v1?epsilon%3D0.001
+var u = "/api/data/v1?epsilon=" + eps;
 d3.json(u, function(error, incidents) {
 
     console.log("incidents count: ", incidents.length);
