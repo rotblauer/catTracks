@@ -186,7 +186,22 @@ func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
 		fmt.Println("Errrrrrr", err)
 		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
 	}
-	rdpCount := len(results)
+	fmt.Println("eps: ", query.Epsilon)
+	fmt.Println("  results: ", len(results))
+
+	//just a hacky shot at wiggler. pointslimits -> query eventually?
+	for len(results) > 1000 {
+		query.Epsilon = query.Epsilon * 1.2
+		fmt.Println("wiggling eps: ", query.Epsilon)
+		//or could do with results stead of coords?
+		results, err = simpleline.RDP(coords, query.Epsilon, simpleline.Euclidean, true)
+		if err != nil {
+			fmt.Println("Errrrrrr", err)
+			results = coords
+			continue
+		}
+		fmt.Println("  results: ", len(results))
+	}
 
 	var tps trackPoint.TPs
 	for _, insult := range results {
@@ -197,7 +212,9 @@ func getAllPoints(query query) ([]*trackPoint.TrackPoint, error) {
 		tps = append(tps, o)
 	}
 
-	fmt.Println("Serving points. Original count was ", originalCount, " and post-RDP is ", rdpCount)
+	fmt.Println("Serving points.")
+	fmt.Println("Original total points: ", originalCount)
+	fmt.Println("post-RDP-wiggling point: ", len(results))
 
 	sort.Sort(tps)
 

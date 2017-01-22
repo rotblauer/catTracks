@@ -268,28 +268,29 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
         redrawSubset(subset);
 
-      //test for sending queryable bounds
-        var bounds = {
-          isbounded: true,
-            northeastlat: mapBounds.getNorthEast().lat,
-            northeastlng: mapBounds.getNorthEast().lng,
-            southwestlat: mapBounds.getSouthWest().lat,
-            southwestlng: mapBounds.getSouthWest().lng
-        };
-        console.log('qBound', bounds);
-        q = $.extend({}, q, bounds);
-        console.log("q", q);
+      // //test for sending queryable bounds
+      //   var bounds = {
+      //     isbounded: true,
+      //       northeastlat: mapBounds.getNorthEast().lat,
+      //       northeastlng: mapBounds.getNorthEast().lng,
+      //       southwestlat: mapBounds.getSouthWest().lat,
+      //       southwestlng: mapBounds.getSouthWest().lng
+      //   };
+      //   console.log('qBound', bounds);
+      //   q = $.extend({}, q, bounds);
+      //   console.log("q", q);
 
-        var qurl = buildApiQueryUrl(q);
-        console.log("queryurl", qurl);
+        // var qurl = buildApiQueryUrl(q);
+        // console.log("queryurl", qurl);
 
       //itworks!
+      //it borken
 
-        $.getJSON(qurl, function(res) {
-            console.log(res);
-        }, function(err) {
-            console.log(err);
-        });
+        // $.getJSON(qurl, function(res) {
+        //     console.log(res);
+        // }, function(err) {
+        //     console.log(err);
+        // });
 
     }
 
