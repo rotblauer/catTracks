@@ -1,7 +1,18 @@
-var eps = 0.001
-// encodeURIComponent("epsilon=" + eps) was giving such as /api/data/v1?epsilon%3D0.001
-var u = "/api/data/v1?epsilon=" + eps;
-d3.json(u, function(error, incidents) {
+var baseurl = "/api/data/";
+var version = "v1";
+var eps = 0.001;
+var q = {
+    epsilon: eps
+}
+
+//will take baseurl and version for granted as global var
+function buildApiQueryUrl(qobj) {
+    console.log("building q url");
+    return baseurl + version + "?" + $.param(qobj);
+}
+
+
+d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
     console.log("incidents count: ", incidents.length);
     console.log("looking like:", incidents.splice(0, 2));
@@ -146,7 +157,7 @@ d3.json(u, function(error, incidents) {
     var tile_ex = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"; //attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a>'
     var os_tile_bw = "http://korona.geog.uni-heidelberg.de/tiles/roadsg/x={x}&y={y}&z={z}";
     // L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png").addTo(leafletMap);
-  var mb_light1 = "https://api.mapbox.com/styles/v1/rotblauer/ciy7ijqu3001a2rocq88pi8s4/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoicm90YmxhdWVyIiwiYSI6ImNpeTdidjZxajAwMzEycW1waGdrNmh3NmsifQ.OpXHPqEHK2sTbQ4-pmhAMQ";
+    var mb_light1 = "https://api.mapbox.com/styles/v1/rotblauer/ciy7ijqu3001a2rocq88pi8s4/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoicm90YmxhdWVyIiwiYSI6ImNpeTdidjZxajAwMzEycW1waGdrNmh3NmsifQ.OpXHPqEHK2sTbQ4-pmhAMQ";
     L.tileLayer(mb_light1, {
         maxZoom: 19
     }).addTo(leafletMap);
@@ -250,12 +261,35 @@ d3.json(u, function(error, incidents) {
 
     function mapmove(e) {
         var mapBounds = leafletMap.getBounds();
-        // console.log('mapbounds', mapBounds);
+        console.log('mapbounds', mapBounds._northEast);
+        console.log('mapbounds', mapBounds._southWest);
 
         var subset = search(qtree, mapBounds.getWest(), mapBounds.getSouth(), mapBounds.getEast(), mapBounds.getNorth());
         console.log("subset length: " + subset.length);
 
         redrawSubset(subset);
+
+      //test for sending queryable bounds
+        var bounds = {
+            northeastlat: mapBounds.getNorthEast().lat,
+            northeastlng: mapBounds.getNorthEast().lng,
+            southwestlat: mapBounds.getSouthWest().lat,
+            southwestlng: mapBounds.getSouthWest().lng
+        };
+        console.log('qBound', bounds);
+        q = $.extend({}, q, bounds);
+        console.log("q", q);
+
+        var qurl = buildApiQueryUrl(q);
+        console.log("queryurl", qurl);
+
+      //itworks!
+        // $.getJSON(qurl, function(res) {
+        //     console.log(res);
+        // }, function(err) {
+        //     console.log(err);
+        // });
+
     }
 
 });
