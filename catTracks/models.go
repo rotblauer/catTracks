@@ -159,15 +159,12 @@ func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
 			var trackPointCurrent trackPoint.TrackPoint
 			json.Unmarshal(trackPointVal, &trackPointCurrent)
 
-			if query.IsBounded {
-				// only grab if coords are in bounds
-				var isInNEBounds = trackPointCurrent.Lat < query.Bounds.NorthEastLat && trackPointCurrent.Lng < query.Bounds.NorthEastLng
-				var isInSWBounds = trackPointCurrent.Lat > query.Bounds.SouthWestLat && trackPointCurrent.Lng > query.Bounds.SouthWestLng
-				if isInNEBounds && isInSWBounds {
-					coords = append(coords, &trackPointCurrent) //filler up
+			if query != nil && query.IsBounded() {
+				if query.PointInBounds(&trackPointCurrent) {
+					coords = append(coords, &trackPointCurrent)
 					return nil
 				}
-				return nil //if isBounded but is out of specified bounds
+				return nil
 			}
 
 			//else no bounds
@@ -178,23 +175,36 @@ func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
 		return err
 	})
 
+	//? but why is there a null pointer error? how is the func being passed a nil query?
+	var epsilon float64
+	if query != nil {
+		epsilon = query.Epsilon // just so we can separate incoming queryEps and wiggled-to Eps
+	} else {
+		epsilon = DefaultEpsilon // to default const
+	}
 	//simpleify line
 	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
 	originalCount := len(coords)
-	results, err := simpleline.RDP(coords, query.Epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
+	results, err := simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
 	if err != nil {
 		fmt.Println("Errrrrrr", err)
 		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
 	}
-	fmt.Println("eps: ", query.Epsilon)
+	fmt.Println("eps: ", epsilon)
 	fmt.Println("  results: ", len(results))
 
+	var l int
+	if query != nil {
+		l = query.Limit
+	} else {
+		l = DefaultLimit
+	}
 	//just a hacky shot at wiggler. pointslimits -> query eventually?
-	for len(results) > 1000 {
-		query.Epsilon = query.Epsilon * 1.2
-		fmt.Println("wiggling eps: ", query.Epsilon)
+	for len(results) > l {
+		epsilon = epsilon + epsilon/(1-epsilon)
+		fmt.Println("wiggling eps: ", epsilon)
 		//or could do with results stead of coords?
-		results, err = simpleline.RDP(coords, query.Epsilon, simpleline.Euclidean, true)
+		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true)
 		if err != nil {
 			fmt.Println("Errrrrrr", err)
 			results = coords

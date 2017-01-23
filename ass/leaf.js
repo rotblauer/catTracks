@@ -1,9 +1,9 @@
 var baseurl = "/api/data/";
 var version = "v1";
-var eps = 0.0001;
+var eps = 0.0005;
 var q = {
     epsilon: eps,
-    isbounded:false
+    limit: 1000
 }
 
 //will take baseurl and version for granted as global var
@@ -11,6 +11,8 @@ function buildApiQueryUrl(qobj) {
     console.log("building q url");
     return baseurl + version + "?" + $.param(qobj);
 }
+
+var isUpdating = false;
 
 
 d3.json(buildApiQueryUrl(q), function(error, incidents) {
@@ -54,14 +56,18 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
 
 
-    var qtree = d3.geom.quadtree(geoData.features.map(function(data, i) {
-        return {
-            x: data.geometry.coordinates[0],
-            y: data.geometry.coordinates[1],
-            all: data
-        };
-    }));
+    var qtree;
 
+    function setQTree(data) {
+        qtree = d3.geom.quadtree(data.features.map(function(data, i) {
+            return {
+                x: data.geometry.coordinates[0],
+                y: data.geometry.coordinates[1],
+                all: data
+            };
+        }));
+    }
+    setQTree(geoData); // init
 
     // Find the nodes within the specified rectangle.
     function search(quadtree, x0, y0, x3, y3) {
@@ -184,6 +190,7 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
     leafletMap.on('moveend', mapmove);
 
     function fitMapToAllPoints() {
+
         var arrayOfLatLngs = [];
         geoData.features.map(function(d, i) {
             //the world is upsidedown
@@ -195,12 +202,25 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
         leafletMap.fitBounds([bs.getNorthWest(), bs.getSouthEast()]);
         leafletMap.panTo(bs.getCenter());
         mapmove();
-
-
     }
-    fitMapToAllPoints();
+    fitMapToAllPoints(); //on init
+
+
     var resetViewButton = document.getElementById("resetView");
-    resetViewButton.onclick = fitMapToAllPoints;
+  resetViewButton.onclick = function () {
+    $.getJSON(buildApiQueryUrl(q),
+              function (res) {
+                console.log("got reset res: ", res.length);
+                  geoData = {
+                    type: "FeatureCollection",
+                    features: reformat(res)
+                  };
+                fitMapToAllPoints();
+              }, function (err) {
+                console.log(err);
+                fitMapToAllPoints();
+              });
+  }
 
     function getZoomScale() {
         var mapWidth = leafletMap.getSize().x;
@@ -264,35 +284,61 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
         console.log('mapbounds', mapBounds._northEast);
         console.log('mapbounds', mapBounds._southWest);
 
-        var subset = search(qtree, mapBounds.getWest(), mapBounds.getSouth(), mapBounds.getEast(), mapBounds.getNorth());
+        //test for sending queryable bounds
+        var bounds = {
+            northeastlat: mapBounds.getNorthEast().lat,
+            northeastlng: mapBounds.getNorthEast().lng,
+            southwestlat: mapBounds.getSouthWest().lat,
+            southwestlng: mapBounds.getSouthWest().lng
+        };
+        console.log('qBound', bounds);
+        q = $.extend({}, q, bounds);
+        console.log("q", q);
+        var qurl = buildApiQueryUrl(q);
+        console.log("queryurl", qurl);
+
+        if (isUpdating) {
+            redrawInBounds(mapBounds);
+            return;
+        }
+        isUpdating = true;
+        queryServerAndRedrawWithBounds(qurl, mapBounds);
+    }
+
+    function queryServerAndRedrawWithBounds(qq, mapBounds) {
+
+        $.getJSON(qq, function(res) {
+            isUpdating = false;
+            if (!res) { //TODO fix empty [] response to be an empty [] instead of nil -- trackPointer issue
+                redrawInBounds(mapBounds);
+                return;
+            }
+            console.log("got response with count: ", res.length);
+            //update "global" data var
+            geoData = {
+                type: "FeatureCollection",
+                features: reformat(res)
+            };
+
+            //update qtree based on dat var
+            setQTree(geoData);
+            updateNodes(qtree);
+            redrawInBounds(mapBounds);
+
+        }, function(err) {
+            isUpdating = false;
+            console.log(err);
+            redrawInBounds(mapBounds);
+        });
+    }
+
+
+    function redrawInBounds(mapbounds) {
+
+        var subset = search(qtree, mapbounds.getWest(), mapbounds.getSouth(), mapbounds.getEast(), mapbounds.getNorth());
         console.log("subset length: " + subset.length);
 
         redrawSubset(subset);
-
-      // //test for sending queryable bounds
-      //   var bounds = {
-      //     isbounded: true,
-      //       northeastlat: mapBounds.getNorthEast().lat,
-      //       northeastlng: mapBounds.getNorthEast().lng,
-      //       southwestlat: mapBounds.getSouthWest().lat,
-      //       southwestlng: mapBounds.getSouthWest().lng
-      //   };
-      //   console.log('qBound', bounds);
-      //   q = $.extend({}, q, bounds);
-      //   console.log("q", q);
-      //
-      //   var qurl = buildApiQueryUrl(q);
-      //   console.log("queryurl", qurl);
-      //
-      // // itworks!
-      // // it borken
-      //
-      //   $.getJSON(qurl, function(res) {
-      //       console.log(res);
-      //   }, function(err) {
-      //       console.log(err);
-      //   });
-
     }
 
 });
