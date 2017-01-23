@@ -8,6 +8,7 @@ import (
 	"github.com/deet/simpleline"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -140,7 +141,30 @@ func DeleteSpain() error {
 	return e
 }
 
-//get everthing in the db... can do filtering some other day
+//TODO per catName string
+func getPointsSince(since *time.Time) ([]trackPoint.TrackPoint, error) {
+
+	var err error
+	var points []trackPoint.TrackPoint
+	sinceNano := since.UnixNano()
+
+	err = GetDB().View(func(tx *bolt.Tx) error {
+		var err error
+		c := tx.Bucket([]byte(trackKey)).Cursor()
+
+		min := []byte(strconv.Itoa(int(sinceNano)))
+
+		// Iterate over the 90's.
+		for k, v := c.Seek(min); k != nil; k, v = c.Next() {
+			var tp trackPoint.TrackPoint
+			json.Unmarshal(v, &tp)
+			points = append(points, tp)
+		}
+		return err
+	})
+
+	return points, err
+}
 
 //TODO make queryable ala which cat when
 func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
