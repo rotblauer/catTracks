@@ -18,6 +18,7 @@ type query struct {
 	Version string  `json:"string"`
 	Bounds  bounds  `json:"bounds"`
 	Limit   int     `json:"limit"`
+	Name    string  `json:"name"`
 }
 
 func (q *query) sumBounds() float64 {
