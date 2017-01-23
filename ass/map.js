@@ -72,7 +72,7 @@ function getPoints(eps) {
     if (typeof(eps) === "undefined") {
         eps = 0.001
     };
-    var u = "/v1?" + encodeURIComponent("epsilon=" + eps);
+    var u = "/v1?epsilon=" + eps
     return d3.json(u, gotPoints);
 }
 

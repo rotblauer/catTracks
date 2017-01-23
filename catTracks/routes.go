@@ -30,7 +30,6 @@ var routes = Routes{
 		"/upload",
 		uploadCSV,
 	},
-
 	Route{
 		"getPointsJSON",
 		"GET",
