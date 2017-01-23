@@ -8,7 +8,7 @@ var q = {
 
 //will take baseurl and version for granted as global var
 function buildApiQueryUrl(qobj) {
-    console.log("building q url");
+    // console.log("building q url");
     return baseurl + version + "?" + $.param(qobj);
 }
 
@@ -207,20 +207,21 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
 
     var resetViewButton = document.getElementById("resetView");
-  resetViewButton.onclick = function () {
-    $.getJSON(buildApiQueryUrl(q),
-              function (res) {
+    resetViewButton.onclick = function() {
+        $.getJSON(buildApiQueryUrl(q),
+            function(res) {
                 console.log("got reset res: ", res.length);
-                  geoData = {
+                geoData = {
                     type: "FeatureCollection",
                     features: reformat(res)
-                  };
+                };
                 fitMapToAllPoints();
-              }, function (err) {
+            },
+            function(err) {
                 console.log(err);
                 fitMapToAllPoints();
-              });
-  }
+            });
+    }
 
     function getZoomScale() {
         var mapWidth = leafletMap.getSize().x;
@@ -281,9 +282,17 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
     function mapmove(e) {
         var mapBounds = leafletMap.getBounds();
-        console.log('mapbounds', mapBounds._northEast);
-        console.log('mapbounds', mapBounds._southWest);
+        // console.log('mapbounds', mapBounds._northEast);
+        // console.log('mapbounds', mapBounds._southWest);
 
+        //keep smoother? redraw with 'old' data before new arrives
+        console.log("Redrawing map on move before querying server.");
+        redrawInBounds(mapBounds);
+
+        if (isUpdating) {
+            // redrawInBounds(mapBounds);
+            return;
+        }
         //test for sending queryable bounds
         var bounds = {
             northeastlat: mapBounds.getNorthEast().lat,
@@ -291,29 +300,26 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
             southwestlat: mapBounds.getSouthWest().lat,
             southwestlng: mapBounds.getSouthWest().lng
         };
-        console.log('qBound', bounds);
+        // console.log('qBound', bounds);
         q = $.extend({}, q, bounds);
-        console.log("q", q);
+        // console.log("q", q);
         var qurl = buildApiQueryUrl(q);
-        console.log("queryurl", qurl);
+        // console.log("queryurl", qurl);
 
-        if (isUpdating) {
-            redrawInBounds(mapBounds);
-            return;
-        }
         isUpdating = true;
         queryServerAndRedrawWithBounds(qurl, mapBounds);
     }
 
     function queryServerAndRedrawWithBounds(qq, mapBounds) {
 
+      console.log("Querying server for points within new bounds.");
         $.getJSON(qq, function(res) {
             isUpdating = false;
             if (!res) { //TODO fix empty [] response to be an empty [] instead of nil -- trackPointer issue
                 redrawInBounds(mapBounds);
                 return;
             }
-            console.log("got response with count: ", res.length);
+            console.log("Got response from server with count: ", res.length);
             //update "global" data var
             geoData = {
                 type: "FeatureCollection",
