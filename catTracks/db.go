@@ -1,9 +1,10 @@
 package catTracks
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
-	// "github.com/rotblauer/trackpoints/trackPoint"
+	"github.com/rotblauer/trackpoints/trackPoint"
 	"path"
 )
 
@@ -32,7 +33,12 @@ func InitBoltDB() error {
 	} else {
 		fmt.Println("Bolt db is initialized.")
 		db.Update(func(tx *bolt.Tx) error {
+			// "tracks" -- this is the default bucket, keyed on time.UnixNano
 			_, e := tx.CreateBucketIfNotExists([]byte(trackKey))
+			if e != nil {
+				return e
+			}
+			_, e = tx.CreateBucketIfNotExists([]byte("names"))
 			if e != nil {
 				return e
 			}
@@ -41,4 +47,30 @@ func InitBoltDB() error {
 	}
 	return err
 	// return GetDB()
+}
+
+//BuildIndexBuckets populates name, lat, and long buckets from main "tracks" (time) bucket.
+func BuildIndexBuckets() error {
+	db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+
+		b.ForEach(func(key, val []byte) error {
+			var tp trackPoint.TrackPoint
+			json.Unmarshal(val, &tp)
+
+			// update "name"
+			db.Update(func(txx *bolt.Tx) error {
+				bname := txx.Bucket([]byte("names"))
+
+				bByName, _ := bname.CreateBucketIfNotExists([]byte(tp.Name))
+
+				bByName.Put(itob(tp.ID), val)
+				return nil
+			})
+
+			return nil
+		})
+		return nil
+	})
+	return nil
 }

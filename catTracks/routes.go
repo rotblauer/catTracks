@@ -42,11 +42,16 @@ var routes = Routes{
 		"/map",
 		getMap,
 	},
-
 	Route{
 		"Leaf",
 		"GET",
 		"/leaf",
 		getLeaf,
+	},
+	Route{
+		"Race",
+		"GET",
+		"/race",
+		getRace,
 	},
 }

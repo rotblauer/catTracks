@@ -17,7 +17,36 @@ var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 //Welcome, loads and servers all (currently) data pointers
 func indexHandler(w http.ResponseWriter, r *http.Request) {
+
 	templates.ExecuteTemplate(w, "base", nil)
+}
+func getRace(w http.ResponseWriter, r *http.Request) {
+	var e error
+	todayPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour))
+	if e != nil {
+		fmt.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+
+	// weekPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour)) // could be better, slice off from todayPoints
+	// if e != nil {
+	// 	fmt.Println(e)
+	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
+	// }
+
+	// allPoints, e := getPointsSince(time.Now().AddDate(-100, 0, 0)) // also TODO
+	// if e != nil {
+	// 	fmt.Println(e)
+	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
+	// }
+
+	buf, e := json.Marshal(todayPoints)
+	if e != nil {
+		fmt.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+
+	templates.ExecuteTemplate(w, "race", buf)
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {

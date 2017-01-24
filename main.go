@@ -16,11 +16,14 @@ func main() {
 	var clearDBTestes bool
 	var testesRun bool
 	var noSpain bool
+	var buildIndexes bool
 
 	flag.IntVar(&porty, "port", 8080, "port to serve and protect")
 	flag.BoolVar(&clearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") //TODO clear only certain values, ie prefixed with testes based on testesRun
 	flag.BoolVar(&testesRun, "testes", false, "testes run prefixes name with testes-")              //hope that's your phone's name
 	flag.BoolVar(&noSpain, "no-spain", false, "remove spanish wanderings")
+	flag.BoolVar(&buildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
+
 	flag.Parse()
 	// Open Bolt DB.
 	// catTracks.InitBoltDB()
@@ -38,6 +41,9 @@ func main() {
 		if e != nil {
 			log.Println(e)
 		}
+	}
+	if buildIndexes {
+		catTracks.BuildIndexBuckets() //cleverly always returns nil
 	}
 	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
 
