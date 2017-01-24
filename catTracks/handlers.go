@@ -22,10 +22,23 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 }
 func getRace(w http.ResponseWriter, r *http.Request) {
 	var e error
-	todayPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour))
+
+	todayPoints, e := getPointsSince(time.Now().Add(-24 * time.Hour))
 	if e != nil {
 		fmt.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println(len(todayPoints))
+
+	todayStats := todayPoints.Statistics()
+	fmt.Println(todayStats)
+
+	renderme := struct {
+		Points trackPoint.TrackPoints `json:"points"`
+		Stats  trackPoint.CatStats    `json:"stats"`
+	}{
+		Points: todayPoints,
+		Stats:  todayStats,
 	}
 
 	// weekPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour)) // could be better, slice off from todayPoints
@@ -40,13 +53,15 @@ func getRace(w http.ResponseWriter, r *http.Request) {
 	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
 	// }
 
-	buf, e := json.Marshal(todayPoints)
+	buf, e := json.Marshal(renderme)
 	if e != nil {
 		fmt.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
+	sbuf := string(buf)
+	fmt.Println(sbuf)
 
-	templates.ExecuteTemplate(w, "race", buf)
+	templates.ExecuteTemplate(w, "race", sbuf)
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {

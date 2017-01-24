@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"strconv"
 	"time"
 )
 
@@ -22,13 +21,12 @@ func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 
 	var err error
 	var points []trackPoint.TrackPoint
-	sinceNano := since.UnixNano()
 
 	err = GetDB().View(func(tx *bolt.Tx) error {
 		var err error
 		c := tx.Bucket([]byte(trackKey)).Cursor()
 
-		min := []byte(strconv.Itoa(int(sinceNano)))
+		min := itob(since.UnixNano())
 
 		// Iterate over the 90's.
 		for k, v := c.Seek(min); k != nil; k, v = c.Next() {
