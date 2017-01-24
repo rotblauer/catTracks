@@ -20,7 +20,7 @@ func indexHandler(w http.ResponseWriter, r *http.Request) {
 
 	templates.ExecuteTemplate(w, "base", nil)
 }
-func getRace(w http.ResponseWriter, r *http.Request) {
+func getRaceJSON(w http.ResponseWriter, r *http.Request) {
 	var e error
 
 	todayPoints, e := getPointsSince(time.Now().Add(-24 * time.Hour))
@@ -28,18 +28,60 @@ func getRace(w http.ResponseWriter, r *http.Request) {
 		fmt.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
-	fmt.Println(len(todayPoints))
-
-	todayStats := todayPoints.Statistics()
-	fmt.Println(todayStats)
-
-	renderme := struct {
-		Points trackPoint.TrackPoints `json:"points"`
-		Stats  trackPoint.CatStats    `json:"stats"`
-	}{
-		Points: todayPoints,
-		Stats:  todayStats,
+	weekPoints, e := getPointsSince(time.Now().Add(-24 * 7 * time.Hour))
+	if e != nil {
+		fmt.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
+	allPoints, e := getPointsSince(time.Now().Add(-24 * 5000 * time.Hour))
+	if e != nil {
+		fmt.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+
+	//holy good damn this is ugly but i love it
+	byCatToday := make(map[string]trackPoint.CatStats)
+	byCatWeek := make(map[string]trackPoint.CatStats)
+	byCatAll := make(map[string]trackPoint.CatStats)
+
+	for _, name := range todayPoints.UniqueNames() { //erbody
+		byCatToday[name] = todayPoints.ForName(name).Statistics()
+	}
+	for _, name := range weekPoints.UniqueNames() { //erbody
+		byCatWeek[name] = weekPoints.ForName(name).Statistics()
+	}
+	for _, name := range allPoints.UniqueNames() { //erbody
+		byCatAll[name] = allPoints.ForName(name).Statistics()
+	}
+
+	today := struct {
+		TeamStats trackPoint.CatStats            `json:"team"`
+		Cat       map[string]trackPoint.CatStats `json:"cat"`
+	}{
+		TeamStats: todayPoints.Statistics(),
+		Cat:       byCatToday,
+	}
+
+	week := struct {
+		TeamStats trackPoint.CatStats            `json:"team"`
+		Cat       map[string]trackPoint.CatStats `json:"cat"`
+	}{
+		TeamStats: weekPoints.Statistics(),
+		Cat:       byCatWeek,
+	}
+
+	all := struct {
+		TeamStats trackPoint.CatStats            `json:"team"`
+		Cat       map[string]trackPoint.CatStats `json:"cat"`
+	}{
+		TeamStats: weekPoints.Statistics(),
+		Cat:       byCatAll,
+	}
+
+	var renderer = make(map[string]interface{})
+	renderer["today"] = today
+	renderer["week"] = week
+	renderer["all"] = all
 
 	// weekPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour)) // could be better, slice off from todayPoints
 	// if e != nil {
@@ -53,15 +95,16 @@ func getRace(w http.ResponseWriter, r *http.Request) {
 	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
 	// }
 
-	buf, e := json.Marshal(renderme)
+	buf, e := json.Marshal(renderer)
 	if e != nil {
 		fmt.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
-	sbuf := string(buf)
-	fmt.Println(sbuf)
+	w.Write(buf)
+}
 
-	templates.ExecuteTemplate(w, "race", sbuf)
+func getRace(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "race", nil)
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {

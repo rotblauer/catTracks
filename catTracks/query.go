@@ -21,6 +21,14 @@ type query struct {
 	Name    string  `json:"name"`
 }
 
+// Seems like non-trad form pass json is mux more mux friendly
+type bounds struct {
+	NorthEastLat float64 `json:"northeastlat"`
+	NorthEastLng float64 `json:"northeastlng"`
+	SouthWestLat float64 `json:"southwestlat"`
+	SouthWestLng float64 `json:"southwestlng"`
+}
+
 func (q *query) sumBounds() float64 {
 	return q.Bounds.NorthEastLat + q.Bounds.NorthEastLng + q.Bounds.SouthWestLat + q.Bounds.SouthWestLng
 }
@@ -45,14 +53,6 @@ func (q *query) SetDefaults() {
 	if q.Limit == 0 {
 		q.Limit = DefaultLimit
 	}
-}
-
-// Seems like non-trad form pass json is mux more mux friendly
-type bounds struct {
-	NorthEastLat float64 `json:"northeastlat"`
-	NorthEastLng float64 `json:"northeastlng"`
-	SouthWestLat float64 `json:"southwestlat"`
-	SouthWestLng float64 `json:"southwestlng"`
 }
 
 func parseQuery(r *http.Request, w http.ResponseWriter) *query {

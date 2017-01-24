@@ -54,4 +54,10 @@ var routes = Routes{
 		"/race",
 		getRace,
 	},
+	Route{
+		"RaceJSON",
+		"GET",
+		"/api/race",
+		getRaceJSON,
+	},
 }
