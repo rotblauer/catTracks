@@ -14,7 +14,6 @@ function buildApiQueryUrl(qobj) {
 
 var isUpdating = false;
 
-
 d3.json(buildApiQueryUrl(q), function(error, incidents) {
 
     console.log("incidents count: ", incidents.length);

@@ -125,6 +125,10 @@ func getLeaf(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "leaf", nil)
 }
 
+func socket(w http.ResponseWriter, r *http.Request) {
+	GetMelody().HandleRequest(w, r)
+}
+
 func getData(query *query) ([]byte, error) {
 	var data []byte
 	allPoints, e := getAllPoints(query)

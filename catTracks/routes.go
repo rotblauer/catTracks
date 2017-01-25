@@ -37,6 +37,12 @@ var routes = Routes{
 		getPointsJSON,
 	},
 	Route{
+		"WS",
+		"GET",
+		"/api/ws",
+		socket,
+	},
+	Route{
 		"Map",
 		"GET",
 		"/map",

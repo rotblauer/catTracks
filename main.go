@@ -49,6 +49,7 @@ func main() {
 		log.Println("Error initing QT.")
 		log.Println(qterr)
 	}
+	catTracks.InitMelody()
 	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
 
 	router := catTracks.NewRouter()
