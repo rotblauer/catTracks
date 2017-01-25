@@ -243,14 +243,15 @@ d3.json(buildApiQueryUrl(q), function(error, incidents) {
         var topLeft = bounds[0];
         var bottomRight = bounds[1];
 
+      var svgPadding = 10; //keep dots from getting cut off at the edges
 
-        svg.attr("width", bottomRight[0] - topLeft[0])
-            .attr("height", bottomRight[1] - topLeft[1])
-            .style("left", topLeft[0] + "px")
-            .style("top", topLeft[1] + "px");
+        svg.attr("width", bottomRight[0] - topLeft[0] + svgPadding*2)
+            .attr("height", bottomRight[1] - topLeft[1] + svgPadding*2)
+            .style("left", topLeft[0] - svgPadding + "px")
+            .style("top", topLeft[1] - svgPadding + "px");
 
 
-        g.attr("transform", "translate(" + -topLeft[0] + "," + -topLeft[1] + ")");
+      g.attr("transform", "translate(" + -(topLeft[0]-svgPadding) + "," + -(topLeft[1]-svgPadding) + ")");
 
         var start = new Date();
 
