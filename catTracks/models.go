@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"github.com/asim/quadtree"
 	"github.com/boltdb/bolt"
 	"github.com/deet/simpleline"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -146,32 +147,46 @@ func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
 	var err error
 	var coords []simpleline.Point
 
-	err = GetDB().View(func(tx *bolt.Tx) error {
-		var err error
-		b := tx.Bucket([]byte(trackKey))
+	if query != nil && query.IsBounded() {
+		//build aabb rect
+		var center map[string]float64
+		//not totally sure what halfpoint means but best guess
+		center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
+		center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
+		cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
+		half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
+		hp := cp.HalfPoint(half)
+		ab := quadtree.NewAABB(cp, hp)
+		//res = GetQT.Search(aabb)
+		qres := GetQT().Search(ab)
+		//for range res = coords append res[i].data
+		//TODO check gainst other query params
+		for _, val := range qres {
+			coords = append(coords, val.Data().(*trackPoint.TrackPoint))
+		}
+	} else {
 
-		// can swap out for- eacher if we figure indexing, or even want it
-		b.ForEach(func(trackPointKey, trackPointVal []byte) error {
-			//query can store other filter rers
+		//TODO make this not what it was
 
-			var trackPointCurrent trackPoint.TrackPoint
-			json.Unmarshal(trackPointVal, &trackPointCurrent)
+		err = GetDB().View(func(tx *bolt.Tx) error {
+			var err error
+			b := tx.Bucket([]byte(trackKey))
 
-			if query != nil && query.IsBounded() {
-				if query.PointInBounds(&trackPointCurrent) {
-					coords = append(coords, &trackPointCurrent)
-					return nil
-				}
+			// can swap out for- eacher if we figure indexing, or even want it
+			b.ForEach(func(trackPointKey, trackPointVal []byte) error {
+
+				var trackPointCurrent trackPoint.TrackPoint
+				json.Unmarshal(trackPointVal, &trackPointCurrent)
+
+				coords = append(coords, &trackPointCurrent)
 				return nil
-			}
 
-			//else no bounds
-			coords = append(coords, &trackPointCurrent) //filler up
-			return nil
+			})
+
+			return err
 		})
 
-		return err
-	})
+	}
 
 	//? but why is there a null pointer error? how is the func being passed a nil query?
 	var epsilon float64
