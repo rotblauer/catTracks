@@ -14,8 +14,17 @@ ws.onmessage = function (msgEvent) {
   var data = JSON.parse(msgEvent.data);
 
   var reformedData = reformat(data);
-
   redrawSubset(reformedData);
+
+  geoData = {
+    type: "FeatureCollection",
+    features: reformedData
+  };
+
+
+  setQTree(geoData); // init
+
+  updateNodes(qtree);
 
 };
 
