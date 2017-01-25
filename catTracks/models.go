@@ -149,7 +149,7 @@ func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
 
 	if query != nil && query.IsBounded() {
 		//build aabb rect
-		var center map[string]float64
+		var center = make(map[string]float64)
 		//not totally sure what halfpoint means but best guess
 		center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
 		center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0

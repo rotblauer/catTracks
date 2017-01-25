@@ -2,7 +2,7 @@ package catTracks
 
 import (
 	"encoding/json"
-	"errors"
+	// "errors"
 	"fmt"
 	"github.com/asim/quadtree"
 	"github.com/boltdb/bolt"
@@ -34,31 +34,60 @@ func initQTBounds() *quadtree.AABB {
 func InitQT() error {
 	var e error
 
+	//tinker with default qt sizing
+	quadtree.MaxDepth = 24
+	quadtree.Capacity = 72 //lets really blow it up
+
 	//being new quadtree
 	fmt.Println("initing qt...")
 	qt = quadtree.New(initQTBounds(), 0, nil)
 
-	// //stick points into quadtree
-	// e = GetDB().View(func(tx *bolt.Tx) error {
-	// 	b := tx.Bucket([]byte(trackKey))
-	// 	ver := b.ForEach(func(key, val []byte) error {
-	// 		var tp trackPoint.TrackPoint
-	// 		err := json.Unmarshal(val, &tp)
-	// 		if err != nil {
-	// 			return err
-	// 		}
-	// 		p := quadtree.NewPoint(tp.Lat, tp.Lng, tp)
-	// 		if qt.Insert(p) {
-	// 			return err
-	// 		}
-	// 		err = errors.New("Could not insert point into quadtree.")
-	// 		return err
-	// 	})
-	// 	return ver
-	// })
-	// if e == nil {
-	// 	fmt.Println("Successfully added all trackpoints to quadtree.")
-	// }
+	//stick points into quadtree
+	e = GetDB().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+
+		count := 0 //limiter
+		ver := b.ForEach(func(key, val []byte) error {
+			count = count + 1
+
+			// if count > 90 {
+			// 	fmt.Println("skipping point", count)
+			// 	return nil
+			// } else {
+
+			fmt.Println("adding point", count)
+
+			var tp trackPoint.TrackPoint
+			err := json.Unmarshal(val, &tp)
+			// fmt.Println(tp)
+			if err != nil {
+				return err
+			}
+			p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
+
+			// qt.Insert(p)
+
+			if qt.Insert(p) {
+				return nil
+			} else {
+				fmt.Println("Couldn't insert point to quadtree.")
+			}
+
+			// err = errors.New("Could not insert point into quadtree.")
+			// return err
+
+			// }
+			return nil
+		})
+		return ver
+	})
+	if e != nil {
+		fmt.Println(e)
+	}
+
+	if e == nil {
+		fmt.Println("Successfully added all trackpoints to quadtree.")
+	}
 
 	return e
 }
