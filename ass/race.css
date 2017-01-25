@@ -1,7 +1,68 @@
-* {
-    color: red;
-}
 
 h1 {
     font-size: 12vh !important;
 }
+
+.row {
+    border-bottom: 1px solid lightgray;
+}
+
+
+//speedometer
+  .unselectable {
+            -moz-user-select: -moz-none;
+            -khtml-user-select: none;
+            -webkit-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+
+        /* css formats for the gauge */
+        .gauge .domain {
+            stroke-width: 2px;
+            stroke: lightgray;
+        }
+
+        .gauge .tick line {
+            stroke: lightgray;
+            stroke-width: 2px;
+        }
+        
+        .gauge line {
+            stroke: lightgray;
+        }
+
+        .gauge .arc, .gauge .cursor {
+            opacity: 0;
+        }
+
+        .gauge .major {
+            fill: lightgray;
+            font-size: 20px;
+            font-family: 'Play', verdana, sans-serif;
+            font-weight: normal;
+        }
+        
+        .gauge .indicator {
+            stroke: lightgray;
+            fill: #000;
+            stroke-width: 4px;
+        }
+        .gauge.max .indicator {
+            stroke: red;
+        }
+        .gauge.avg .indicator {
+            stroke: green;
+        }
+
+        /* css formats for the segment display */
+        .segdisplay .on {
+            fill: indianred;
+
+        }
+
+        .segdisplay .off {
+            fill: indianred;
+            opacity: 0.15;
+        }
