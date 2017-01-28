@@ -88,6 +88,10 @@ func storePoint(tp trackPoint.TrackPoint) error {
 				fmt.Println("Didn't save post trackPoint in bolt.", err)
 				return err
 			}
+			p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
+			if !GetQT().Insert(p) {
+				fmt.Println("Couldn't add to quadtree: ", p)
+			}
 			fmt.Println("Saved trackpoint: ", tp)
 			return nil
 		})
