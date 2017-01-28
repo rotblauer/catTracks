@@ -1,9 +1,11 @@
 package catTracks
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"github.com/boltdb/bolt"
+	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"path"
 )
@@ -42,6 +44,10 @@ func InitBoltDB() error {
 			if e != nil {
 				return e
 			}
+			_, e = tx.CreateBucketIfNotExists([]byte("geohash"))
+			if e != nil {
+				return e
+			}
 			return e
 		})
 	}
@@ -65,6 +71,25 @@ func BuildIndexBuckets() error {
 				bByName, _ := bname.CreateBucketIfNotExists([]byte(tp.Name))
 
 				bByName.Put(itob(tp.ID), val)
+
+				return nil
+			})
+
+			// under geohasher keys
+			db.Update(func(txx *bolt.Tx) error {
+				b := txx.Bucket([]byte("geohash"))
+
+				// Compute the CellID for lat, lng
+				c := s2.CellIDFromLatLng(s2.LatLngFromDegrees(tp.Lat, tp.Lng))
+
+				// store the uint64 value of c to its bigendian binary form
+				hashkey := make([]byte, 8)
+				binary.BigEndian.PutUint64(hashkey, uint64(c))
+
+				e := b.Put(hashkey, val)
+				if e != nil {
+					fmt.Println("shit geohash index err", e)
+				}
 				return nil
 			})
 

@@ -31,7 +31,7 @@ ws.onmessage = function (msgEvent) {
 
 var baseurl = "/api/data/";
 var version = "v1";
-var eps = 0.001;
+var eps = 0.00001;
 var q = {
     epsilon: eps,
   limit: 1000

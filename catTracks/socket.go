@@ -31,7 +31,8 @@ func getPointsWS(s *melody.Session, msg []byte) {
 	log.Println("socket got query", q)
 
 	// var c = make(chan *trackPoint.TrackPoint)
-	pts, e := socketPointsByQuery(&q)
+	pts, e := socketPointsByQueryQuadtree(&q)
+	// pts, e := socketPointsByQueryGeohash(&q)
 	if e != nil {
 		log.Println("Couldn't get points.")
 	}
