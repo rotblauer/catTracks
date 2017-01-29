@@ -10,11 +10,13 @@ import (
 
 const (
 	DefaultEpsilon = 0.001
+	DefaultGamma   = 0.001
 	DefaultLimit   = 1000
 )
 
 type query struct {
-	Epsilon float64 `json:"epsilon"`
+	Epsilon float64 `json:"epsilon"` // rdp epsilon
+	Gamma   float64 `json:"gamma"`   // delta for epsilon w/r/t limiter
 	Version string  `json:"string"`
 	Bounds  bounds  `json:"bounds"`
 	Limit   int     `json:"limit"`
@@ -46,12 +48,30 @@ func (q *query) PointInBounds(tp *trackPoint.TrackPoint) bool {
 	return inY && inX
 }
 
+//New returns a new query
+func NewQuery() *query {
+	return &query{
+		Epsilon: DefaultEpsilon,
+		Limit:   DefaultLimit,
+		Gamma:   DefaultGamma,
+		Bounds: bounds{
+			NorthEastLat: 0.0,
+			NorthEastLng: 180.0,
+			SouthWestLat: -180.0,
+			SouthWestLng: 180.0,
+		},
+	}
+}
+
 func (q *query) SetDefaults() {
 	if q.Epsilon == 0 {
 		q.Epsilon = DefaultEpsilon
 	}
 	if q.Limit == 0 {
 		q.Limit = DefaultLimit
+	}
+	if q.Gamma == 0 {
+		q.Gamma = DefaultGamma
 	}
 }
 

@@ -11,7 +11,6 @@ import (
 	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
-	"strings"
 	"time"
 )
 
@@ -105,150 +104,61 @@ func storePoint(tp trackPoint.TrackPoint) error {
 	return err
 }
 
-// DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke
-func DeleteTestes() error {
-	e := GetDB().Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(trackKey))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var tp trackPoint.TrackPoint
-			e := json.Unmarshal(v, &tp)
-			if e != nil {
-				fmt.Println("Error deleting testes.")
-				return e
-			}
-			if strings.HasPrefix(tp.Name, testesPrefix) {
-				b.Delete(k)
-			}
-		}
-		return nil
-	})
-	return e
-}
+func pointsFromQTWithQuery(query *query) (c []simpleline.Point) {
 
-// DeleteSpain deletes spain
-func DeleteSpain() error {
-	e := GetDB().Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte("tracks"))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var tp trackPoint.TrackPoint
-			e := json.Unmarshal(v, &tp)
-			if e != nil {
-				fmt.Println("Error deleting testes.")
-				return e
-			}
-			if tp.Lng < 12.0 && tp.Lng > -10.0 {
-				b.Delete(k)
-			}
-		}
-		return nil
-	})
-	return e
+	start := time.Now()
+
+	//build aabb rect
+	var center = make(map[string]float64)
+	//not totally sure what halfpoint means but best guess
+	center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
+	center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
+	cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
+	half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
+	hp := cp.HalfPoint(half)
+	ab := quadtree.NewAABB(cp, hp)
+	//res = GetQT.Search(aabb)
+	qres := GetQT().Search(ab)
+	//for range res = coords append res[i].data
+	//TODO check gainst other query params
+	// fmt.Println("server quad res length: ", len(qres))
+	for _, val := range qres {
+		c = append(c, val.Data().(*trackPoint.TrackPoint))
+	}
+
+	fmt.Println("Found ", len(qres), " with quadtree method in ", time.Since(start))
+
+	return c
+
 }
 
 //TODO make queryable ala which cat when
-func getAllPoints(query *query) ([]*trackPoint.TrackPoint, error) {
+func getAllPoints() ([]simpleline.Point, error) {
 
-	var err error
+	//TODO make this not what it was
+	start := time.Now()
+
 	var coords []simpleline.Point
 
-	if query != nil && query.IsBounded() {
-		//build aabb rect
-		var center = make(map[string]float64)
-		//not totally sure what halfpoint means but best guess
-		center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
-		center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
-		cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
-		half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
-		hp := cp.HalfPoint(half)
-		ab := quadtree.NewAABB(cp, hp)
-		//res = GetQT.Search(aabb)
-		qres := GetQT().Search(ab)
-		//for range res = coords append res[i].data
-		//TODO check gainst other query params
-		for _, val := range qres {
-			coords = append(coords, val.Data().(*trackPoint.TrackPoint))
-		}
-	} else {
+	err := GetDB().View(func(tx *bolt.Tx) error {
+		var err error
+		b := tx.Bucket([]byte(trackKey))
 
-		//TODO make this not what it was
+		// can swap out for- eacher if we figure indexing, or even want it
+		b.ForEach(func(trackPointKey, trackPointVal []byte) error {
 
-		err = GetDB().View(func(tx *bolt.Tx) error {
-			var err error
-			b := tx.Bucket([]byte(trackKey))
+			var trackPointCurrent trackPoint.TrackPoint
+			json.Unmarshal(trackPointVal, &trackPointCurrent)
 
-			// can swap out for- eacher if we figure indexing, or even want it
-			b.ForEach(func(trackPointKey, trackPointVal []byte) error {
-
-				var trackPointCurrent trackPoint.TrackPoint
-				json.Unmarshal(trackPointVal, &trackPointCurrent)
-
-				coords = append(coords, &trackPointCurrent)
-				return nil
-
-			})
-
-			return err
+			coords = append(coords, &trackPointCurrent)
+			return nil
 		})
 
-	}
+		return err
+	})
+	fmt.Println("Found ", len(coords), " points with iterator method in ", time.Since(start))
 
-	//? but why is there a null pointer error? how is the func being passed a nil query?
-	var epsilon float64
-	if query != nil {
-		epsilon = query.Epsilon // just so we can separate incoming queryEps and wiggled-to Eps
-	} else {
-		epsilon = DefaultEpsilon // to default const
-	}
-	//simpleify line
-	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
-	originalCount := len(coords)
-	results, err := simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
-	if err != nil {
-		fmt.Println("Errrrrrr", err)
-		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
-	}
-	fmt.Println("eps: ", epsilon)
-	fmt.Println("  results: ", len(results))
-
-	var l int
-	if query != nil {
-		l = query.Limit
-	} else {
-		l = DefaultLimit
-	}
-	//just a hacky shot at wiggler. pointslimits -> query eventually?
-	for len(results) > l {
-		epsilon = epsilon + epsilon/(1-epsilon)
-		fmt.Println("wiggling eps: ", epsilon)
-		//or could do with results stead of coords?
-		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true)
-		if err != nil {
-			fmt.Println("Errrrrrr", err)
-			results = coords
-			continue
-		}
-		fmt.Println("  results: ", len(results))
-	}
-
-	var tps trackPoint.TPs
-	for _, insult := range results {
-		o, ok := insult.(*trackPoint.TrackPoint)
-		if !ok {
-			fmt.Println("shittt notok")
-		}
-		// could send channeler??
-		tps = append(tps, o)
-	}
-
-	fmt.Println("Serving points.")
-	fmt.Println("Original total points: ", originalCount)
-	fmt.Println("post-RDP-wiggling point: ", len(results))
-
-	sort.Sort(tps)
-
-	return tps, err
+	return coords, err
 }
 
 // http://blog.nobugware.com/post/2016/geo_db_s2_geohash_database/
@@ -409,6 +319,41 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 	return tps, err
 }
 
+//only call if coords > query.Limit
+func simplifyPoints(query *query, coords []simpleline.Point) ([]simpleline.Point, error) {
+
+	var err error
+	start := time.Now()
+	results, _ := simpleline.RDP(coords, query.Epsilon, simpleline.Euclidean, true)
+
+	var epsilon float64
+	epsilon = query.Epsilon
+	for len(results) > query.Limit {
+		epsilon = epsilon + query.Gamma
+		// fmt.Println("eps -> ", epsilon, " ; result -> ", len(results))
+		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true)
+		if err != nil {
+			fmt.Println("Errrrrrr", err)
+			results = coords
+			continue
+		}
+	}
+	fmt.Println("simplified ", len(coords), " to ", len(results), " in ", time.Since(start))
+	return results, err
+}
+
+func simplePointsToTrackPoints(results []simpleline.Point) trackPoint.TPs {
+	var tps trackPoint.TPs
+	for _, insult := range results {
+		o, ok := insult.(*trackPoint.TrackPoint)
+		if !ok {
+			fmt.Println("shittt notok")
+		}
+		tps = append(tps, o) // could send channeler??
+	}
+	return tps
+}
+
 //TODO make queryable ala which cat when
 // , channel chan *trackPoint.TrackPoint
 func socketPointsByQueryQuadtree(query *query) (trackPoint.TPs, error) {
@@ -416,110 +361,35 @@ func socketPointsByQueryQuadtree(query *query) (trackPoint.TPs, error) {
 	var err error
 	var coords []simpleline.Point
 
-	if query != nil && query.IsBounded() {
+	if query == nil {
+		query = NewQuery()
+	}
+	query.SetDefaults()
 
-		start := time.Now()
-
-		//build aabb rect
-		var center = make(map[string]float64)
-		//not totally sure what halfpoint means but best guess
-		center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
-		center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
-		cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
-		half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
-		hp := cp.HalfPoint(half)
-		ab := quadtree.NewAABB(cp, hp)
-		//res = GetQT.Search(aabb)
-		qres := GetQT().Search(ab)
-		//for range res = coords append res[i].data
-		//TODO check gainst other query params
-		// fmt.Println("server quad res length: ", len(qres))
-		for _, val := range qres {
-			coords = append(coords, val.Data().(*trackPoint.TrackPoint))
-		}
-
-		fmt.Printf("Found %s points with quadtree method - %s", len(qres), time.Since(start))
-
+	if query.IsBounded() {
+		query.SetDefaults()
+		coords = pointsFromQTWithQuery(query)
 	} else {
-
-		//TODO make this not what it was
-		start := time.Now()
-
-		err = GetDB().View(func(tx *bolt.Tx) error {
-			var err error
-			b := tx.Bucket([]byte(trackKey))
-
-			// can swap out for- eacher if we figure indexing, or even want it
-			b.ForEach(func(trackPointKey, trackPointVal []byte) error {
-
-				var trackPointCurrent trackPoint.TrackPoint
-				json.Unmarshal(trackPointVal, &trackPointCurrent)
-
-				coords = append(coords, &trackPointCurrent)
-				return nil
-
-			})
-
-			return err
-		})
-		fmt.Printf("Found %d points with iterator method - %s", len(coords), time.Since(start))
-
-	}
-
-	//? but why is there a null pointer error? how is the func being passed a nil query?
-	var epsilon float64
-	if query != nil {
-		epsilon = query.Epsilon // just so we can separate incoming queryEps and wiggled-to Eps
-	} else {
-		epsilon = DefaultEpsilon // to default const
-	}
-	//simpleify line
-	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
-	originalCount := len(coords)
-	results, err := simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
-	if err != nil {
-		fmt.Println("Errrrrrr", err)
-		results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
-	}
-	// fmt.Println("eps: ", epsilon)
-	// fmt.Println("  results: ", len(results))
-
-	var l int
-	if query != nil {
-		l = query.Limit
-	} else {
-		l = DefaultLimit
-	}
-	//just a hacky shot at wiggler. pointslimits -> query eventually?
-	for len(results) > l {
-		epsilon = epsilon + epsilon/(1-epsilon)
-		// fmt.Println("wiggling eps: ", epsilon)
-		//or could do with results stead of coords?
-		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true)
+		coords, err = getAllPoints()
 		if err != nil {
-			fmt.Println("Errrrrrr", err)
-			results = coords
-			continue
+			fmt.Println("error getting all points", err)
 		}
-		fmt.Println("  results: ", len(results))
 	}
 
-	var tps trackPoint.TPs
-	for _, insult := range results {
-		o, ok := insult.(*trackPoint.TrackPoint)
-		if !ok {
-			fmt.Println("shittt notok")
+	if len(coords) > query.Limit {
+		coords, err = simplifyPoints(query, coords)
+		if err != nil {
+			fmt.Println("simpler err", err)
+			return nil, err
 		}
-		// could send channeler??
-		tps = append(tps, o)
-
 	}
+	// fmt.Println("asdf coords len", len(coords))
+	tps := simplePointsToTrackPoints(coords)
 
 	fmt.Println("Serving points.")
-	fmt.Println("Original total points: ", originalCount)
-	fmt.Println("post-RDP-wiggling point: ", len(results))
+	fmt.Println("post-RDP-wiggling point: ", len(tps))
 
-	sort.Sort(tps)
+	sort.Sort(tps) //does sort by time == id
 
 	return tps, err
 }

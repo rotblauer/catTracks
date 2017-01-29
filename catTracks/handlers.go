@@ -131,7 +131,7 @@ func socket(w http.ResponseWriter, r *http.Request) {
 
 func getData(query *query) ([]byte, error) {
 	var data []byte
-	allPoints, e := getAllPoints(query)
+	allPoints, e := socketPointsByQueryQuadtree(query) // getAllPoints(query)
 	if e != nil {
 		return data, e
 	}

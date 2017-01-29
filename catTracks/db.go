@@ -8,6 +8,7 @@ import (
 	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"path"
+	"strings"
 )
 
 var (
@@ -98,4 +99,25 @@ func BuildIndexBuckets() error {
 		return nil
 	})
 	return nil
+}
+
+// DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke
+func DeleteTestes() error {
+	e := GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+		c := b.Cursor()
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			var tp trackPoint.TrackPoint
+			e := json.Unmarshal(v, &tp)
+			if e != nil {
+				fmt.Println("Error deleting testes.")
+				return e
+			}
+			if strings.HasPrefix(tp.Name, testesPrefix) {
+				b.Delete(k)
+			}
+		}
+		return nil
+	})
+	return e
 }
