@@ -1,0 +1,13 @@
+#!/usr/bin/env bash
+
+# Gets styles from mapbox.
+# API reference:
+# https://www.mapbox.com/api-documentation/#the-style-object
+
+# "https://api.mapbox.com/styles/v1/{username}/{style_id}?access_token=
+
+username=rotblauer
+style_id_light=ciy7ijqu3001a2rocq88pi8s4
+access_token=pk.eyJ1Ijoicm90YmxhdWVyIiwiYSI6ImNpeTdidjZxajAwMzEycW1waGdrNmh3NmsifQ.OpXHPqEHK2sTbQ4-pmhAMQ
+
+curl https://api.mapbox.com/styles/v1/$username/$style_id_light?access_token=$access_token
