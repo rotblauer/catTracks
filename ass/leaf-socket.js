@@ -316,7 +316,8 @@ function mapmove(e) {
       northeastlng: mapBounds.getNorthEast().lng,
       southwestlat: mapBounds.getSouthWest().lat,
       southwestlng: mapBounds.getSouthWest().lng
-    }
+    },
+    scale: getZoomScale()
     };
     // console.log('qBound', bounds);
     q = $.extend({}, q, bounds);

@@ -4,15 +4,17 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"path"
+
 	"github.com/boltdb/bolt"
 	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"path"
 )
 
 var (
-	db       *bolt.DB
-	trackKey = "tracks"
+	db         *bolt.DB
+	trackKey   = "tracks"
+	allBuckets = []string{trackKey, "names", "geohash"}
 )
 
 // GetDB is db getter.
@@ -20,39 +22,34 @@ func GetDB() *bolt.DB {
 	return db
 }
 
+func initBuckets(buckets []string) error {
+	err := GetDB().Update(func(tx *bolt.Tx) error {
+		var e error
+		for _, buck := range buckets {
+			_, e = tx.CreateBucketIfNotExists([]byte(buck))
+			if e != nil {
+				return e
+			}
+		}
+		return e
+	})
+	return err
+}
+
 // InitBoltDB sets up initial stuff, like the file and necesary buckets
 func InitBoltDB() error {
-	//sec := setting.Cfg.Section("server")
-	//p := sec.Key("APP_DATA_PATH").String()
-	where := path.Join("db", "tracks.db")
-
 	var err error
-	db, err = bolt.Open(where, 0666, nil)
-
-	// return err
+	db, err = bolt.Open(path.Join("db", "tracks.db"), 0666, nil)
 	if err != nil {
 		fmt.Println("Could not initialize Bolt database. ", err)
-	} else {
-		fmt.Println("Bolt db is initialized.")
-		db.Update(func(tx *bolt.Tx) error {
-			// "tracks" -- this is the default bucket, keyed on time.UnixNano
-			_, e := tx.CreateBucketIfNotExists([]byte(trackKey))
-			if e != nil {
-				return e
-			}
-			_, e = tx.CreateBucketIfNotExists([]byte("names"))
-			if e != nil {
-				return e
-			}
-			_, e = tx.CreateBucketIfNotExists([]byte("geohash"))
-			if e != nil {
-				return e
-			}
-			return e
-		})
+		return err
+	}
+
+	err = initBuckets(allBuckets)
+	if err != nil {
+		fmt.Println("Err initing buckets.", err)
 	}
 	return err
-	// return GetDB()
 }
 
 //BuildIndexBuckets populates name, lat, and long buckets from main "tracks" (time) bucket.

@@ -2,21 +2,39 @@ package catTracks
 
 import (
 	"encoding/json"
+	"fmt"
+	"time"
+
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"time"
 )
 
-// OVERALL: per day/ per ever/ per week/ ... per time
-// OVERALL: per cat/ per catTeam
+type timePeriodStats struct {
+	TeamStats trackPoint.CatStats            `json:"team"`
+	Cat       map[string]trackPoint.CatStats `json:"cat"`
+}
 
-// OVERALL: calculations:
-// - max, min, mean, mode, median
+func buildTimePeriodStats(numDays int) (stats timePeriodStats, e error) {
+	d := -24 * numDays
+	pts, e := getPointsSince(time.Now().Add(time.Duration(d) * time.Hour))
+	if e != nil {
+		fmt.Println(e)
+		return stats, e
+	}
 
-// OVERALL: units
-// - elevation, speed, distance,
+	catPts := make(map[string]trackPoint.CatStats)
+	for _, name := range pts.UniqueNames() { //erbody
+		catPts[name] = pts.ForName(name).Statistics()
+	}
 
-//TODO per catName string
+	stats = timePeriodStats{
+		TeamStats: pts.Statistics(),
+		Cat:       catPts,
+	}
+	return stats, e
+
+}
+
 func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 
 	var err error

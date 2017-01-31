@@ -2,8 +2,10 @@ package catTracks
 
 import (
 	"encoding/json"
+	"time"
 	// "errors"
 	"fmt"
+
 	"github.com/asim/quadtree"
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -12,7 +14,7 @@ import (
 var (
 	qt                    *quadtree.QuadTree
 	www                   quadtree.AABB
-	halfwayAroundTheWorld = 20000001.42 // half world's circumference in meters
+	halfwayAroundTheWorld = 40000001.42 // half world's circumference in meters
 	centerOfTheWorld      = map[string]float64{"lat": 0.0, "lng": 0.0}
 )
 
@@ -46,16 +48,7 @@ func InitQT() error {
 	e = GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 
-		count := 0 //limiter
 		ver := b.ForEach(func(key, val []byte) error {
-			count = count + 1
-
-			// if count > 90 {
-			// 	fmt.Println("skipping point", count)
-			// 	return nil
-			// } else {
-
-			fmt.Println("adding point", count)
 
 			var tp trackPoint.TrackPoint
 			err := json.Unmarshal(val, &tp)
@@ -65,18 +58,11 @@ func InitQT() error {
 			}
 			p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
 
-			// qt.Insert(p)
-
 			if qt.Insert(p) {
 				return nil
 			} else {
 				fmt.Println("Couldn't insert point to quadtree.")
 			}
-
-			// err = errors.New("Could not insert point into quadtree.")
-			// return err
-
-			// }
 			return nil
 		})
 		return ver
@@ -90,4 +76,30 @@ func InitQT() error {
 	}
 
 	return e
+}
+
+func getPointsFromQT(query *query) (tps trackPoint.TPs) {
+	start := time.Now()
+
+	//build aabb rect
+	var center = make(map[string]float64)
+	//not totally sure what halfpoint means but best guess
+	center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
+	center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
+	cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
+	half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
+	hp := cp.HalfPoint(half)
+	ab := quadtree.NewAABB(cp, hp)
+	//res = GetQT.Search(aabb)
+	qres := GetQT().Search(ab)
+	//for range res = tps append res[i].data
+	//TODO check gainst other query params
+	// fmt.Println("server quad res length: ", len(qres))
+	for _, val := range qres {
+		tps = append(tps, val.Data().(*trackPoint.TrackPoint))
+	}
+
+	fmt.Printf("Found %s points with quadtree method - %s\n", len(qres), time.Since(start))
+
+	return tps
 }

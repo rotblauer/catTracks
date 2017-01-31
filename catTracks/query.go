@@ -2,10 +2,11 @@ package catTracks
 
 import (
 	"fmt"
+	"net/http"
+
 	"github.com/creack/httpreq"
 	"github.com/gorilla/mux"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"net/http"
 )
 
 const (
@@ -19,6 +20,7 @@ type query struct {
 	Bounds  bounds  `json:"bounds"`
 	Limit   int     `json:"limit"`
 	Name    string  `json:"name"`
+	Scale   float64 `json:"scale"`
 }
 
 // Seems like non-trad form pass json is mux more mux friendly
@@ -52,6 +54,13 @@ func (q *query) SetDefaults() {
 	}
 	if q.Limit == 0 {
 		q.Limit = DefaultLimit
+	}
+}
+
+func NewQuery() *query {
+	return &query{
+		Epsilon: DefaultEpsilon,
+		Limit:   DefaultLimit,
 	}
 }
 

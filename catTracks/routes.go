@@ -16,7 +16,7 @@ var routes = Routes{
 		"Index",
 		"GET",
 		"/",
-		indexHandler,
+		getIndexTemplate,
 	},
 	Route{
 		"PointPopulator",
@@ -46,19 +46,19 @@ var routes = Routes{
 		"Map",
 		"GET",
 		"/map",
-		getMap,
+		getMapTemplate,
 	},
 	Route{
 		"Leaf",
 		"GET",
 		"/leaf",
-		getLeaf,
+		getLeafTemplate,
 	},
 	Route{
 		"Race",
 		"GET",
 		"/race",
-		getRace,
+		getRaceTemplate,
 	},
 	Route{
 		"RaceJSON",

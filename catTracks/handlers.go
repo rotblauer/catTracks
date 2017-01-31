@@ -5,95 +5,53 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/rotblauer/trackpoints/trackPoint"
 	"html/template"
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
 // the html stuff of this thing
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
 //Welcome, loads and servers all (currently) data pointers
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-
+func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
 	templates.ExecuteTemplate(w, "base", nil)
 }
+func getRaceTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "race", nil)
+}
+func getMapTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "map", nil)
+}
+func getLeafTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "leaf", nil)
+}
+
+func socket(w http.ResponseWriter, r *http.Request) {
+	// see ./socket.go
+	GetMelody().HandleRequest(w, r)
+}
+
 func getRaceJSON(w http.ResponseWriter, r *http.Request) {
 	var e error
 
-	todayPoints, e := getPointsSince(time.Now().Add(-24 * time.Hour))
-	if e != nil {
-		fmt.Println(e)
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	weekPoints, e := getPointsSince(time.Now().Add(-24 * 7 * time.Hour))
-	if e != nil {
-		fmt.Println(e)
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	allPoints, e := getPointsSince(time.Now().Add(-24 * 5000 * time.Hour))
-	if e != nil {
-		fmt.Println(e)
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-
-	//holy good damn this is ugly but i love it
-	byCatToday := make(map[string]trackPoint.CatStats)
-	byCatWeek := make(map[string]trackPoint.CatStats)
-	byCatAll := make(map[string]trackPoint.CatStats)
-
-	for _, name := range todayPoints.UniqueNames() { //erbody
-		byCatToday[name] = todayPoints.ForName(name).Statistics()
-	}
-	for _, name := range weekPoints.UniqueNames() { //erbody
-		byCatWeek[name] = weekPoints.ForName(name).Statistics()
-	}
-	for _, name := range allPoints.UniqueNames() { //erbody
-		byCatAll[name] = allPoints.ForName(name).Statistics()
-	}
-
-	today := struct {
-		TeamStats trackPoint.CatStats            `json:"team"`
-		Cat       map[string]trackPoint.CatStats `json:"cat"`
-	}{
-		TeamStats: todayPoints.Statistics(),
-		Cat:       byCatToday,
-	}
-
-	week := struct {
-		TeamStats trackPoint.CatStats            `json:"team"`
-		Cat       map[string]trackPoint.CatStats `json:"cat"`
-	}{
-		TeamStats: weekPoints.Statistics(),
-		Cat:       byCatWeek,
-	}
-
-	all := struct {
-		TeamStats trackPoint.CatStats            `json:"team"`
-		Cat       map[string]trackPoint.CatStats `json:"cat"`
-	}{
-		TeamStats: weekPoints.Statistics(),
-		Cat:       byCatAll,
-	}
-
 	var renderer = make(map[string]interface{})
-	renderer["today"] = today
-	renderer["week"] = week
-	renderer["all"] = all
+	var spans = map[string]int{
+		"today": 1,
+		"week":  7,
+		"all":   100000,
+	}
 
-	// weekPoints, e := getPointsSince(time.Now().Add(-1 * time.Hour)) // could be better, slice off from todayPoints
-	// if e != nil {
-	// 	fmt.Println(e)
-	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
-	// }
-
-	// allPoints, e := getPointsSince(time.Now().AddDate(-100, 0, 0)) // also TODO
-	// if e != nil {
-	// 	fmt.Println(e)
-	// 	http.Error(w, e.Error(), http.StatusInternalServerError)
-	// }
+	for span, spanVal := range spans {
+		renderer[span], e = buildTimePeriodStats(spanVal)
+		if e != nil {
+			fmt.Println(e)
+			http.Error(w, e.Error(), http.StatusInternalServerError)
+		}
+	}
 
 	buf, e := json.Marshal(renderer)
 	if e != nil {
@@ -101,10 +59,6 @@ func getRaceJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
 	w.Write(buf)
-}
-
-func getRace(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "race", nil)
 }
 
 func getPointsJSON(w http.ResponseWriter, r *http.Request) {
@@ -116,17 +70,6 @@ func getPointsJSON(w http.ResponseWriter, r *http.Request) {
 	}
 	fmt.Println("Receive ajax get data string ")
 	w.Write([]byte(data))
-}
-
-func getMap(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "map", nil)
-}
-func getLeaf(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "leaf", nil)
-}
-
-func socket(w http.ResponseWriter, r *http.Request) {
-	GetMelody().HandleRequest(w, r)
 }
 
 func getData(query *query) ([]byte, error) {
@@ -142,7 +85,6 @@ func getData(query *query) ([]byte, error) {
 	return data, nil
 }
 
-//TODO populate a population of points
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	var trackPoints trackPoint.TrackPoints
 

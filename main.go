@@ -23,6 +23,7 @@ func main() {
 	flag.BoolVar(&buildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
 
 	flag.Parse()
+
 	// Open Bolt DB.
 	// catTracks.InitBoltDB()
 	if bolterr := catTracks.InitBoltDB(); bolterr == nil {
