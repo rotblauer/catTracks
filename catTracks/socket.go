@@ -30,8 +30,7 @@ func onMessageHandler(s *melody.Session, msg []byte) {
 	json.Unmarshal(msg, &q)
 
 	// var c = make(chan *trackPoint.TrackPoint)
-	pts, e := getPointsQT(&q)
-	// pts, e := getPointsGH(&q)
+	pts, e := getPointsWithQuery(&q)
 	if e != nil {
 		log.Println("Couldn't get points.")
 	}

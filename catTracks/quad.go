@@ -82,7 +82,7 @@ func InitQT() error {
 	return e
 }
 
-func getPointsFromQT(query *query) (tps trackPoint.TPs) {
+func searchQuadtree(query *query) (tps trackPoint.TPs) {
 	start := time.Now()
 
 	//build aabb rect

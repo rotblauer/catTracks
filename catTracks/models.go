@@ -102,7 +102,7 @@ func getAllStoredPoints() (tps trackPoint.TPs, e error) {
 
 //TODO make queryable ala which cat when
 // , channel chan *trackPoint.TrackPoint
-func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
+func getPointsWithQuery(query *query) (tps trackPoint.TPs, err error) {
 
 	if query == nil {
 		query = NewQuery()
@@ -110,9 +110,13 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 
 	query.SetDefaults() // eps, lim  catches empty vals
 
-	if query.IsBounded() {
-		// tps = getPointsFromQT(query)
-		tps = getPointsGH(query)
+	if query.IsBounded() && (GetSearchType() == "quadtree" || GetSearchType() == "geohash") {
+		if GetSearchType() == "quadtree" {
+			tps = searchQuadtree(query) // TODO set env
+		}
+		if GetSearchType() == "geohash" {
+			tps = searchGeohash(query)
+		}
 	} else {
 		tps, err = getAllStoredPoints()
 		if err != nil {

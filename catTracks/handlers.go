@@ -68,12 +68,11 @@ func getPointsJSON(w http.ResponseWriter, r *http.Request) {
 	if eq != nil {
 		http.Error(w, eq.Error(), http.StatusInternalServerError)
 	}
-	fmt.Println("Receive ajax get data string ")
 	w.Write(data)
 }
 func getData(query *query) ([]byte, error) {
 	var data []byte
-	allPoints, e := getPointsQT(query)
+	allPoints, e := getPointsWithQuery(query)
 	if e != nil {
 		return data, e
 	}

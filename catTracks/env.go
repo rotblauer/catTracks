@@ -2,6 +2,7 @@ package catTracks
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strings"
 
@@ -14,6 +15,7 @@ const (
 )
 
 var testes = false
+var searchType = "quadtree"
 
 // SetTestes run
 func SetTestes(flagger bool) {
@@ -25,6 +27,23 @@ func getTestesPrefix() string {
 		return testesPrefix
 	}
 	return ""
+}
+
+// SetSearch sets the env for kind of search to use
+func SetSearch(s string) error {
+	if s == "geohash" {
+		searchType = "geohash"
+		return nil
+	}
+	if s == searchType {
+		return nil
+	}
+	return errors.New("Either 'quadtree' or 'geohash' for search type.")
+}
+
+// GetSearchType return the env search type
+func GetSearchType() string {
+	return searchType
 }
 
 // DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke

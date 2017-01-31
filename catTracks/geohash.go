@@ -36,7 +36,7 @@ func NewGeoKey(tp trackPoint.TrackPoint) []byte {
 	zkey := append(placeKey, kid...)
 	zkey = append(zkey, personKey...)
 
-	// K<unixnanotime><cellIdBytes>N<personName>
+	// <cellIdBytes>K<unixnanotime>N<personName>
 	return zkey
 }
 
@@ -86,10 +86,10 @@ func citiesInCellID(c s2.CellID) (tps trackPoint.TPs) {
 
 //TODO make queryable ala which cat when
 // , channel chan *trackPoint.TrackPoint
-func getPointsGH(query *query) (tps trackPoint.TPs) {
+func searchGeohash(query *query) trackPoint.TPs {
 
 	start := time.Now()
-
+	var tps trackPoint.TPs
 	// for now, use _way back_ and _now_ for time bounds... can queryfy em later
 	// d := time.Duration(-10) * time.Minute
 	// geoPrefixs := GeoKeyPrefix(time.Now().UTC().Add(d), time.Now().UTC())
@@ -97,7 +97,7 @@ func getPointsGH(query *query) (tps trackPoint.TPs) {
 	rect := s2.RectFromLatLng(s2.LatLngFromDegrees(query.Bounds.SouthWestLat, query.Bounds.SouthWestLng))
 	rect = rect.AddPoint(s2.LatLngFromDegrees(query.Bounds.NorthEastLat, query.Bounds.NorthEastLng))
 
-	rc := &s2.RegionCoverer{MaxLevel: 22, MaxCells: 8}
+	rc := &s2.RegionCoverer{MaxLevel: 20, MaxCells: 8}
 	r := s2.Region(rect.CapBound())
 	covering := rc.Covering(r)
 
