@@ -2,10 +2,11 @@ package main
 
 import (
 	"flag"
-	"github.com/rotblauer/catTracks/catTracks"
 	"log"
 	"net/http"
 	"strconv"
+
+	"github.com/rotblauer/catTracks/catTracks"
 )
 
 //start the url handlers, special init for everything?

@@ -83,23 +83,22 @@ func getPointsFromQT(query *query) (tps trackPoint.TPs) {
 
 	//build aabb rect
 	var center = make(map[string]float64)
-	//not totally sure what halfpoint means but best guess
 	center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
 	center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
 	cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
+
+	//not totally sure what halfpoint means but best guess
 	half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
 	hp := cp.HalfPoint(half)
+
 	ab := quadtree.NewAABB(cp, hp)
-	//res = GetQT.Search(aabb)
 	qres := GetQT().Search(ab)
-	//for range res = tps append res[i].data
-	//TODO check gainst other query params
-	// fmt.Println("server quad res length: ", len(qres))
+
 	for _, val := range qres {
 		tps = append(tps, val.Data().(*trackPoint.TrackPoint))
 	}
 
-	fmt.Printf("Found %s points with quadtree method - %s\n", len(qres), time.Since(start))
+	fmt.Println("Found ", len(qres), " points with quadtree method in ", time.Since(start))
 
 	return tps
 }

@@ -2,6 +2,7 @@ package catTracks
 
 import (
 	"encoding/json"
+
 	"github.com/olahol/melody"
 	// "github.com/rotblauer/trackpoints/trackPoint"
 	"log"
@@ -14,7 +15,7 @@ func InitMelody() {
 	m = melody.New()
 
 	// Incoming message about updated query params.
-	m.HandleMessage(getPointsWS)
+	m.HandleMessage(onMessageHandler)
 }
 
 //GetMelody does stuff
@@ -23,15 +24,13 @@ func GetMelody() *melody.Melody {
 }
 
 // on request
-func getPointsWS(s *melody.Session, msg []byte) {
+func onMessageHandler(s *melody.Session, msg []byte) {
 
 	var q query
-	log.Println("raw socket msg: ", string(msg))
 	json.Unmarshal(msg, &q)
-	log.Println("socket got query", q)
 
 	// var c = make(chan *trackPoint.TrackPoint)
-	pts, e := socketPointsByQueryQuadtree(&q)
+	pts, e := getPointsQT(&q)
 	// pts, e := socketPointsByQueryGeohash(&q)
 	if e != nil {
 		log.Println("Couldn't get points.")

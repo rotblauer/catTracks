@@ -42,7 +42,7 @@ func getRaceJSON(w http.ResponseWriter, r *http.Request) {
 	var spans = map[string]int{
 		"today": 1,
 		"week":  7,
-		"all":   100000,
+		"all":   10000,
 	}
 
 	for span, spanVal := range spans {
@@ -69,12 +69,11 @@ func getPointsJSON(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, eq.Error(), http.StatusInternalServerError)
 	}
 	fmt.Println("Receive ajax get data string ")
-	w.Write([]byte(data))
+	w.Write(data)
 }
-
 func getData(query *query) ([]byte, error) {
 	var data []byte
-	allPoints, e := getAllPoints(query)
+	allPoints, e := getPointsQT(query)
 	if e != nil {
 		return data, e
 	}
