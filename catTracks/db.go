@@ -1,13 +1,13 @@
 package catTracks
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
 	"path"
 
+	"gopkg.in/cheggaaa/pb.v1"
+
 	"github.com/boltdb/bolt"
-	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
@@ -26,6 +26,7 @@ func initBuckets(buckets []string) error {
 	err := GetDB().Update(func(tx *bolt.Tx) error {
 		var e error
 		for _, buck := range buckets {
+			fmt.Println("Ensured existance of bucket: ", buck)
 			_, e = tx.CreateBucketIfNotExists([]byte(buck))
 			if e != nil {
 				return e
@@ -54,45 +55,81 @@ func InitBoltDB() error {
 
 //BuildIndexBuckets populates name, lat, and long buckets from main "tracks" (time) bucket.
 func BuildIndexBuckets() error {
-	db.View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(trackKey))
+	var tps []trackPoint.TrackPoint
+	var countTps int
 
+	e := db.View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+		countTps = b.Stats().KeyN
 		b.ForEach(func(key, val []byte) error {
 			var tp trackPoint.TrackPoint
 			json.Unmarshal(val, &tp)
-
-			// update "name"
-			db.Update(func(txx *bolt.Tx) error {
-				bname := txx.Bucket([]byte("names"))
-
-				bByName, _ := bname.CreateBucketIfNotExists([]byte(tp.Name))
-
-				bByName.Put(itob(tp.ID), val)
-
-				return nil
-			})
-
-			// under geohasher keys
-			db.Update(func(txx *bolt.Tx) error {
-				b := txx.Bucket([]byte("geohash"))
-
-				// Compute the CellID for lat, lng
-				c := s2.CellIDFromLatLng(s2.LatLngFromDegrees(tp.Lat, tp.Lng))
-
-				// store the uint64 value of c to its bigendian binary form
-				hashkey := make([]byte, 8)
-				binary.BigEndian.PutUint64(hashkey, uint64(c))
-
-				e := b.Put(hashkey, val)
-				if e != nil {
-					fmt.Println("shit geohash index err", e)
-				}
-				return nil
-			})
-
+			tps = append(tps, tp)
 			return nil
 		})
+
+		tx.DeleteBucket([]byte("names"))
+		tx.CreateBucketIfNotExists([]byte("names"))
+
+		tx.DeleteBucket([]byte("geohash"))
+		tx.CreateBucketIfNotExists([]byte("geohash"))
+
 		return nil
 	})
+	if e != nil {
+		fmt.Println("e", e)
+		return e
+	}
+
+	// update "name"
+	fmt.Println("Indexing on names...")
+	namebar := pb.StartNew(countTps)
+
+	db.Update(func(txx *bolt.Tx) error {
+		bname := txx.Bucket([]byte("names"))
+		for _, tp := range tps {
+			bByName, _ := bname.CreateBucketIfNotExists([]byte(tp.Name))
+			b, e := json.Marshal(tp)
+			if e != nil {
+				fmt.Println("got err marshaling tp for namer", e)
+				return e
+			}
+			bByName.Put(itob(tp.ID), []byte(b))
+			namebar.Increment()
+		}
+		return nil
+	})
+
+	namebar.FinishPrint("Finished names.")
+
+	fmt.Println("Indexing on geohash...")
+	geobar := pb.StartNew(countTps)
+	geobar.ShowFinalTime = true
+
+	// under geohasher keys
+	eg := db.Update(func(txx *bolt.Tx) error {
+		for _, tp := range tps {
+			gb := txx.Bucket([]byte("geohash"))
+
+			hashkey := NewGeoKey(tp)
+
+			b, e := json.Marshal(tp)
+			if e != nil {
+				fmt.Println("shite rr marshaling tp")
+			}
+
+			ep := gb.Put(hashkey, []byte(b))
+			if ep != nil {
+				fmt.Println("NOTSAVE geohash index", ep)
+			}
+			geobar.Increment()
+		}
+		return nil
+	})
+	if eg != nil {
+		fmt.Println("eg", eg)
+	}
+
+	geobar.FinishPrint("Finished geohashes.")
 	return nil
 }

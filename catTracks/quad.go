@@ -6,6 +6,8 @@ import (
 	// "errors"
 	"fmt"
 
+	"gopkg.in/cheggaaa/pb.v1"
+
 	"github.com/asim/quadtree"
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -41,12 +43,14 @@ func InitQT() error {
 	quadtree.Capacity = 72 //lets really blow it up
 
 	//being new quadtree
-	fmt.Println("initing qt...")
+	fmt.Println("Initializing quadtree (into memory) ...")
 	qt = quadtree.New(initQTBounds(), 0, nil)
 
 	//stick points into quadtree
 	e = GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
+		qtpb := pb.StartNew(b.Stats().KeyN)
+		qtpb.ShowFinalTime = true
 
 		ver := b.ForEach(func(key, val []byte) error {
 
@@ -59,20 +63,20 @@ func InitQT() error {
 			p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
 
 			if qt.Insert(p) {
+				qtpb.Increment()
 				return nil
 			} else {
 				fmt.Println("Couldn't insert point to quadtree.")
 			}
 			return nil
 		})
+		qtpb.FinishPrint("Finished inserting points into quadtree.")
 		return ver
 	})
 	if e != nil {
 		fmt.Println(e)
-	}
-
-	if e == nil {
-		fmt.Println("Successfully added all trackpoints to quadtree.")
+	} else {
+		fmt.Println("... with no errors.")
 	}
 
 	return e

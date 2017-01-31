@@ -35,15 +35,17 @@ func main() {
 		if e != nil {
 			log.Println(e)
 		}
+		return
 	}
 	if buildIndexes {
 		catTracks.BuildIndexBuckets() //cleverly always returns nil
+		return
 	}
 	if qterr := catTracks.InitQT(); qterr != nil {
 		log.Println("Error initing QT.")
 		log.Println(qterr)
 	}
-	catTracks.InitMelody()
+	catTracks.InitMelody()         // sets up websockets, see ./socket.go
 	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
 
 	router := catTracks.NewRouter()

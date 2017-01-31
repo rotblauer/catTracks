@@ -111,7 +111,8 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 	query.SetDefaults() // eps, lim  catches empty vals
 
 	if query.IsBounded() {
-		tps = getPointsFromQT(query)
+		// tps = getPointsFromQT(query)
+		tps = getPointsGH(query)
 	} else {
 		tps, err = getAllStoredPoints()
 		if err != nil {

@@ -31,7 +31,7 @@ func onMessageHandler(s *melody.Session, msg []byte) {
 
 	// var c = make(chan *trackPoint.TrackPoint)
 	pts, e := getPointsQT(&q)
-	// pts, e := socketPointsByQueryGeohash(&q)
+	// pts, e := getPointsGH(&q)
 	if e != nil {
 		log.Println("Couldn't get points.")
 	}
