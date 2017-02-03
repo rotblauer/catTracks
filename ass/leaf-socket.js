@@ -189,7 +189,7 @@ var tile_ex = "http://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"; //attribution
 var os_tile_bw = "http://korona.geog.uni-heidelberg.de/tiles/roadsg/x={x}&y={y}&z={z}";
 // L.tileLayer("http://{s}.sm.mapstack.stamen.com/(toner-lite,$fff[difference],$fff[@23],$fff[hsl-saturation@20])/{z}/{x}/{y}.png").addTo(leafletMap);
 var mb_light1 = "https://api.mapbox.com/styles/v1/rotblauer/ciy7ijqu3001a2rocq88pi8s4/tiles/256/{z}/{x}/{y}?access_token=pk.eyJ1Ijoicm90YmxhdWVyIiwiYSI6ImNpeTdidjZxajAwMzEycW1waGdrNmh3NmsifQ.OpXHPqEHK2sTbQ4-pmhAMQ";
-var rb_tiler = "http://track.areteh.co:8080/{z}/{x}/{y}"
+var rb_tiler = "http://track.areteh.co:8080/{z}/{x}/{y}.png"
 L.tileLayer(mb_light1, {
     maxZoom: 19
 }).addTo(leafletMap);
