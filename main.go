@@ -39,10 +39,10 @@ func main() {
 	if buildIndexes {
 		catTracks.BuildIndexBuckets() //cleverly always returns nil
 	}
-	if qterr := catTracks.InitQT(); qterr != nil {
-		log.Println("Error initing QT.")
-		log.Println(qterr)
-	}
+	// if qterr := catTracks.InitQT(); qterr != nil {
+	// 	log.Println("Error initing QT.")
+	// 	log.Println(qterr)
+	// }
 	catTracks.InitMelody()
 	catTracks.SetTestes(testesRun) //is false defaulter, false prefixes names with ""
 

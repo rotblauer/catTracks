@@ -42,7 +42,7 @@ func getRaceJSON(w http.ResponseWriter, r *http.Request) {
 	var spans = map[string]int{
 		"today": 1,
 		"week":  7,
-		"all":   10000,
+		"all":   10,
 	}
 
 	for span, spanVal := range spans {
