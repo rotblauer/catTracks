@@ -1,5 +1,5 @@
 {
-  "name": "catTracks",
+  "name": "cat-tracks",
   "authors": [
     "rotblauer <rotblauer@gmail.com>"
   ],
@@ -24,7 +24,8 @@
     "datatables.net-dt": "^1.10.12",
     "datatables.net-bs": "^1.10.12",
     "tether": "^1.3.7",
-    "datatables": "^1.10.12"
+    "datatables": "^1.10.12",
+    "rangeslider.js": "^2.3.0"
   },
   "devDependencies": {
     "bower": "*",

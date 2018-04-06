@@ -1,0 +1,25 @@
+#!/bin/sh
+
+# run from project dir
+
+echo "killing running trackermain process... "
+echo "(will fail to kill ps proc)"
+kill $(ps aux | grep trackermain | awk '{print $2}') # kill trackermain
+# kill $(ps aux | grep tile-server | awk '{print $2}') #kill any running node tileservers
+
+#mbtiles_file=word_countries.mbtiles
+#mbtiles_file=tiles-world-simple.mbtiles
+# mbtiles_file=tiles-world-utfgrid.mbtiles
+#mbtiles_file=tiles-world-vector.mbtiles
+
+
+pushd $HOME/track.areteh.co/;
+./linux.trackermain --port=3001 >> $HOME/track.areteh.co/logs.log 2>&1 &
+# node tile-server.js $mbtiles_file 8080 2>&1 &
+popd;
+
+# This one may work too, but chat still won't turn on, probably.
+# nohup $HOME/goggable.areteh.co/gogs/linux.gogs web -c $HOME/goggable.areteh.co/gogs/custom/conf/prod.app.ini &
+
+# This one definitely works, but chat won't turn on.
+# nohup $HOME/goggable.areteh.co/gogs/gogs web > $HOME/glogs/goggable.log &

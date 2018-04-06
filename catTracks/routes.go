@@ -16,7 +16,7 @@ var routes = Routes{
 		"Index",
 		"GET",
 		"/",
-		indexHandler,
+		getIndexTemplate,
 	},
 	Route{
 		"PointPopulator",
@@ -29,5 +29,41 @@ var routes = Routes{
 		"POST",
 		"/upload",
 		uploadCSV,
+	},
+	Route{
+		"getPointsJSON",
+		"GET",
+		"/api/data/{version}",
+		getPointsJSON,
+	},
+	Route{
+		"WS",
+		"GET",
+		"/api/ws",
+		socket,
+	},
+	Route{
+		"Map",
+		"GET",
+		"/map",
+		getMapTemplate,
+	},
+	Route{
+		"Leaf",
+		"GET",
+		"/leaf",
+		getLeafTemplate,
+	},
+	Route{
+		"Race",
+		"GET",
+		"/race",
+		getRaceTemplate,
+	},
+	Route{
+		"RaceJSON",
+		"GET",
+		"/api/race",
+		getRaceJSON,
 	},
 }

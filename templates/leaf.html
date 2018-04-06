@@ -1,0 +1,32 @@
+{{define "leaf"}}
+<!doctype html>
+<html>
+
+<head>
+    <title>Leafy Cat Map</title>
+    <meta charset="utf-8">
+    <link href="/ass/leaf.css" rel="stylesheet" />
+    <script   src="https://code.jquery.com/jquery-3.1.1.min.js"   integrity="sha256-hVVnYaiADRTO2PzUGmuLJr8BLUSjGIZsDYGmIJLv2b8="   crossorigin="anonymous"></script>
+
+</head>
+
+<body>
+    <button id="resetView">Reset View</button>
+    <div id="map"></div>
+    <div id="tooltip">
+        <svg xmlns="http://www.w3.org/2000/svg" width="100px" height="100px" />
+    </div>
+
+    <link rel="stylesheet" href="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.css" />
+    <script src="http://cdn.leafletjs.com/leaflet-0.7.2/leaflet.js"></script>
+
+    <!-- d3v3 -->
+    <script src="http://d3js.org/d3.v3.min.js" charset="utf-8"></script>
+
+
+    <script src="/ass/leaf-socket.js"></script>
+</body>
+
+</html>
+
+{{end}}

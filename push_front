@@ -1,0 +1,9 @@
+#!/usr/bin/env bash
+
+rsync -avz -L --progress -h\
+ --exclude=".git"\
+ --exclude="*.db"\
+ --exclude="*.main"\
+ --exclude="*.trackermain"\
+ --exclude="ass/berlin*"\
+ ./ freya:~/track.areteh.co/

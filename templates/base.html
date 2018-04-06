@@ -10,22 +10,19 @@
     <link rel="stylesheet" href="/bower_components/bootstrap/dist/css/bootstrap.min.css">
     <script src="/bower_components/jquery/dist/jquery.min.js">
     </script>
+    <script src="/bower_components/rangeslider.js/dist/rangeslider.min.js"></script>
     <script src="/bower_components/bootstrap/dist/js/bootstrap.min.js">
     </script>
-    <script src="/ass/cattracks.js" ></script>
-    <script type="text/javascript" src="/bower_components/geolocator/dist/geolocator.min.js"></script>
-    <script type="text/javascript" src="/ass/cattracks-getgeo.js">
-    </script>
      <script src="/ass/markerclusterer.js"></script>
-
+    <script type="text/javascript" src="/bower_components/geolocator/dist/geolocator.min.js"></script>
 </head>
 
 <body>
-  <p id="trackPointsData" style="display: none;">{{.TrackPointsJSON}}</p>
+  <!--<p id="trackPointsData" style="display: none;">{{.TrackPointsJSON}}</p>-->
 {{template "index" .}}
 
-  <script>
-
+    <script src="/ass/cattracks.js" ></script>
+    <script type="text/javascript" src="/ass/cattracks-getgeo.js">
     </script>
 <script async defer
         src="https://maps.googleapis.com/maps/api/js?key=AIzaSyDIx8zEL5Q8uN2r5kahv9VyADy5xygfrIQ&callback=initMap">

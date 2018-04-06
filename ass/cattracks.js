@@ -52,6 +52,8 @@ function postPoint () {
 }
 
   // data is trackpoint obj
+
+    // I think I broke this
   function handlePostSuccess(data, status) {
     alert("REsponser: " + data + "\n" + "status: " + status);
 
@@ -75,6 +77,46 @@ function postPoint () {
     initMap();
   }
 
+  console.log("RAGNER RAGNER -- ", $("input#daRslider").length);
+  $('input#daRslider').rangeslider({
+
+    // Feature detection the default is `true`.
+    // Set this to `false` if you want to use
+    // the polyfill also in Browsers which support
+    // the native <input type="range"> element.
+    polyfill: true,
+
+    // Default CSS classes
+    rangeClass: 'rangeslider',
+    disabledClass: 'rangeslider--disabled',
+    horizontalClass: 'rangeslider--horizontal',
+    verticalClass: 'rangeslider--vertical',
+    fillClass: 'rangeslider__fill',
+    handleClass: 'rangeslider__handle',
+
+    //TODO its not calling any of these callbacks. idk.
+    // Callback function
+    onInit: function() {
+      console.log('ranger inited');
+    },
+
+    // Callback function
+    onSlide: function(position, value) {
+      console.log('ranger sliding"');
+    },
+
+    // Callback function
+    onSlideEnd: function(position, value) {
+      console.log('slide ended. doing stuff');
+      $("#epsilonvalue").text(value);
+      // remove all points...
+      //TODO
+      // getData for value as eps
+      getData(map, value);
+      //--> and gD does do that, namely populate points from returned q
+    }
+  });
+
 });
 
 var bounds; // google LatLngBounds
@@ -82,6 +124,8 @@ var namePositions = {}; //holds googly lat/long
 var markers = []; //hold googly markers for clustering
 var map; //to become a googlemap
 
+
+//called from googler igniter
 function initMap() {
   namePositions = {};
   markers = [];
@@ -91,7 +135,12 @@ function initMap() {
     center: {lat: 38.6270, lng: -90.1994},
     mapTypeId: 'terrain'
   });
-  addTrackPointsToMap(map);
+
+    // TODO slidey mcsliderton
+    getData(map,0.001)
+
+
+  // addTrackPointsToMap(map);
 }
 
 function getUniqueNames(trackPoints) {
@@ -110,10 +159,26 @@ function initNamedPositions(uniqueNames) {
   }
 }
 
-function addTrackPointsToMap(map) {
-  var pointsData = JSON.parse($("#trackPointsData").text());
+function getData(map,epsilon){
+   return $.ajax({
+     url: '/api/data/v1',
+        type: 'GET',
+        dataType: 'json',
+        data: 'epsilon=' + parseFloat(epsilon).toString(),
+        // data : JSON.stringify({ "Epsilon": epsilon}),
+        success: function (data) {
+          alert("got data" + JSON.stringify(data));
+           addTrackPointsToMap(map,data);
+       }
+    });
+}
 
-  if (Array.isArray(pointsData)) {
+function addTrackPointsToMap(map,pointsData) {
+
+    // var pointsData = JSON.parse($("#trackPointsData").text());
+
+    markers =[]
+    if (Array.isArray(pointsData)) {
     var uniqueNames = getUniqueNames(pointsData);
     initNamedPositions(uniqueNames);
 
@@ -124,6 +189,8 @@ function addTrackPointsToMap(map) {
     for (n in uniqueNames) {
       drawFlightPath(map, namePositions[uniqueNames[n]], uniqueNames[n]);
     }
+  }else{
+    alert("hey that should be array")
   }
 
   var markerCluster = new MarkerClusterer(map, markers, {imagePath: '/ass/images/m'});

@@ -1,42 +1,15 @@
 package catTracks
 
 import (
-	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"github.com/boltdb/bolt"
-	"github.com/deet/simpleline"
-	"github.com/rotblauer/trackpoints/trackPoint"
 	"sort"
-	"strings"
 	"time"
+
+	"github.com/asim/quadtree"
+	"github.com/boltdb/bolt"
+	"github.com/rotblauer/trackpoints/trackPoint"
 )
-
-const (
-	testesPrefix = "testes-------"
-)
-
-var testes = false
-
-// SetTestes run
-func SetTestes(flagger bool) {
-	testes = flagger
-}
-func getTestesPrefix() string {
-	if testes {
-		return testesPrefix
-	}
-	return ""
-}
-
-//Store a snippit of life
-
-// itob returns an 8-byte big endian representation of v.
-func itob(v int64) []byte {
-	b := make([]byte, 8)
-	binary.BigEndian.PutUint64(b, uint64(v))
-	return b
-}
 
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
@@ -87,6 +60,10 @@ func storePoint(tp trackPoint.TrackPoint) error {
 				fmt.Println("Didn't save post trackPoint in bolt.", err)
 				return err
 			}
+			p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
+			if !GetQT().Insert(p) {
+				fmt.Println("Couldn't add to quadtree: ", p)
+			}
 			fmt.Println("Saved trackpoint: ", tp)
 			return nil
 		})
@@ -98,87 +75,59 @@ func storePoint(tp trackPoint.TrackPoint) error {
 	return err
 }
 
-// DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke
-func DeleteTestes() error {
-	e := GetDB().Update(func(tx *bolt.Tx) error {
+func getAllStoredPoints() (tps trackPoint.TPs, e error) {
+	start := time.Now()
+
+	e = GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-			var tp trackPoint.TrackPoint
-			e := json.Unmarshal(v, &tp)
-			if e != nil {
-				fmt.Println("Error deleting testes.")
-				return e
+
+		// can swap out for- eacher if we figure indexing, or even want it
+		b.ForEach(func(trackPointKey, trackPointVal []byte) error {
+
+			var trackPointCurrent trackPoint.TrackPoint
+			err := json.Unmarshal(trackPointVal, &trackPointCurrent)
+			if err != nil {
+				return err
 			}
-			if strings.HasPrefix(tp.Name, testesPrefix) {
-				b.Delete(k)
-			}
-		}
+
+			tps = append(tps, &trackPointCurrent)
+			return nil
+		})
 		return nil
 	})
-	return e
+	fmt.Printf("Found %d points with iterator method - %s\n", len(tps), time.Since(start))
+
+	return tps, e
 }
 
-//get everthing in the db... can do filtering some other day
-
 //TODO make queryable ala which cat when
-func getAllPoints() ([]*trackPoint.TrackPoint, error) {
+// , channel chan *trackPoint.TrackPoint
+func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 
-	var err error
-	// var trackPoints trackPoint.TrackPoints
-	var coords []simpleline.Point
-
-	err = GetDB().View(func(tx *bolt.Tx) error {
-		var err error
-		b := tx.Bucket([]byte(trackKey))
-
-		if b.Stats().KeyN > 0 {
-			c := b.Cursor()
-			for trackPointkey, trackPointval := c.First(); trackPointkey != nil; trackPointkey, trackPointval = c.Next() {
-				//only if trackPoint is in given trackPoints key set (we don't want all trackPoints just feeded times)
-				//but if no ids given, return em all
-				var trackPoint trackPoint.TrackPoint
-				json.Unmarshal(trackPointval, &trackPoint)
-				// trackPoints = append(trackPoints, trackPoint)
-
-				//rdp
-				coords = append(coords, &trackPoint) //filler up
-
-			}
-
-		} else {
-			//cuz its not an error if no trackPoints
-			return nil
-		}
-		return err
-	})
-
-	originalCount := len(coords)
-
-	//simpleify line
-	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
-	results, sErr := simpleline.RDP(coords, 0.001, simpleline.Euclidean, true) //0.001 bring a 3000pt run to prox 300 (cuz scale is lat and lng)
-	if sErr != nil {
-		fmt.Println("Errrrrrr", sErr)
+	if query == nil {
+		query = NewQuery()
 	}
 
-	rdpCount := len(results)
+	query.SetDefaults() // eps, lim  catches empty vals
 
-	//dis shit is fsck but fsckit
-	//truncater
-	// trackPoints = trackPoints[len(trackPoints)-3:] // lets go crazy with 3
-	var tps trackPoint.TPs
-
-	for _, insult := range results {
-
-		// fmt.Println(insult)
-		o, ok := insult.(*trackPoint.TrackPoint)
-		if !ok {
-			fmt.Println("shittt notok")
+	if query.IsBounded() {
+		tps = getPointsFromQT(query)
+	} else {
+		tps, err = getAllStoredPoints()
+		if err != nil {
+			return nil, err
 		}
-		tps = append(tps, o)
 	}
-	fmt.Println("Serving points. Original count was ", originalCount, " and post-RDP is ", rdpCount)
+
+	if len(tps) > query.Limit {
+		limitedTPs, err := limitTrackPoints(query, tps)
+		if err != nil {
+			fmt.Println(err)
+			return tps, err
+		}
+		tps = limitedTPs
+	}
+
 	sort.Sort(tps)
 
 	return tps, err

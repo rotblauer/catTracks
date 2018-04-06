@@ -5,46 +5,85 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"github.com/rotblauer/trackpoints/trackPoint"
 	"html/template"
 	"net/http"
 	"strconv"
 	"time"
-)
 
-var funcMap = template.FuncMap{
-	"eq": func(a, b interface{}) bool {
-		return a == b
-	},
-}
+	"github.com/rotblauer/trackpoints/trackPoint"
+)
 
 // the html stuff of this thing
 var templates = template.Must(template.ParseGlob("templates/*.html"))
 
-//For passing to the template
-type Data struct {
-	TrackPoints     []*trackPoint.TrackPoint
-	TrackPointsJSON string
-}
-
 //Welcome, loads and servers all (currently) data pointers
-func indexHandler(w http.ResponseWriter, r *http.Request) {
-	// catQ := r.FormValue("cat") //catQ is "" if not there //turn off queryable fur meow
-	allPoints, e := getAllPoints()
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	pointsJSON, e := json.Marshal(allPoints)
-	if e != nil {
-		http.Error(w, e.Error(), http.StatusInternalServerError)
-	}
-	data := Data{TrackPoints: allPoints, TrackPointsJSON: string(pointsJSON)}
-	fmt.Println("Done processing results")
-	templates.Funcs(funcMap)
-	templates.ExecuteTemplate(w, "base", data)
+func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "base", nil)
+}
+func getRaceTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "race", nil)
+}
+func getMapTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "map", nil)
+}
+func getLeafTemplate(w http.ResponseWriter, r *http.Request) {
+	templates.ExecuteTemplate(w, "leaf", nil)
 }
 
-//TODO populate a population of points
+func socket(w http.ResponseWriter, r *http.Request) {
+	// see ./socket.go
+	GetMelody().HandleRequest(w, r)
+}
+
+func getRaceJSON(w http.ResponseWriter, r *http.Request) {
+	var e error
+
+	var renderer = make(map[string]interface{})
+	var spans = map[string]int{
+		"today": 1,
+		"week":  7,
+		"all":   10000,
+	}
+
+	for span, spanVal := range spans {
+		renderer[span], e = buildTimePeriodStats(spanVal)
+		if e != nil {
+			fmt.Println(e)
+			http.Error(w, e.Error(), http.StatusInternalServerError)
+		}
+	}
+
+	buf, e := json.Marshal(renderer)
+	if e != nil {
+		fmt.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	w.Write(buf)
+}
+
+func getPointsJSON(w http.ResponseWriter, r *http.Request) {
+	query := parseQuery(r, w)
+
+	data, eq := getData(query)
+	if eq != nil {
+		http.Error(w, eq.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Receive ajax get data string ")
+	w.Write(data)
+}
+func getData(query *query) ([]byte, error) {
+	var data []byte
+	allPoints, e := getPointsQT(query)
+	if e != nil {
+		return data, e
+	}
+	data, err := json.Marshal(allPoints)
+	if err != nil {
+		return data, err
+	}
+	return data, nil
+}
+
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	var trackPoints trackPoint.TrackPoints
 
