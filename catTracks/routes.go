@@ -66,4 +66,10 @@ var routes = Routes{
 		"/api/race",
 		getRaceJSON,
 	},
+	Route{
+		"StatsJSON",
+		"GET",
+		"/stats",
+		getStatsJSON,
+	},
 }
