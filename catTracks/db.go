@@ -14,7 +14,9 @@ import (
 var (
 	db         *bolt.DB
 	trackKey   = "tracks"
-	allBuckets = []string{trackKey, "names", "geohash"}
+	statsKey = "stats"
+	statsDataKey = "storage" // use: bucket.Put(statsDataKey, value), bucket.Get(statsDataKey)
+	allBuckets = []string{trackKey, statsKey, "names", "geohash"}
 )
 
 // GetDB is db getter.
