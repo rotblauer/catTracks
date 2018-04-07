@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var debug = true
+var debug = false
 
 func debugLog(args ...interface{}) {
 	if debug {
@@ -23,20 +23,20 @@ func debugLog(args ...interface{}) {
 }
 
 type catStatsAggregate struct {
-	daily      catStatsCalculatedSlice
-	today      *catStatsCalculated // most recent
-	threeDays  *catStatsCalculated
-	sevenDays  *catStatsCalculated
-	thirtyDays *catStatsCalculated
-	halfYear   *catStatsCalculated
-	year       *catStatsCalculated
-	allTime    *catStatsCalculated
+	Daily      catStatsCalculatedSlice
+	Today      *catStatsCalculated // most recent
+	ThreeDays  *catStatsCalculated
+	SevenDays  *catStatsCalculated
+	ThirtyDays *catStatsCalculated
+	HalfYear   *catStatsCalculated
+	Year       *catStatsCalculated
+	AllTime    *catStatsCalculated
 }
 
 type catStatsCalculated struct {
-	startTime       time.Time
-	duration        time.Duration
-	userOrTeamStats []*userStats
+	StartTime       time.Time
+	Duration        time.Duration
+	UserOrTeamStats []*userStats
 }
 type catStatsCalculatedSlice []*catStatsCalculated
 
@@ -46,7 +46,7 @@ func (s catStatsCalculatedSlice) Len() int {
 
 func (s catStatsCalculatedSlice) Less(i, j int) bool {
 	// default sorter is 1,2,3,4,5
-	return s[i].startTime.After(s[j].startTime) // because we want newest first
+	return s[i].StartTime.After(s[j].StartTime) // because we want newest first
 }
 
 func (s catStatsCalculatedSlice) Swap(i, j int) {
@@ -54,204 +54,209 @@ func (s catStatsCalculatedSlice) Swap(i, j int) {
 }
 
 type userStats struct {
-	name  string    // will also have "group" in addition to "Rye8" and "Big Papa"
-	raw   rawValues `json:-`
-	stats calcedMetrics
+	Name  string // will also have "group" in addition to "Rye8" and "Big Papa"
+	Raw   rawValues `json:"-"`
+	Stats calcedMetrics
 }
 
 func (s *userStats) buildStatsFromRaw() *userStats {
-	//debugLog(us.name, len(us.raw.accuracy))
+	//debugLog(us.Name, len(us.Raw.Accuracy))
 
 	us := &userStats{
-		name: s.name,
-		raw:  s.raw,
+		Name: s.Name,
+		Raw:  s.Raw,
 	}
 
-	maxElevation, _ := us.raw.elevation.Max()
-	maxSpeed, _ := us.raw.speed.Max()
-	maxLat, _ := us.raw.lat.Max()
-	maxLng, _ := us.raw.lng.Max()
-	maxAccuracy, _ := us.raw.accuracy.Max()
+	maxElevation, _ := us.Raw.Elevation.Max()
+	maxSpeed, _ := us.Raw.Speed.Max()
+	maxLat, _ := us.Raw.Lat.Max()
+	maxLng, _ := us.Raw.Lng.Max()
+	maxAccuracy, _ := us.Raw.Accuracy.Max()
 
-	minElevation, _ := us.raw.elevation.Min()
-	minSpeed, _ := us.raw.speed.Min()
-	minLat, _ := us.raw.lat.Min()
-	minLng, _ := us.raw.lng.Min()
-	minAccuracy, _ := us.raw.accuracy.Min()
+	minElevation, _ := us.Raw.Elevation.Min()
+	minSpeed, _ := us.Raw.Speed.Min()
+	minLat, _ := us.Raw.Lat.Min()
+	minLng, _ := us.Raw.Lng.Min()
+	minAccuracy, _ := us.Raw.Accuracy.Min()
 
-	medElevation, _ := us.raw.elevation.Median()
-	medSpeed, _ := us.raw.speed.Median()
-	medLat, _ := us.raw.lat.Median()
-	medLng, _ := us.raw.lng.Median()
-	medAccuracy, _ := us.raw.accuracy.Median()
+	medElevation, _ := us.Raw.Elevation.Median()
+	medSpeed, _ := us.Raw.Speed.Median()
+	medLat, _ := us.Raw.Lat.Median()
+	medLng, _ := us.Raw.Lng.Median()
+	medAccuracy, _ := us.Raw.Accuracy.Median()
 
-	avgElevation, _ := us.raw.elevation.Mean()
-	avgSpeed, _ := us.raw.speed.Mean()
-	avgLat, _ := us.raw.lat.Mean()
-	avgLng, _ := us.raw.lng.Mean()
-	avgAccuracy, _ := us.raw.accuracy.Mean()
+	avgElevation, _ := us.Raw.Elevation.Mean()
+	avgSpeed, _ := us.Raw.Speed.Mean()
+	avgLat, _ := us.Raw.Lat.Mean()
+	avgLng, _ := us.Raw.Lng.Mean()
+	avgAccuracy, _ := us.Raw.Accuracy.Mean()
 
-	stddevElevation, _ := us.raw.elevation.StandardDeviation()
-	stddevSpeed, _ := us.raw.speed.StandardDeviation()
-	stddevLat, _ := us.raw.lat.StandardDeviation()
-	stddevLng, _ := us.raw.lng.StandardDeviation()
-	stddevAccuracy, _ := us.raw.accuracy.StandardDeviation()
+	stddevElevation, _ := us.Raw.Elevation.StandardDeviation()
+	stddevSpeed, _ := us.Raw.Speed.StandardDeviation()
+	stddevLat, _ := us.Raw.Lat.StandardDeviation()
+	stddevLng, _ := us.Raw.Lng.StandardDeviation()
+	stddevAccuracy, _ := us.Raw.Accuracy.StandardDeviation()
 
-	varianceElevation, _ := us.raw.elevation.Variance()
-	varianceSpeed, _ := us.raw.speed.Variance()
-	varianceLat, _ := us.raw.lat.Variance()
-	varianceLng, _ := us.raw.lng.Variance()
-	varianceAccuracy, _ := us.raw.accuracy.Variance()
+	varianceElevation, _ := us.Raw.Elevation.Variance()
+	varianceSpeed, _ := us.Raw.Speed.Variance()
+	varianceLat, _ := us.Raw.Lat.Variance()
+	varianceLng, _ := us.Raw.Lng.Variance()
+	varianceAccuracy, _ := us.Raw.Accuracy.Variance()
 
-	sumElevation, _ := us.raw.elevation.Sum()
-	sumSpeed, _ := us.raw.speed.Sum()
-	sumLat, _ := us.raw.lat.Sum()
-	sumLng, _ := us.raw.lng.Sum()
-	sumAccuracy, _ := us.raw.accuracy.Sum()
+	sumElevation, _ := us.Raw.Elevation.Sum()
+	sumSpeed, _ := us.Raw.Speed.Sum()
+	sumLat, _ := us.Raw.Lat.Sum()
+	sumLng, _ := us.Raw.Lng.Sum()
+	sumAccuracy, _ := us.Raw.Accuracy.Sum()
 
 	var absSumElevation float64
-	for _, x := range us.raw.elevation {
+	for _, x := range us.Raw.Elevation {
 		absSumElevation += math.Abs(x)
 	}
 
 	var absSumSpeed float64 // dumb
-	for _, x := range us.raw.speed {
+	for _, x := range us.Raw.Speed {
 		absSumSpeed += math.Abs(x)
 	}
 
 	var absSumLat float64
-	for _, x := range us.raw.lat {
+	for _, x := range us.Raw.Lat {
 		absSumLat += math.Abs(x)
 	}
 
 	var absSumLng float64
-	for _, x := range us.raw.lng {
+	for _, x := range us.Raw.Lng {
 		absSumLng += math.Abs(x)
 	}
 
 	var absSumAccuracy float64 // dumb
-	for _, x := range us.raw.accuracy {
+	for _, x := range us.Raw.Accuracy {
 		absSumAccuracy += math.Abs(x)
 	}
 
-	us.stats.elevation = calcedStats{
-		max:      maxElevation,
-		min:      minElevation,
-		avg:      avgElevation,
-		med:      medElevation,
-		stdDev:   stddevElevation,
-		variance: varianceElevation,
-		sum:      sumElevation,
-		absSum:   absSumElevation,
+	us.Stats.Elevation = calcedStats{
+		Max:      maxElevation,
+		Min:      minElevation,
+		Avg:      avgElevation,
+		Med:      medElevation,
+		StdDev:   stddevElevation,
+		Variance: varianceElevation,
+		Sum:      sumElevation,
+		AbsSum:   absSumElevation,
+		Count: len(us.Raw.Elevation),
 	}
-	us.stats.speed = calcedStats{
-		max:      maxSpeed,
-		min:      minSpeed,
-		avg:      avgSpeed,
-		med:      medSpeed,
-		stdDev:   stddevSpeed,
-		variance: varianceSpeed,
-		sum:      sumSpeed,
-		absSum:   absSumSpeed,
+	us.Stats.Speed = calcedStats{
+		Max:      maxSpeed,
+		Min:      minSpeed,
+		Avg:      avgSpeed,
+		Med:      medSpeed,
+		StdDev:   stddevSpeed,
+		Variance: varianceSpeed,
+		Sum:      sumSpeed,
+		AbsSum:   absSumSpeed,
+		Count: len(us.Raw.Speed),
 	}
-	us.stats.lat = calcedStats{
-		max:      maxLat,
-		min:      minLat,
-		avg:      avgLat,
-		med:      medLat,
-		stdDev:   stddevLat,
-		variance: varianceLat,
-		sum:      sumLat,
-		absSum:   absSumLat,
+	us.Stats.Lat = calcedStats{
+		Max:      maxLat,
+		Min:      minLat,
+		Avg:      avgLat,
+		Med:      medLat,
+		StdDev:   stddevLat,
+		Variance: varianceLat,
+		Sum:      sumLat,
+		AbsSum:   absSumLat,
+		Count: len(us.Raw.Lat),
 	}
-	us.stats.lng = calcedStats{
-		max:      maxLng,
-		min:      minLng,
-		avg:      avgLng,
-		med:      medLng,
-		stdDev:   stddevLng,
-		variance: varianceLng,
-		sum:      sumLng,
-		absSum:   absSumLng,
+	us.Stats.Lng = calcedStats{
+		Max:      maxLng,
+		Min:      minLng,
+		Avg:      avgLng,
+		Med:      medLng,
+		StdDev:   stddevLng,
+		Variance: varianceLng,
+		Sum:      sumLng,
+		AbsSum:   absSumLng,
+		Count: len(us.Raw.Lng),
 	}
-	us.stats.accuracy = calcedStats{
-		max:      maxAccuracy,
-		min:      minAccuracy,
-		avg:      avgAccuracy,
-		med:      medAccuracy,
-		stdDev:   stddevAccuracy,
-		variance: varianceAccuracy,
-		sum:      sumAccuracy,
-		absSum:   absSumAccuracy,
+	us.Stats.Accuracy = calcedStats{
+		Max:      maxAccuracy,
+		Min:      minAccuracy,
+		Avg:      avgAccuracy,
+		Med:      medAccuracy,
+		StdDev:   stddevAccuracy,
+		Variance: varianceAccuracy,
+		Sum:      sumAccuracy,
+		AbsSum:   absSumAccuracy,
+		Count: len(us.Raw.Accuracy),
 	}
 	return us
 }
 
 type rawValues struct {
-	elevation Stats.Float64Data
-	speed     Stats.Float64Data
-	lat       Stats.Float64Data
-	lng       Stats.Float64Data
-	accuracy  Stats.Float64Data
+	Elevation Stats.Float64Data
+	Speed     Stats.Float64Data
+	Lat       Stats.Float64Data
+	Lng       Stats.Float64Data
+	Accuracy  Stats.Float64Data
 }
 
 type calcedMetrics struct {
-	elevation calcedStats
-	speed     calcedStats
-	lat       calcedStats
-	lng       calcedStats
-	accuracy  calcedStats
+	Elevation calcedStats
+	Speed     calcedStats
+	Lat       calcedStats
+	Lng       calcedStats
+	Accuracy  calcedStats
 }
 func (c rawValues) String() string {
-	return fmt.Sprintf("acc=%.2f el=%.2f speed=%.2f lat=%.2f lng=%.2f", c.accuracy[0], c.elevation[0], c.speed[0], c.lat[0], c.lng[0])
+	return fmt.Sprintf("acc=%.2f el=%.2f Speed=%.2f Lat=%.2f Lng=%.2f", c.Accuracy[0], c.Elevation[0], c.Speed[0], c.Lat[0], c.Lng[0])
 }
 func (c calcedMetrics) String() string {
-	return fmt.Sprintf("acc=%.2f el=%.2f speed=%.2f lat=%.2f lng=%.2f", c.accuracy.avg, c.elevation.avg, c.speed.avg, c.lat.avg, c.lng.avg)
+	return fmt.Sprintf("acc=%.2f el=%.2f Speed=%.2f Lat=%.2f Lng=%.2f", c.Accuracy.Avg, c.Elevation.Avg, c.Speed.Avg, c.Lat.Avg, c.Lng.Avg)
 }
 
 type calcedStats struct {
-	max      float64
-	min      float64
-	avg      float64
-	med      float64
-	stdDev   float64
-	variance float64
-	sum      float64 // sum of (ironically absolute) values; How much elevation did you traverse today?
-	absSum   float64 // sum of values; How much higher or lower are you than when you started?
-	count    int
+	Max      float64
+	Min      float64
+	Avg      float64
+	Med      float64
+	StdDev   float64
+	Variance float64
+	Sum      float64 // Sum of (ironically absolute) values; How much Elevation did you traverse Today?
+	AbsSum   float64 // Sum of values; How much higher or lower are you than when you started?
+	Count    int
 }
 
 func (s *catStatsCalculated) getOrInitRawUserStats(name string) (*userStats, int) {
-	for i, s := range s.userOrTeamStats {
-		if s.name == name {
+	for i, s := range s.UserOrTeamStats {
+		if s.Name == name {
 			return s, i
 		}
 	}
-	return &userStats{name: name}, -1
+	return &userStats{Name: name}, -1
 }
 
 func (us *userStats) appendRawValues(point trackPoint.TrackPoint) {
-	us.raw.elevation = append(us.raw.elevation, point.Elevation)
-	us.raw.speed = append(us.raw.speed, point.Speed)
-	us.raw.lat = append(us.raw.lat, point.Lat)
-	us.raw.lng = append(us.raw.lng, point.Lng)
-	us.raw.accuracy = append(us.raw.accuracy, point.Accuracy)
+	us.Raw.Elevation = append(us.Raw.Elevation, point.Elevation)
+	us.Raw.Speed = append(us.Raw.Speed, point.Speed)
+	us.Raw.Lat = append(us.Raw.Lat, point.Lat)
+	us.Raw.Lng = append(us.Raw.Lng, point.Lng)
+	us.Raw.Accuracy = append(us.Raw.Accuracy, point.Accuracy)
 }
 
 func (s *catStatsCalculated) createOrAppendRawValuesByUser(point trackPoint.TrackPoint) *catStatsCalculated {
 	us, index := s.getOrInitRawUserStats(point.Name)
 	us.appendRawValues(point)
 	if index < 0 {
-		s.userOrTeamStats = append(s.userOrTeamStats, us)
+		s.UserOrTeamStats = append(s.UserOrTeamStats, us)
 	} else {
-		s.userOrTeamStats[index] = us
+		s.UserOrTeamStats[index] = us
 	}
 	return s
 }
 
 func (c *catStatsCalculatedSlice) getDaily(t time.Time) (int, *catStatsCalculated) {
 	for i, d := range *c {
-		if d.startTime.Sub(t) < d.duration {
+		if d.StartTime.Sub(t) < d.Duration {
 			return i, d
 		}
 	}
@@ -259,18 +264,18 @@ func (c *catStatsCalculatedSlice) getDaily(t time.Time) (int, *catStatsCalculate
 }
 
 func CalculateAndStoreStats(lastNDays int) error {
-	// collect raw values
+	// collect Raw values
 	start := time.Now() // reference for dailies
 	dailies := catStatsCalculatedSlice{
 		&catStatsCalculated{
-			startTime: start,
-			duration:  24 * time.Hour,
+			StartTime: start,
+			Duration:  24 * time.Hour,
 		}}
 	for i := 1; i <= lastNDays; i++ {
 		dailies = append(dailies,
 			&catStatsCalculated{
-				startTime: start.AddDate(0, 0, -i),
-				duration:  24 * time.Hour,
+				StartTime: start.AddDate(0, 0, -i),
+				Duration:  24 * time.Hour,
 			})
 	}
 
@@ -286,7 +291,7 @@ func CalculateAndStoreStats(lastNDays int) error {
 			if start.Sub(trackPointCurrent.Time) > time.Duration(lastNDays)*24*time.Hour {
 				return nil
 			}
-			// initialize new daily batch
+			// initialize new Daily batch
 			index, stat := dailies.getDaily(trackPointCurrent.Time)
 			if stat == nil {
 				return nil
@@ -299,30 +304,30 @@ func CalculateAndStoreStats(lastNDays int) error {
 		return e
 	}
 
-	debugLog("raw", dailies[0].userOrTeamStats[0].name)
-	debugLog("raw", dailies[0].userOrTeamStats[0].raw)
+	debugLog("Raw", dailies[0].UserOrTeamStats[0].Name)
+	debugLog("Raw", dailies[0].UserOrTeamStats[0].Raw)
 
 	for i, d := range dailies {
-		for j, s := range d.userOrTeamStats {
-			d.userOrTeamStats[j] = s.buildStatsFromRaw()
+		for j, s := range d.UserOrTeamStats {
+			d.UserOrTeamStats[j] = s.buildStatsFromRaw()
 			//debugLog(s)
 		}
 		dailies[i] = d
 	}
 	sort.Sort(dailies)
 
-	debugLog("stats", dailies[0].userOrTeamStats[0].name)
-	debugLog("stats", dailies[0].userOrTeamStats[0].stats)
+	debugLog("Stats", dailies[0].UserOrTeamStats[0].Name)
+	debugLog("Stats", dailies[0].UserOrTeamStats[0].Stats)
 
 	out := &catStatsAggregate{
-		daily: dailies,
-		today: dailies[0],
+		Daily: dailies,
+		Today: dailies[0],
 	}
 
-	debugLog("agg_firstdaily", out.daily[0].startTime)
-	debugLog("agg_firstdaily", out.daily[0].userOrTeamStats[0].stats)
-	debugLog("agg.today", out.today.userOrTeamStats[0].name)
-	debugLog("agg.today", out.today.userOrTeamStats[0].stats)
+	debugLog("agg_firstdaily", out.Daily[0].StartTime)
+	debugLog("agg_firstdaily", out.Daily[0].UserOrTeamStats[0].Stats)
+	debugLog("agg.Today", out.Today.UserOrTeamStats[0].Name)
+	debugLog("agg.Today", out.Today.UserOrTeamStats[0].Stats)
 
 	val, e := json.Marshal(out)
 	if e != nil {
@@ -349,7 +354,7 @@ func GetStats() ([]byte, error) {
 		b := tx.Bucket([]byte(statsKey))
 		val := b.Get([]byte(statsDataKey))
 		if val == nil {
-			return errors.New("no data for stats")
+			return errors.New("no data for Stats")
 		}
 		out = val
 		return nil
@@ -371,7 +376,7 @@ func getStatsJSON(w http.ResponseWriter, r *http.Request) {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
-	fmt.Println("Got stats:", len(b), "bytes")
+	fmt.Println("Got Stats:", len(b), "bytes")
 
 	w.Write(b)
 }

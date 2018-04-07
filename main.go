@@ -52,7 +52,7 @@ func main() {
 
 	go func() {
 		for {
-			if e := catTracks.CalculateAndStoreStats(30); e != nil {
+			if e := catTracks.CalculateAndStoreStats(7); e != nil {
 				log.Println(e)
 			}
 		}

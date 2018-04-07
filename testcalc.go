@@ -13,7 +13,7 @@ func main() {
 		defer catTracks.GetDB().Close()
 	}
 
-	if e := catTracks.CalculateAndStoreStats(3); e != nil {
+	if e := catTracks.CalculateAndStoreStats(1); e != nil {
 		log.Println("calcstats err:", e)
 		return
 	}
