@@ -4,6 +4,8 @@ import (
 	"github.com/rotblauer/catTracks/catTracks"
 	"log"
 	"fmt"
+	"time"
+	"github.com/boltdb/bolt"
 )
 
 func main() {
@@ -12,12 +14,29 @@ func main() {
 	if bolterr := catTracks.InitBoltDB(); bolterr == nil {
 		defer catTracks.GetDB().Close()
 	}
+	//
+	catTracks.GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte("stats"))
+		e := b.ForEach(func(k, v []byte) error {
+			if err := b.Delete(k); err != nil {
+				return err
+			}
+			return nil
+		})
+		return e
+	})
 
-	if e := catTracks.CalculateAndStoreStats(1); e != nil {
+	l, err := time.LoadLocation("America/New_York")
+	if err != nil {
+		log.Fatal(err)
+	}
+	refT := time.Date(2018, time.April, 4, 12, 0, 0, 0, l).Add(-114*time.Hour) // for ago because old db
+	if e := catTracks.CalculateAndStoreStatsByDateAndSpanStepping(refT, 1*time.Hour, -4*time.Hour); e != nil {
 		log.Println("calcstats err:", e)
 		return
 	}
-	val, e := catTracks.GetStats()
+	val, e := catTracks.GetStats(refT.Add(12*time.Hour), -24*time.Hour)
+	//val, e := catTracks.GetStats(time.Now(), -2455*time.Hour)
 	if e != nil {
 		log.Println("getstats err:", e)
 		return

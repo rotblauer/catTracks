@@ -10,8 +10,9 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"sort"
 	"time"
+	"encoding/binary"
+	"strings"
 )
 
 var debug = false
@@ -54,9 +55,31 @@ func (s catStatsCalculatedSlice) Swap(i, j int) {
 }
 
 type userStats struct {
-	Name  string // will also have "group" in addition to "Rye8" and "Big Papa"
+	Name  string    // will also have "group" in addition to "Rye8" and "Big Papa"
 	Raw   rawValues `json:"-"`
 	Stats calcedMetrics
+}
+
+func sumDiff(ff Stats.Float64Data) float64 {
+	var out float64
+	for i, f := range ff {
+		if i == 0 {
+			continue
+		}
+		out += f - ff[i-1]
+	}
+	return out
+}
+
+func absSumDiff(ff Stats.Float64Data) float64 {
+	var out float64
+	for i, f := range ff {
+		if i == 0 {
+			continue
+		}
+		out += math.Abs(f - ff[i-1])
+	}
+	return out
 }
 
 func (s *userStats) buildStatsFromRaw() *userStats {
@@ -65,6 +88,12 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 	us := &userStats{
 		Name: s.Name,
 		Raw:  s.Raw,
+	}
+
+	for i, s := range us.Raw.Speed {
+		if s < 0 {
+			us.Raw.Speed[i] = 0
+		}
 	}
 
 	maxElevation, _ := us.Raw.Elevation.Max()
@@ -143,7 +172,9 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		Variance: varianceElevation,
 		Sum:      sumElevation,
 		AbsSum:   absSumElevation,
-		Count: len(us.Raw.Elevation),
+		SumDiff: sumDiff(us.Raw.Elevation),
+		AbsSumDiff: absSumDiff(us.Raw.Elevation),
+		Count:    len(us.Raw.Elevation),
 	}
 	us.Stats.Speed = calcedStats{
 		Max:      maxSpeed,
@@ -154,7 +185,9 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		Variance: varianceSpeed,
 		Sum:      sumSpeed,
 		AbsSum:   absSumSpeed,
-		Count: len(us.Raw.Speed),
+		SumDiff: sumDiff(us.Raw.Speed),
+		AbsSumDiff: absSumDiff(us.Raw.Speed),
+		Count:    len(us.Raw.Speed),
 	}
 	us.Stats.Lat = calcedStats{
 		Max:      maxLat,
@@ -165,7 +198,9 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		Variance: varianceLat,
 		Sum:      sumLat,
 		AbsSum:   absSumLat,
-		Count: len(us.Raw.Lat),
+		SumDiff: sumDiff(us.Raw.Lat),
+		AbsSumDiff: absSumDiff(us.Raw.Lat),
+		Count:    len(us.Raw.Lat),
 	}
 	us.Stats.Lng = calcedStats{
 		Max:      maxLng,
@@ -176,7 +211,9 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		Variance: varianceLng,
 		Sum:      sumLng,
 		AbsSum:   absSumLng,
-		Count: len(us.Raw.Lng),
+		SumDiff: sumDiff(us.Raw.Lng),
+		AbsSumDiff: absSumDiff(us.Raw.Lng),
+		Count:    len(us.Raw.Lng),
 	}
 	us.Stats.Accuracy = calcedStats{
 		Max:      maxAccuracy,
@@ -187,7 +224,9 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		Variance: varianceAccuracy,
 		Sum:      sumAccuracy,
 		AbsSum:   absSumAccuracy,
-		Count: len(us.Raw.Accuracy),
+		SumDiff: sumDiff(us.Raw.Accuracy),
+		AbsSumDiff: absSumDiff(us.Raw.Accuracy),
+		Count:    len(us.Raw.Accuracy),
 	}
 	return us
 }
@@ -207,6 +246,7 @@ type calcedMetrics struct {
 	Lng       calcedStats
 	Accuracy  calcedStats
 }
+
 func (c rawValues) String() string {
 	return fmt.Sprintf("acc=%.2f el=%.2f Speed=%.2f Lat=%.2f Lng=%.2f", c.Accuracy[0], c.Elevation[0], c.Speed[0], c.Lat[0], c.Lng[0])
 }
@@ -215,15 +255,28 @@ func (c calcedMetrics) String() string {
 }
 
 type calcedStats struct {
-	Max      float64
-	Min      float64
-	Avg      float64
-	Med      float64
-	StdDev   float64
-	Variance float64
-	Sum      float64 // Sum of (ironically absolute) values; How much Elevation did you traverse Today?
-	AbsSum   float64 // Sum of values; How much higher or lower are you than when you started?
-	Count    int
+	Max        float64
+	Min        float64
+	Avg        float64
+	Med        float64
+	StdDev     float64
+	Variance   float64
+	Sum        float64
+	AbsSum     float64
+	SumDiff    float64 // Sum of (ironically absolute) values; How much Elevation did you traverse Today?
+	AbsSumDiff float64 // Sum of values; How much higher or lower are you than when you started?
+	Count      int
+}
+
+func (s *catStatsCalculated) createOrAppendRawValuesByUser(point trackPoint.TrackPoint) *catStatsCalculated {
+	us, index := s.getOrInitRawUserStats(point.Name)
+	us.appendRawValues(point)
+	if index < 0 {
+		s.UserOrTeamStats = append(s.UserOrTeamStats, us)
+	} else {
+		s.UserOrTeamStats[index] = us
+	}
+	return s
 }
 
 func (s *catStatsCalculated) getOrInitRawUserStats(name string) (*userStats, int) {
@@ -243,17 +296,6 @@ func (us *userStats) appendRawValues(point trackPoint.TrackPoint) {
 	us.Raw.Accuracy = append(us.Raw.Accuracy, point.Accuracy)
 }
 
-func (s *catStatsCalculated) createOrAppendRawValuesByUser(point trackPoint.TrackPoint) *catStatsCalculated {
-	us, index := s.getOrInitRawUserStats(point.Name)
-	us.appendRawValues(point)
-	if index < 0 {
-		s.UserOrTeamStats = append(s.UserOrTeamStats, us)
-	} else {
-		s.UserOrTeamStats[index] = us
-	}
-	return s
-}
-
 func (c *catStatsCalculatedSlice) getDaily(t time.Time) (int, *catStatsCalculated) {
 	for i, d := range *c {
 		if d.StartTime.Sub(t) < d.Duration {
@@ -263,22 +305,135 @@ func (c *catStatsCalculatedSlice) getDaily(t time.Time) (int, *catStatsCalculate
 	return -1, nil
 }
 
-func CalculateAndStoreStats(lastNDays int) error {
-	// collect Raw values
-	start := time.Now() // reference for dailies
-	dailies := catStatsCalculatedSlice{
-		&catStatsCalculated{
-			StartTime: start,
-			Duration:  24 * time.Hour,
-		}}
-	for i := 1; i <= lastNDays; i++ {
-		dailies = append(dailies,
-			&catStatsCalculated{
-				StartTime: start.AddDate(0, 0, -i),
-				Duration:  24 * time.Hour,
-			})
+// prefix = "storage": len = 7
+//
+var keyPrefixLen = len([]byte(statsDataKey))
+var timeFmtLen = len([]byte(time.RFC3339Nano))
+func (s *catStatsCalculated) buildStorageKey() []byte {
+	var key []byte
+
+	key = append(key, []byte(statsDataKey)...)
+	key = s.StartTime.AppendFormat(key, time.RFC3339Nano)
+	key = append(key, []byte("_")...)
+	var b = make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(s.Duration.Nanoseconds()))
+	key = append(key, b...)
+
+	return key
+}
+
+func buildStorageKeyCheck(t time.Time, d time.Duration) []byte {
+	var key []byte
+
+	key = append(key, []byte(statsDataKey)...)
+	key = t.AppendFormat(key, time.RFC3339Nano)
+	key = append(key, []byte("_")...)
+	var b = make([]byte, 8)
+	binary.LittleEndian.PutUint64(b, uint64(d.Nanoseconds()))
+	key = append(key, b...)
+
+	return key
+}
+
+func getTimeAndSpanFromKey(key []byte) (time.Time, time.Duration, error) {
+	//debugLog(string(key), len(key), keyLen, keyPrefixLen, keyPrefixLen+timeFmtLen)
+	//if len(key) != keyLen {
+	//	return time.Now(), 1*time.Second, fmt.Errorf("invalid key: %s", string(key))
+	//}
+	tbytes := key[keyPrefixLen:]
+	s := strings.Split(string(tbytes), "_")
+	
+	//debugLog(string(s[0]), len(tbytes), tbytes)
+	t, err := time.Parse(time.RFC3339Nano, s[0])
+	if err != nil {
+		return t, 0, err
 	}
 
+	dbytes := key[len(key)-timeFmtLen:]
+	d := time.Duration(int64(binary.LittleEndian.Uint64(dbytes))) * time.Nanosecond
+	return t, d, nil
+}
+
+func storeStats(s *catStatsCalculated) error {
+	if s == nil {
+		return errors.New("cannot store nil catStats")
+	}
+	val, e := json.Marshal(s)
+	if e != nil {
+		return e
+	}
+	if val == nil {
+		return errors.New("no data to store")
+	}
+
+	debugLog("store: len(val)", len(val), "bytes")
+
+	if e := GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+		return b.Put(s.buildStorageKey(), val)
+	}); e != nil {
+		return e
+	}
+	return nil
+}
+
+// NOTE: spanStep should be +, spanOverall can be +/- where '-' means backward-looking and '+' means forward looking relative to time t
+func CalculateAndStoreStatsByDateAndSpanStepping(t time.Time, spanStep, spanOverall time.Duration) error {
+	tlim := t.Add(spanOverall)
+	tPivot := t
+	//  |t,tPivot --------------> |tlim
+	if spanOverall > 0 {
+		for tPivot.Before(tlim) {
+			s, e := calculateStatsByDateAndSpan(tPivot, spanStep)
+			if e != nil {
+				return e
+			}
+			if e := storeStats(s); e != nil {
+				return e
+			}
+			debugLog(">0", tPivot)
+			tPivot = tPivot.Add(spanStep)
+		}
+	} else {
+		tPivot = tlim
+		// |tlim,tPivot ----------------> |t
+		for tPivot.Before(t) {
+			s, e := calculateStatsByDateAndSpan(tPivot, spanStep)
+			if e != nil {
+				return e
+			}
+			if e := storeStats(s); e != nil {
+				return e
+			}
+			debugLog("<0", tPivot)
+			tPivot = tPivot.Add(spanStep)
+		}
+	}
+	return nil
+}
+
+func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalculated, error) {
+
+	// check for pre-existence of immutable data
+	var preExisting *catStatsCalculated
+	if e := GetDB().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+		v := b.Get(buildStorageKeyCheck(t, span))
+		if v != nil {
+			if err := json.Unmarshal(v, &preExisting); err != nil {
+				return err
+			}
+		}
+		return nil
+	}); e != nil {
+		return nil, e
+	}
+	if preExisting != nil {
+		return preExisting, nil
+	}
+
+	// collect Raw values
+	var daily *catStatsCalculated
 	if e := GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 		e := b.ForEach(func(k, v []byte) error {
@@ -288,75 +443,62 @@ func CalculateAndStoreStats(lastNDays int) error {
 				return err
 			}
 			// break if beyond allow relative time frame
-			if start.Sub(trackPointCurrent.Time) > time.Duration(lastNDays)*24*time.Hour {
+			if t.Sub(trackPointCurrent.Time) > span {
 				return nil
 			}
-			// initialize new Daily batch
-			index, stat := dailies.getDaily(trackPointCurrent.Time)
-			if stat == nil {
-				return nil
+			if daily == nil {
+				daily = &catStatsCalculated{
+						StartTime: t,
+						Duration: span,
+					}
 			}
-			dailies[index] = stat.createOrAppendRawValuesByUser(trackPointCurrent)
+			daily = daily.createOrAppendRawValuesByUser(trackPointCurrent)
 			return nil
 		})
 		return e
 	}); e != nil {
-		return e
+		return nil, e
+	}
+	if daily == nil {
+		return nil, fmt.Errorf("no tracks in span: t=%v, d=%v", t, span)
 	}
 
-	debugLog("Raw", dailies[0].UserOrTeamStats[0].Name)
-	debugLog("Raw", dailies[0].UserOrTeamStats[0].Raw)
-
-	for i, d := range dailies {
-		for j, s := range d.UserOrTeamStats {
-			d.UserOrTeamStats[j] = s.buildStatsFromRaw()
-			//debugLog(s)
-		}
-		dailies[i] = d
-	}
-	sort.Sort(dailies)
-
-	debugLog("Stats", dailies[0].UserOrTeamStats[0].Name)
-	debugLog("Stats", dailies[0].UserOrTeamStats[0].Stats)
-
-	out := &catStatsAggregate{
-		Daily: dailies,
-		Today: dailies[0],
+	for j, s := range daily.UserOrTeamStats {
+		daily.UserOrTeamStats[j] = s.buildStatsFromRaw()
+		//debugLog(s)
 	}
 
-	debugLog("agg_firstdaily", out.Daily[0].StartTime)
-	debugLog("agg_firstdaily", out.Daily[0].UserOrTeamStats[0].Stats)
-	debugLog("agg.Today", out.Today.UserOrTeamStats[0].Name)
-	debugLog("agg.Today", out.Today.UserOrTeamStats[0].Stats)
-
-	val, e := json.Marshal(out)
-	if e != nil {
-		return e
-	}
-	if val == nil {
-		return errors.New("no data to store")
-	}
-
-	debugLog("len(val)", len(val))
-
-	if e := GetDB().Update(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(statsKey))
-		return b.Put([]byte(statsDataKey), val)
-	}); e != nil {
-		return e
-	}
-	return nil
+	return daily, nil
 }
 
-func GetStats() ([]byte, error) {
-	var out []byte
+// NOTE: use -duration to look backards, +duration to look forward relative to given time t
+func getStatsByTimeSpan(t time.Time, d time.Duration) (catStatsCalculatedSlice, error) {
+	var out catStatsCalculatedSlice
+	startTime := t.Add(d)
 	if e := GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
-		val := b.Get([]byte(statsDataKey))
-		if val == nil {
-			return errors.New("no data for Stats")
+		if e := b.ForEach(func(k, v []byte) error {
+			debugLog(string(k), len(k))
+			tk, td, e := getTimeAndSpanFromKey(k)
+			debugLog("key", tk, td)
+			if e != nil {
+				debugLog("err:", e)
+				return nil
+			}
+			// out of desired range
+			if !(tk.Before(t) && tk.After(startTime)) {
+				debugLog("stats out of bounds", "tk=", tk, "t=", t, "start=", startTime)
+				return nil
+			}
+			var s = &catStatsCalculated{}
+			if e := json.Unmarshal(v, s); e != nil {
+				return e
+			}
+			out = append(out, s)
+			return nil
+		}); e != nil {
+			return e
 		}
-		out = val
 		return nil
 	}); e != nil {
 		return nil, e
@@ -364,8 +506,27 @@ func GetStats() ([]byte, error) {
 	return out, nil
 }
 
+func GetStats(t time.Time, d time.Duration) ([]byte, error) {
+	var ds catStatsAggregate
+	s, err := getStatsByTimeSpan(t, d)
+	if err != nil {
+		return nil, err
+	}
+	if len(s) == 0 {
+		return nil, errors.New("empty dailies")
+	}
+
+	ds.Daily = s
+
+	b, err := json.Marshal(ds)
+	if err != nil {
+		return nil, err
+	}
+	return b, nil
+}
+
 func getStatsJSON(w http.ResponseWriter, r *http.Request) {
-	data, e := GetStats()
+	data, e := GetStats(time.Now(), -24*time.Hour)
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
