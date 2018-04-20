@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/rotblauer/trackpoints/trackPoint"
+	"log"
 )
 
 // the html stuff of this thing
@@ -149,4 +150,15 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 
 	http.Redirect(w, r, "/", 302) //the 300
 
+}
+
+func getLastKnown(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin","*")
+	b, e := json.Marshal(lastKnownMap)
+	if e != nil {
+		log.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Got lastknown:", len(b), "bytes")
+	w.Write(b)
 }

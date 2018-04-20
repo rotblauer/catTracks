@@ -50,13 +50,13 @@ func main() {
 
 	http.Handle("/", router)
 
-	go func() {
-		for {
-			if e := catTracks.calculateAndStoreStats(7); e != nil {
-				log.Println(e)
-			}
-		}
-	}()
+	//go func() {
+	//	for {
+	//		if e := catTracks.calculateAndStoreStats(7); e != nil {
+	//			log.Println(e)
+	//		}
+	//	}
+	//}()
 
 	http.ListenAndServe(":"+strconv.Itoa(porty), nil)
 }

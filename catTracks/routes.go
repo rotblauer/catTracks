@@ -72,4 +72,10 @@ var routes = Routes{
 		"/stats",
 		getStatsJSON,
 	},
+	Route{
+		"CatsLastKnown",
+		"GET",
+		"/lastknown",
+		getLastKnown,
+	},
 }

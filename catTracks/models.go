@@ -10,6 +10,12 @@ import (
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
+var lastKnownMap = make(map[string]trackPoint.TrackPoint)
+
+func storeLastKnown(tp trackPoint.TrackPoint) {
+	lastKnownMap[tp.Name] = tp
+}
+
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
 	for _, point := range trackPoints {
@@ -63,6 +69,8 @@ func storePoint(tp trackPoint.TrackPoint) error {
 			// if !GetQT().Insert(p) {
 			// 	fmt.Println("Couldn't add to quadtree: ", p)
 			// }
+
+			storeLastKnown(tp)
 			fmt.Println("Saved trackpoint: ", tp)
 			return nil
 		})
