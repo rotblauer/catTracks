@@ -8,12 +8,88 @@ import (
 
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
+	"log"
 )
 
-var lastKnownMap = make(map[string]trackPoint.TrackPoint)
+type LastKnown map[string]trackPoint.TrackPoint
+type Metadata struct {
+	KeyN int
+	LastUpdatedAt time.Time
+	LastUpdatedBy string
+	LastUpdatedPointsN int
+}
 
+func getmetadata() (out []byte, err error) {
+	err = GetDB().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+		out = b.Get([]byte("metadata"))
+		return nil
+	})
+	return
+}
+func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error {
+	e := GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+
+		// if not initialized, run the stats which takes a hot second
+		var n int
+		v := b.Get([]byte("metadata"))
+		if v == nil {
+			log.Println("updating bucket stats key_n...")
+			n = tx.Bucket([]byte(trackKey)).Stats().KeyN
+			log.Println("initialized metadata", n)
+		} else {
+			md := &Metadata{}
+			if e := json.Unmarshal(v, md); e != nil {
+				return e
+			}
+			n = md.KeyN
+		}
+		d := &Metadata{
+			KeyN: n+lenpointsupdated,
+			LastUpdatedAt: time.Now().UTC(),
+			LastUpdatedBy: lastpoint.Name,
+			LastUpdatedPointsN: lenpointsupdated,
+		}
+		by, e := json.Marshal(d)
+		if e != nil {
+			return nil
+		}
+		if e := b.Put([]byte("metadata"), by); e != nil {
+			return e
+		}
+
+		return nil
+	})
+	return e
+}
+func getLastKnownData() (out []byte, err error) {
+	err = GetDB().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+		out = b.Get([]byte("lastknown"))
+		return nil
+	})
+	return
+}
 func storeLastKnown(tp trackPoint.TrackPoint) {
-	lastKnownMap[tp.Name] = tp
+	//lastKnownMap[tp.Name] = tp
+	GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(statsKey))
+		lk := LastKnown{}
+		v := b.Get([]byte("lastknown"))
+		if e := json.Unmarshal(v, lk); e != nil {
+			log.Println("error unmarshalling nil lastknown", tp)
+		}
+		lk[tp.Name] = tp
+		if by, e := json.Marshal(lk); e == nil {
+			if e := b.Put([]byte("lastknown"), by); e != nil {
+				return e
+			}
+		} else {
+			log.Println("err marshalling lastknown", tp)
+		}
+		return nil
+	})
 }
 
 func storePoints(trackPoints trackPoint.TrackPoints) error {
@@ -23,6 +99,11 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		if err != nil {
 			return err
 		}
+	}
+	if err == nil {
+		l := len(trackPoints)
+		err = storemetadata(trackPoints[l-1], l)
+		storeLastKnown(trackPoints[l-1])
 	}
 	return err
 }
@@ -69,8 +150,6 @@ func storePoint(tp trackPoint.TrackPoint) error {
 			// if !GetQT().Insert(p) {
 			// 	fmt.Println("Couldn't add to quadtree: ", p)
 			// }
-
-			storeLastKnown(tp)
 			fmt.Println("Saved trackpoint: ", tp)
 			return nil
 		})

@@ -78,4 +78,10 @@ var routes = Routes{
 		"/lastknown",
 		getLastKnown,
 	},
+	Route{
+		"Metadata",
+		"GET",
+		"/metadata",
+		getMetaData,
+	},
 }
