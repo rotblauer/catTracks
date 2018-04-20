@@ -1,18 +1,19 @@
 package catTracks
 
 import (
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/boltdb/bolt"
-	Stats "github.com/montanaflynn/stats"
-	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"math"
 	"net/http"
-	"time"
-	"encoding/binary"
 	"strings"
+	"time"
+
+	"github.com/boltdb/bolt"
+	Stats "github.com/montanaflynn/stats"
+	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
 var debug = false
@@ -96,6 +97,17 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 		}
 	}
 
+	// assume lat slice same len as lng slice
+	var dist float64
+	for i := range us.Raw.Lat {
+		if i == 0 {
+			continue
+		}
+		lat1, lng1, lat2, lng2 := us.Raw.Lat[i-1], us.Raw.Lng[i-1], us.Raw.Lat[i], us.Raw.Lng[i]
+		dist += trackPoint.Distance(lat1, lng1, lat2, lng2)
+	}
+	us.Stats.Distance = dist
+
 	maxElevation, _ := us.Raw.Elevation.Max()
 	maxSpeed, _ := us.Raw.Speed.Max()
 	maxLat, _ := us.Raw.Lat.Max()
@@ -164,69 +176,69 @@ func (s *userStats) buildStatsFromRaw() *userStats {
 	}
 
 	us.Stats.Elevation = calcedStats{
-		Max:      maxElevation,
-		Min:      minElevation,
-		Avg:      avgElevation,
-		Med:      medElevation,
-		StdDev:   stddevElevation,
-		Variance: varianceElevation,
-		Sum:      sumElevation,
-		AbsSum:   absSumElevation,
-		SumDiff: sumDiff(us.Raw.Elevation),
+		Max:        maxElevation,
+		Min:        minElevation,
+		Avg:        avgElevation,
+		Med:        medElevation,
+		StdDev:     stddevElevation,
+		Variance:   varianceElevation,
+		Sum:        sumElevation,
+		AbsSum:     absSumElevation,
+		SumDiff:    sumDiff(us.Raw.Elevation),
 		AbsSumDiff: absSumDiff(us.Raw.Elevation),
-		Count:    len(us.Raw.Elevation),
+		Count:      len(us.Raw.Elevation),
 	}
 	us.Stats.Speed = calcedStats{
-		Max:      maxSpeed,
-		Min:      minSpeed,
-		Avg:      avgSpeed,
-		Med:      medSpeed,
-		StdDev:   stddevSpeed,
-		Variance: varianceSpeed,
-		Sum:      sumSpeed,
-		AbsSum:   absSumSpeed,
-		SumDiff: sumDiff(us.Raw.Speed),
+		Max:        maxSpeed,
+		Min:        minSpeed,
+		Avg:        avgSpeed,
+		Med:        medSpeed,
+		StdDev:     stddevSpeed,
+		Variance:   varianceSpeed,
+		Sum:        sumSpeed,
+		AbsSum:     absSumSpeed,
+		SumDiff:    sumDiff(us.Raw.Speed),
 		AbsSumDiff: absSumDiff(us.Raw.Speed),
-		Count:    len(us.Raw.Speed),
+		Count:      len(us.Raw.Speed),
 	}
 	us.Stats.Lat = calcedStats{
-		Max:      maxLat,
-		Min:      minLat,
-		Avg:      avgLat,
-		Med:      medLat,
-		StdDev:   stddevLat,
-		Variance: varianceLat,
-		Sum:      sumLat,
-		AbsSum:   absSumLat,
-		SumDiff: sumDiff(us.Raw.Lat),
+		Max:        maxLat,
+		Min:        minLat,
+		Avg:        avgLat,
+		Med:        medLat,
+		StdDev:     stddevLat,
+		Variance:   varianceLat,
+		Sum:        sumLat,
+		AbsSum:     absSumLat,
+		SumDiff:    sumDiff(us.Raw.Lat),
 		AbsSumDiff: absSumDiff(us.Raw.Lat),
-		Count:    len(us.Raw.Lat),
+		Count:      len(us.Raw.Lat),
 	}
 	us.Stats.Lng = calcedStats{
-		Max:      maxLng,
-		Min:      minLng,
-		Avg:      avgLng,
-		Med:      medLng,
-		StdDev:   stddevLng,
-		Variance: varianceLng,
-		Sum:      sumLng,
-		AbsSum:   absSumLng,
-		SumDiff: sumDiff(us.Raw.Lng),
+		Max:        maxLng,
+		Min:        minLng,
+		Avg:        avgLng,
+		Med:        medLng,
+		StdDev:     stddevLng,
+		Variance:   varianceLng,
+		Sum:        sumLng,
+		AbsSum:     absSumLng,
+		SumDiff:    sumDiff(us.Raw.Lng),
 		AbsSumDiff: absSumDiff(us.Raw.Lng),
-		Count:    len(us.Raw.Lng),
+		Count:      len(us.Raw.Lng),
 	}
 	us.Stats.Accuracy = calcedStats{
-		Max:      maxAccuracy,
-		Min:      minAccuracy,
-		Avg:      avgAccuracy,
-		Med:      medAccuracy,
-		StdDev:   stddevAccuracy,
-		Variance: varianceAccuracy,
-		Sum:      sumAccuracy,
-		AbsSum:   absSumAccuracy,
-		SumDiff: sumDiff(us.Raw.Accuracy),
+		Max:        maxAccuracy,
+		Min:        minAccuracy,
+		Avg:        avgAccuracy,
+		Med:        medAccuracy,
+		StdDev:     stddevAccuracy,
+		Variance:   varianceAccuracy,
+		Sum:        sumAccuracy,
+		AbsSum:     absSumAccuracy,
+		SumDiff:    sumDiff(us.Raw.Accuracy),
 		AbsSumDiff: absSumDiff(us.Raw.Accuracy),
-		Count:    len(us.Raw.Accuracy),
+		Count:      len(us.Raw.Accuracy),
 	}
 	return us
 }
@@ -245,6 +257,7 @@ type calcedMetrics struct {
 	Lat       calcedStats
 	Lng       calcedStats
 	Accuracy  calcedStats
+	Distance  float64
 }
 
 func (c rawValues) String() string {
@@ -309,6 +322,7 @@ func (c *catStatsCalculatedSlice) getDaily(t time.Time) (int, *catStatsCalculate
 //
 var keyPrefixLen = len([]byte(statsDataKey))
 var timeFmtLen = len([]byte(time.RFC3339Nano))
+
 func (s *catStatsCalculated) buildStorageKey() []byte {
 	var key []byte
 
@@ -342,7 +356,7 @@ func getTimeAndSpanFromKey(key []byte) (time.Time, time.Duration, error) {
 	//}
 	tbytes := key[keyPrefixLen:]
 	s := strings.Split(string(tbytes), "_")
-	
+
 	//debugLog(string(s[0]), len(tbytes), tbytes)
 	t, err := time.Parse(time.RFC3339Nano, s[0])
 	if err != nil {
@@ -448,9 +462,9 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 			}
 			if daily == nil {
 				daily = &catStatsCalculated{
-						StartTime: t,
-						Duration: span,
-					}
+					StartTime: t,
+					Duration:  span,
+				}
 			}
 			daily = daily.createOrAppendRawValuesByUser(trackPointCurrent)
 			return nil
