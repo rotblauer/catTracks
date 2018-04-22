@@ -9,14 +9,21 @@ import (
 	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
+	"os"
+	"path/filepath"
+	"os/user"
 )
+
+var punktlichTileDBPathRelHome = filepath.Join("punktlich.rotblauer.com", "tester.db")
 
 type LastKnown map[string]trackPoint.TrackPoint
 type Metadata struct {
 	KeyN int
+	KeyNUpdated time.Time
 	LastUpdatedAt time.Time
 	LastUpdatedBy string
 	LastUpdatedPointsN int
+	TileDBLastUpdated time.Time
 }
 
 func getmetadata() (out []byte, err error) {
@@ -28,28 +35,72 @@ func getmetadata() (out []byte, err error) {
 	return
 }
 func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error {
-	e := GetDB().Update(func(tx *bolt.Tx) error {
+	db := GetDB()
+	e := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 
 		// if not initialized, run the stats which takes a hot second
-		var n int
+		var keyN int
+
+		var tileDBLastUpdated time.Time
+		var homedir string
+		usr, err := user.Current()
+		if err != nil {
+			log.Println("get current user err", err)
+			homedir = "~"
+			//if homedir, err = filepath.Abs("~"); err != nil {
+			//	log.Println("expand ~ filepath abs err:", err)
+			//	homedir = filepath.Join("home", "freyabison")
+			//}
+		} else {
+			homedir = usr.HomeDir
+		}
+		dbpath := filepath.Join(homedir, punktlichTileDBPathRelHome)
+		dbpath = filepath.Clean(dbpath)
+		log.Println("dbpath", dbpath)
+		dbfi, err := os.Stat(dbpath)
+		if err == nil {
+			tileDBLastUpdated = dbfi.ModTime()
+		} else {
+			log.Println("err tile db path stat:", err)
+		}
+
 		v := b.Get([]byte("metadata"))
+		md := &Metadata{}
+		var keyNUpdated time.Time
+
 		if v == nil {
 			log.Println("updating bucket stats key_n...")
-			n = tx.Bucket([]byte(trackKey)).Stats().KeyN
-			log.Println("initialized metadata", n)
+			keyN = tx.Bucket([]byte(trackKey)).Stats().KeyN
+			log.Println("initialized metadata", "keyN:", keyN)
+			keyNUpdated = time.Now().UTC()
 		} else {
-			md := &Metadata{}
 			if e := json.Unmarshal(v, md); e != nil {
 				return e
 			}
-			n = md.KeyN
 		}
+		if md != nil && (md.KeyNUpdated.IsZero() || time.Since(md.KeyNUpdated) > 24 * time.Hour) {
+			log.Println("updating bucket stats key_n...")
+			log.Println("  because", md==nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24 * time.Hour)
+			keyN = tx.Bucket([]byte(trackKey)).Stats().KeyN
+			log.Println("updated metadata keyN:", keyN)
+			keyNUpdated = time.Now().UTC()
+		} else {
+			log.Println("dont update keyn", md==nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24 * time.Hour)
+			keyN = md.KeyN+lenpointsupdated
+		}
+
 		d := &Metadata{
-			KeyN: n+lenpointsupdated,
-			LastUpdatedAt: time.Now().UTC(),
-			LastUpdatedBy: lastpoint.Name,
+			KeyN:               keyN,
+			LastUpdatedAt:      time.Now().UTC(),
+			LastUpdatedBy:      lastpoint.Name,
 			LastUpdatedPointsN: lenpointsupdated,
+			TileDBLastUpdated:  tileDBLastUpdated,
+		}
+		if !keyNUpdated.IsZero() {
+			d.KeyNUpdated = keyNUpdated
+		} else {
+			d.KeyNUpdated = md.KeyNUpdated
 		}
 		by, e := json.Marshal(d)
 		if e != nil {
