@@ -75,9 +75,11 @@ func storeLastKnown(tp trackPoint.TrackPoint) {
 	//lastKnownMap[tp.Name] = tp
 	GetDB().Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
+
 		lk := LastKnown{}
+
 		v := b.Get([]byte("lastknown"))
-		if e := json.Unmarshal(v, lk); e != nil {
+		if e := json.Unmarshal(v, &lk); e != nil {
 			log.Println("error unmarshalling nil lastknown", tp)
 		}
 		lk[tp.Name] = tp
