@@ -47,11 +47,7 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 		usr, err := user.Current()
 		if err != nil {
 			log.Println("get current user err", err)
-			homedir = "~"
-			//if homedir, err = filepath.Abs("~"); err != nil {
-			//	log.Println("expand ~ filepath abs err:", err)
-			//	homedir = filepath.Join("home", "freyabison")
-			//}
+			homedir = os.Getenv("HOME")
 		} else {
 			homedir = usr.HomeDir
 		}
