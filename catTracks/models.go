@@ -157,6 +157,20 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 	return err
 }
 
+func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
+	if tp.Uuid == "" {
+		if tp.ID != 0 {
+			return i64tob(tp.ID)
+		}
+		return i64tob(tp.Time.UnixNano())
+	}
+	// have uuid
+	k := []byte{}
+	k = append(k, i64tob(tp.Time.UnixNano())...)
+	k = append(k, []byte(tp.Uuid)...)
+	return k
+}
+
 func storePoint(tp trackPoint.TrackPoint) error {
 
 	var err error
@@ -170,8 +184,12 @@ func storePoint(tp trackPoint.TrackPoint) error {
 
 			// id, _ := b.NextSequence()
 			// trackPoint.ID = int(id)
+
 			tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
-			if exists := b.Get(itob(tp.ID)); exists != nil {
+
+			key := buildTrackpointKey(tp)
+
+			if exists := b.Get(key); exists != nil {
 				// make sure it's ours
 				var existingTrackpoint trackPoint.TrackPoint
 				e := json.Unmarshal(exists, &existingTrackpoint)
@@ -190,7 +208,7 @@ func storePoint(tp trackPoint.TrackPoint) error {
 			if err != nil {
 				return err
 			}
-			err = b.Put(itob(tp.ID), trackPointJSON)
+			err = b.Put(key, trackPointJSON)
 			if err != nil {
 				fmt.Println("Didn't save post trackPoint in bolt.", err)
 				return err

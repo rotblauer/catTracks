@@ -69,7 +69,7 @@ func BuildIndexBuckets() error {
 
 				bByName, _ := bname.CreateBucketIfNotExists([]byte(tp.Name))
 
-				bByName.Put(itob(tp.ID), val)
+				bByName.Put(buildTrackpointKey(tp), val)
 
 				return nil
 			})

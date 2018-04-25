@@ -324,19 +324,10 @@ var keyPrefixLen = len([]byte(statsDataKey))
 var timeFmtLen = len([]byte(time.RFC3339Nano))
 
 func (s *catStatsCalculated) buildStorageKey() []byte {
-	var key []byte
-
-	key = append(key, []byte(statsDataKey)...)
-	key = s.StartTime.AppendFormat(key, time.RFC3339Nano)
-	key = append(key, []byte("_")...)
-	var b = make([]byte, 8)
-	binary.LittleEndian.PutUint64(b, uint64(s.Duration.Nanoseconds()))
-	key = append(key, b...)
-
-	return key
+	return buildStorageKeyFn(s.StartTime, s.Duration)
 }
 
-func buildStorageKeyCheck(t time.Time, d time.Duration) []byte {
+func buildStorageKeyFn(t time.Time, d time.Duration) []byte {
 	var key []byte
 
 	key = append(key, []byte(statsDataKey)...)
@@ -350,14 +341,9 @@ func buildStorageKeyCheck(t time.Time, d time.Duration) []byte {
 }
 
 func getTimeAndSpanFromKey(key []byte) (time.Time, time.Duration, error) {
-	//debugLog(string(key), len(key), keyLen, keyPrefixLen, keyPrefixLen+timeFmtLen)
-	//if len(key) != keyLen {
-	//	return time.Now(), 1*time.Second, fmt.Errorf("invalid key: %s", string(key))
-	//}
 	tbytes := key[keyPrefixLen:]
 	s := strings.Split(string(tbytes), "_")
 
-	//debugLog(string(s[0]), len(tbytes), tbytes)
 	t, err := time.Parse(time.RFC3339Nano, s[0])
 	if err != nil {
 		return t, 0, err
@@ -432,7 +418,7 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 	var preExisting *catStatsCalculated
 	if e := GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
-		v := b.Get(buildStorageKeyCheck(t, span))
+		v := b.Get(buildStorageKeyFn(t, span))
 		if v != nil {
 			if err := json.Unmarshal(v, &preExisting); err != nil {
 				return err
@@ -445,6 +431,8 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 	if preExisting != nil {
 		return preExisting, nil
 	}
+
+	t.UnixNano()
 
 	// collect Raw values
 	var daily *catStatsCalculated

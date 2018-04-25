@@ -14,7 +14,8 @@ func main() {
 	if bolterr := catTracks.InitBoltDB(); bolterr == nil {
 		defer catTracks.GetDB().Close()
 	}
-	//
+
+	// clear out old stats from dev db.
 	catTracks.GetDB().Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("stats"))
 		e := b.ForEach(func(k, v []byte) error {
@@ -30,12 +31,12 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	refT := time.Date(2018, time.April, 4, 12, 0, 0, 0, l).Add(-114*time.Hour) // for ago because old db
-	if e := catTracks.CalculateAndStoreStatsByDateAndSpanStepping(refT, 1*time.Hour, -4*time.Hour); e != nil {
+	refT := time.Date(2018, time.April, 1, 12, 0, 0, 0, l)
+	if e := catTracks.CalculateAndStoreStatsByDateAndSpanStepping(refT, 1*time.Hour, -12*time.Hour); e != nil {
 		log.Println("calcstats err:", e)
 		return
 	}
-	val, e := catTracks.GetStats(refT.Add(12*time.Hour), -24*time.Hour)
+	val, e := catTracks.GetStats(refT.Add(4*time.Hour), -16*time.Hour)
 	//val, e := catTracks.GetStats(time.Now(), -2455*time.Hour)
 	if e != nil {
 		log.Println("getstats err:", e)

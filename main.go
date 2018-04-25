@@ -51,6 +51,10 @@ func main() {
 	http.Handle("/", router)
 
 	//go func() {
+	//
+	//}()
+
+	//go func() {
 	//	for {
 	//		if e := catTracks.calculateAndStoreStats(7); e != nil {
 	//			log.Println(e)

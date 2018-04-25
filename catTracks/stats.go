@@ -42,9 +42,11 @@ func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 
 	err = GetDB().View(func(tx *bolt.Tx) error {
 		var err error
-		c := tx.Bucket([]byte(trackKey)).Cursor()
+		b := tx.Bucket([]byte(trackKey))
+		c := b.Cursor()
 
-		min := itob(since.UnixNano())
+		// TODO: fix or delete me
+		min := i64tob(since.UnixNano())
 
 		// Iterate over the 90's.
 		for k, v := c.Seek(min); k != nil; k, v = c.Next() {
