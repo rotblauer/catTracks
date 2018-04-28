@@ -14,6 +14,7 @@ import (
 	"github.com/boltdb/bolt"
 	Stats "github.com/montanaflynn/stats"
 	"github.com/rotblauer/trackpoints/trackPoint"
+	"bytes"
 )
 
 var debug = false
@@ -412,6 +413,7 @@ func CalculateAndStoreStatsByDateAndSpanStepping(t time.Time, spanStep, spanOver
 	return nil
 }
 
+// always moved forwards
 func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalculated, error) {
 
 	// check for pre-existence of immutable data
@@ -432,13 +434,36 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 		return preExisting, nil
 	}
 
-	t.UnixNano()
+	//	// Iterate over the 90's.
+	//	for k, v := c.Seek(min); k != nil && bytes.Compare(k, max) <= 0; k, v = c.Next() {
+	//		fmt.Printf("%s: %s\n", k, v)
+	//	}
+	startB := I64tob(t.UnixNano())
+	stopB := I64tob(t.Add(span).UnixNano())
+	log.Println("startB", startB)
+	log.Println("startB", startB[:7])
+	log.Println("stopB ", stopB)
 
 	// collect Raw values
 	var daily *catStatsCalculated
 	if e := GetDB().View(func(tx *bolt.Tx) error {
-		b := tx.Bucket([]byte(trackKey))
-		e := b.ForEach(func(k, v []byte) error {
+		c := tx.Bucket([]byte(trackKey)).Cursor()
+		//b := tx.Bucket([]byte(trackKey))
+		// this for each point in bucket
+
+		//var count = 0
+		//e := b.ForEach(func(k, v []byte) error {
+			//log.Println("key",k)
+			//log.Println("start", startB)
+			//log.Println("stop", stopB)
+			//count++
+			//if count > 3{
+			//	panic("break")
+			//	return nil
+			//}
+		// we have to use stopB[:8] because new points can have uuid appended
+		//for k, v := c.Seek(startB); k != nil && bytes.Compare(k, stopB[:8]) <= 0; k, v = c.Next() {
+		for k, v := c.Seek(startB[:7]); k != nil && bytes.HasPrefix(k, stopB[:7]); k, v = c.Next() {
 			var trackPointCurrent trackPoint.TrackPoint
 			err := json.Unmarshal(v, &trackPointCurrent)
 			if err != nil {
@@ -448,6 +473,11 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 			if t.Sub(trackPointCurrent.Time) > span {
 				return nil
 			}
+			log.Println("key  ",k)
+			log.Println("start", startB)
+			log.Println("stop ", stopB)
+			panic(t.String() + " "+trackPointCurrent.Time.String())
+
 			if daily == nil {
 				daily = &catStatsCalculated{
 					StartTime: t,
@@ -456,11 +486,39 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 			}
 			daily = daily.createOrAppendRawValuesByUser(trackPointCurrent)
 			return nil
-		})
-		return e
+		}
+		var n = 0
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			if bytes.HasPrefix(k, startB[:7]) {
+				log.Println("prefix start  ", startB[:7])
+				log.Println("prefix key    ", k)
+				var trackPointCurrent trackPoint.TrackPoint
+				err := json.Unmarshal(v, &trackPointCurrent)
+				if err != nil {
+					return err
+				}
+				log.Println(trackPointCurrent)
+			}
+			if n == 0 {
+				log.Println()
+			}
+			n++
+		}
+		//return e
+		return nil
 	}); e != nil {
 		return nil, e
 	}
+	log.Println("--------")
+	GetDB().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
+		b.ForEach(func(k, v []byte) error {
+			log.Println("k     ", k)
+			panic("")
+			return nil
+		})
+		return nil
+	})
 	if daily == nil {
 		return nil, fmt.Errorf("no tracks in span: t=%v, d=%v", t, span)
 	}

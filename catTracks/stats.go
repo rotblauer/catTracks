@@ -46,7 +46,7 @@ func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 		c := b.Cursor()
 
 		// TODO: fix or delete me
-		min := i64tob(since.UnixNano())
+		min := I64tob(since.UnixNano())
 
 		// Iterate over the 90's.
 		for k, v := c.Seek(min); k != nil; k, v = c.Next() {
