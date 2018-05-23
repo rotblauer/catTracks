@@ -99,6 +99,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	}
 	errS := storePoints(trackPoints)
 	if errS != nil {
+		log.Println("storing points err:", errS)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	//return json of trakcpoint if stored succcess
@@ -121,6 +122,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	}{
 		Status: http.StatusOK,
 	}); errW != nil {
+		log.Println("respond ok err:", errW)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
