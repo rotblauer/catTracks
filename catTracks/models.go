@@ -178,49 +178,47 @@ func storePoint(tp trackPoint.TrackPoint) error {
 		tp.Time = time.Now()
 	}
 
-	go func() {
-		GetDB().Update(func(tx *bolt.Tx) error {
-			b := tx.Bucket([]byte(trackKey))
+	GetDB().Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(trackKey))
 
-			// id, _ := b.NextSequence()
-			// trackPoint.ID = int(id)
+		// id, _ := b.NextSequence()
+		// trackPoint.ID = int(id)
 
-			tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
+		tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
 
-			key := buildTrackpointKey(tp)
+		key := buildTrackpointKey(tp)
 
-			if exists := b.Get(key); exists != nil {
-				// make sure it's ours
-				var existingTrackpoint trackPoint.TrackPoint
-				e := json.Unmarshal(exists, &existingTrackpoint)
-				if e != nil {
-					fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
-				}
-				if existingTrackpoint.Name == tp.Name {
-					fmt.Println("Got that trackpoint already. Breaking.")
-					return nil
-				}
+		if exists := b.Get(key); exists != nil {
+			// make sure it's ours
+			var existingTrackpoint trackPoint.TrackPoint
+			e := json.Unmarshal(exists, &existingTrackpoint)
+			if e != nil {
+				fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
 			}
-			// gets "" case nontestesing
-			tp.Name = getTestesPrefix() + tp.Name
+			if existingTrackpoint.Name == tp.Name {
+				fmt.Println("Got redundant track; not storing: ", tp.Name, tp.Time)
+				return nil
+			}
+		}
+		// gets "" case nontestesing
+		tp.Name = getTestesPrefix() + tp.Name
 
-			trackPointJSON, err := json.Marshal(tp)
-			if err != nil {
-				return err
-			}
-			err = b.Put(key, trackPointJSON)
-			if err != nil {
-				fmt.Println("Didn't save post trackPoint in bolt.", err)
-				return err
-			}
-			// p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
-			// if !GetQT().Insert(p) {
-			// 	fmt.Println("Couldn't add to quadtree: ", p)
-			// }
-			fmt.Println("Saved trackpoint: ", tp)
-			return nil
-		})
-	}()
+		trackPointJSON, err := json.Marshal(tp)
+		if err != nil {
+			return err
+		}
+		err = b.Put(key, trackPointJSON)
+		if err != nil {
+			fmt.Println("Didn't save post trackPoint in bolt.", err)
+			return err
+		}
+		// p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
+		// if !GetQT().Insert(p) {
+		// 	fmt.Println("Couldn't add to quadtree: ", p)
+		// }
+		fmt.Println("Saved trackpoint: ", tp)
+		return nil
+	})
 
 	if err != nil {
 		fmt.Println(err)

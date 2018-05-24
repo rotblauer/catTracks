@@ -97,12 +97,18 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), 400)
 		return
 	}
-	errS := storePoints(trackPoints)
-	if errS != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-	}
-	//return json of trakcpoint if stored succcess
-	if errW := json.NewEncoder(w).Encode(&trackPoints); errW != nil {
+	go func() {
+		errS := storePoints(trackPoints)
+		if errS != nil {
+			log.Println("store err:", errS)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+		}
+		log.Println("stored trackpoints", "len:", trackPoints.Len())
+	}()
+
+	// return empty json of empty trackpoints to not have to download tons of shit
+	if errW := json.NewEncoder(w).Encode(&trackPoint.TrackPoints{}); errW != nil {
+		log.Println("respond write err:", errW)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
