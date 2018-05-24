@@ -102,25 +102,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 	//return json of trakcpoint if stored succcess
-	// this is dumb because the ios app doesn't use the JSON at all, and only checks
-	// if the response is not an error.
-	// it causes the tracks POST to actually DOWNLOAD the whole set of points
-	// that it just pushed.
-	//if errW := json.NewEncoder(w).Encode(&trackPoints); errW != nil {
-	//	http.Error(w, err.Error(), http.StatusInternalServerError)
-	//}
-
-	// don't want plain text because we're in JSON land here
-	//w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	//w.Header().Set("X-Content-Type-Options", "nosniff")
-	//w.WriteHeader(http.StatusOK)
-	//fmt.Fprintln(w, "SUCCESS")
-
-	if errW := json.NewEncoder(w).Encode(&struct{
-		Status uint
-	}{
-		Status: http.StatusOK,
-	}); errW != nil {
+	if errW := json.NewEncoder(w).Encode(&trackPoints); errW != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
 }
