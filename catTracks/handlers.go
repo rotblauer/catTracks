@@ -159,7 +159,7 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 }
 
 func getLastKnown(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin","*")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	b, e := getLastKnownData()
 	//b, e := json.Marshal(lastKnownMap)
 	if e != nil {
@@ -171,7 +171,7 @@ func getLastKnown(w http.ResponseWriter, r *http.Request) {
 }
 
 func getMetaData(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin","*")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	b, e := getmetadata()
 	if e != nil {

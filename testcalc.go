@@ -1,11 +1,11 @@
 package main
 
 import (
+	"fmt"
+	"github.com/boltdb/bolt"
 	"github.com/rotblauer/catTracks/catTracks"
 	"log"
-	"fmt"
 	"time"
-	"github.com/boltdb/bolt"
 )
 
 func main() {
