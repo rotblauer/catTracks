@@ -10,20 +10,20 @@ import (
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"os"
-	"path/filepath"
 	"os/user"
+	"path/filepath"
 )
 
 var punktlichTileDBPathRelHome = filepath.Join("punktlich.rotblauer.com", "tester.db")
 
 type LastKnown map[string]trackPoint.TrackPoint
 type Metadata struct {
-	KeyN int
-	KeyNUpdated time.Time
-	LastUpdatedAt time.Time
-	LastUpdatedBy string
+	KeyN               int
+	KeyNUpdated        time.Time
+	LastUpdatedAt      time.Time
+	LastUpdatedBy      string
 	LastUpdatedPointsN int
-	TileDBLastUpdated time.Time
+	TileDBLastUpdated  time.Time
 }
 
 func getmetadata() (out []byte, err error) {
@@ -75,15 +75,16 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 				return e
 			}
 		}
-		if md != nil && (md.KeyNUpdated.IsZero() || time.Since(md.KeyNUpdated) > 24 * time.Hour) {
+		if md != nil && (md.KeyNUpdated.IsZero() || time.Since(md.KeyNUpdated) > 24*time.Hour) {
 			log.Println("updating bucket stats key_n...")
-			log.Println("  because", md==nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24 * time.Hour)
-			keyN = tx.Bucket([]byte(trackKey)).Stats().KeyN
+			log.Println("  because", md == nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24*time.Hour)
+			keyN = 180000000
+			// keyN = tx.Bucket([]byte(trackKey)).Stats().KeyN
 			log.Println("updated metadata keyN:", keyN)
 			keyNUpdated = time.Now().UTC()
 		} else {
-			log.Println("dont update keyn", md==nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24 * time.Hour)
-			keyN = md.KeyN+lenpointsupdated
+			log.Println("dont update keyn", md == nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24*time.Hour)
+			keyN = md.KeyN + lenpointsupdated
 		}
 
 		d := &Metadata{
@@ -110,6 +111,7 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 	})
 	return e
 }
+
 func getLastKnownData() (out []byte, err error) {
 	err = GetDB().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
@@ -118,12 +120,12 @@ func getLastKnownData() (out []byte, err error) {
 	})
 	return
 }
+
 func storeLastKnown(tp trackPoint.TrackPoint) {
 	//lastKnownMap[tp.Name] = tp
-	GetDB().Update(func(tx *bolt.Tx) error {
+	lk := LastKnown{}
+	if err := GetDB().Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
-
-		lk := LastKnown{}
 
 		v := b.Get([]byte("lastknown"))
 		if e := json.Unmarshal(v, &lk); e != nil {
@@ -138,7 +140,11 @@ func storeLastKnown(tp trackPoint.TrackPoint) {
 			log.Println("err marshalling lastknown", tp)
 		}
 		return nil
-	})
+	}); err != nil {
+		log.Println("error storing last known: %v", err)
+	} else {
+		log.Printf("stored last known: lk=%v\ntp=%v", lk, tp)
+	}
 }
 
 func storePoints(trackPoints trackPoint.TrackPoints) error {
