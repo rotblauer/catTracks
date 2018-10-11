@@ -201,8 +201,8 @@ func storePoint(tp trackPoint.TrackPoint) error {
 			if e != nil {
 				fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
 			}
-			if existingTrackpoint.Name == tp.Name {
-				fmt.Println("Got redundant track; not storing: ", tp.Name, tp.Time)
+			if existingTrackpoint.Name == tp.Name && existingTrackpoint.Uuid == tp.Uuid {
+				fmt.Println("Got redundant track; not storing: ", tp.Name, tp.Uuid, tp.Time)
 				return nil
 			}
 		}
