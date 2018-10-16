@@ -78,7 +78,7 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 		if md != nil && (md.KeyNUpdated.IsZero() || time.Since(md.KeyNUpdated) > 24*time.Hour) {
 			log.Println("updating bucket stats key_n...")
 			log.Println("  because", md == nil, md.KeyNUpdated, md.KeyNUpdated.IsZero(), time.Since(md.KeyNUpdated) > 24*time.Hour)
-			keyN = 180000000
+			keyN = 0
 			// keyN = tx.Bucket([]byte(trackKey)).Stats().KeyN
 			log.Println("updated metadata keyN:", keyN)
 			keyNUpdated = time.Now().UTC()
