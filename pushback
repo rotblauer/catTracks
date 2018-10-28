@@ -1,0 +1,18 @@
+#!/usr/bin/env bash
+
+# env GOOS=linux
+go build -o linux.trackermain main.go
+
+# echo "Pushing da front."
+# ./push_front
+
+echo "Pushing da binary."
+rsync -avz -L --progress -h\
+ ./linux.trackermain freya:~/track.areteh.co/
+
+ssh freya <<\EOI
+cd track.areteh.co
+./kickstart
+exit
+EOI
+
