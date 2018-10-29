@@ -6,7 +6,10 @@ import (
 	"sort"
 	"time"
 
+	"compress/gzip"
 	"github.com/boltdb/bolt"
+	"github.com/kpawlik/geojson"
+	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"os"
@@ -27,7 +30,7 @@ type Metadata struct {
 }
 
 func getmetadata() (out []byte, err error) {
-	err = GetDB().View(func(tx *bolt.Tx) error {
+	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 		out = b.Get([]byte("metadata"))
 		return nil
@@ -35,7 +38,7 @@ func getmetadata() (out []byte, err error) {
 	return
 }
 func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error {
-	db := GetDB()
+	db := GetDB("master")
 	e := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 
@@ -113,7 +116,7 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 }
 
 func getLastKnownData() (out []byte, err error) {
-	err = GetDB().View(func(tx *bolt.Tx) error {
+	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 		out = b.Get([]byte("lastknown"))
 		return nil
@@ -124,7 +127,7 @@ func getLastKnownData() (out []byte, err error) {
 func storeLastKnown(tp trackPoint.TrackPoint) {
 	//lastKnownMap[tp.Name] = tp
 	lk := LastKnown{}
-	if err := GetDB().Update(func(tx *bolt.Tx) error {
+	if err := GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 
 		v := b.Get([]byte("lastknown"))
@@ -141,18 +144,88 @@ func storeLastKnown(tp trackPoint.TrackPoint) {
 		}
 		return nil
 	}); err != nil {
-		log.Println("error storing last known: %v", err)
+		log.Printf("error storing last known: %v", err)
 	} else {
 		log.Printf("stored last known: lk=%v\ntp=%v", lk, tp)
 	}
 }
 
+type F struct {
+	p  string // path to file
+	f  *os.File
+	gf *gzip.Writer
+	je *json.Encoder
+}
+
+func CreateGZ(s string, compressLevel int) (f F) {
+	fi, err := os.OpenFile(s, os.O_WRONLY|os.O_APPEND|os.O_CREATE, 0660)
+	if err != nil {
+		log.Printf("Error in Create file\n")
+		panic(err)
+	}
+	gf, err := gzip.NewWriterLevel(fi, compressLevel)
+	if err != nil {
+		log.Printf("Error in Create gz \n")
+		panic(err)
+	}
+	je := json.NewEncoder(gf)
+	f = F{s, fi, gf, je}
+	return
+}
+
+func CloseGZ(f F) {
+	// Close the gzip first.
+	f.gf.Flush()
+	f.gf.Close()
+	f.f.Close()
+}
+
+func trackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
+	var currentNote note.Note
+
+	// convert to a feature
+	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(trackPointCurrent.Lng), geojson.Coord(trackPointCurrent.Lat)})
+
+	//currently need speed, name,time
+	trimmedProps := make(map[string]interface{})
+	trimmedProps["Speed"] = trackPointCurrent.Speed
+	trimmedProps["Name"] = trackPointCurrent.Name
+	trimmedProps["Time"] = trackPointCurrent.Time
+	trimmedProps["UnixTime"] = trackPointCurrent.Time.Unix()
+	trimmedProps["Elevation"] = trackPointCurrent.Elevation
+
+	e := json.Unmarshal([]byte(trackPointCurrent.Notes), &currentNote)
+	if e != nil {
+		trimmedProps["Notes"] = currentNote.CustomNote
+		trimmedProps["Pressure"] = currentNote.Pressure
+		trimmedProps["Activity"] = currentNote.Activity
+	} else {
+		trimmedProps["Notes"] = trackPointCurrent.Notes
+	}
+	return geojson.NewFeature(p, trimmedProps, 1)
+}
+
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
+	var f F
+	featureChan := make(chan *geojson.Feature, 100000)
+	defer close(featureChan)
+	if tracksGZPath != "" {
+		f = CreateGZ(tracksGZPath, gzip.BestCompression)
+		go func() {
+			for feat := range featureChan {
+				f.je.Encode(feat)
+			}
+			CloseGZ(f)
+		}()
+	}
 	for _, point := range trackPoints {
 		err = storePoint(point)
 		if err != nil {
 			return err
+		}
+		if tracksGZPath != "" {
+			featureChan <- trackToFeature(point)
 		}
 	}
 	if err == nil {
@@ -184,23 +257,22 @@ func storePoint(tp trackPoint.TrackPoint) error {
 		tp.Time = time.Now()
 	}
 
-	GetDB().Update(func(tx *bolt.Tx) error {
+	err = GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 
-		// id, _ := b.NextSequence()
-		// trackPoint.ID = int(id)
-
+		// Note that tp.ID is not the db key. ID is a uniq identifier per cat only.
 		tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
 
 		key := buildTrackpointKey(tp)
 
 		if exists := b.Get(key); exists != nil {
-			// make sure it's ours
+			// make sure same cat
 			var existingTrackpoint trackPoint.TrackPoint
 			e := json.Unmarshal(exists, &existingTrackpoint)
 			if e != nil {
 				fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
 			}
+			// use Name and Uuid conditions because Uuid tracking was introduced after Name, so not all points/cats/apps have it. So Name is backwards-friendly.
 			if existingTrackpoint.Name == tp.Name && existingTrackpoint.Uuid == tp.Uuid {
 				fmt.Println("Got redundant track; not storing: ", tp.Name, tp.Uuid, tp.Time)
 				return nil
@@ -215,17 +287,11 @@ func storePoint(tp trackPoint.TrackPoint) error {
 		}
 		err = b.Put(key, trackPointJSON)
 		if err != nil {
-			fmt.Println("Didn't save post trackPoint in bolt.", err)
 			return err
 		}
-		// p := quadtree.NewPoint(tp.Lat, tp.Lng, &tp)
-		// if !GetQT().Insert(p) {
-		// 	fmt.Println("Couldn't add to quadtree: ", p)
-		// }
 		fmt.Println("Saved trackpoint: ", tp)
 		return nil
 	})
-
 	if err != nil {
 		fmt.Println(err)
 	}
@@ -235,7 +301,7 @@ func storePoint(tp trackPoint.TrackPoint) error {
 func getAllStoredPoints() (tps trackPoint.TPs, e error) {
 	start := time.Now()
 
-	e = GetDB().View(func(tx *bolt.Tx) error {
+	e = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 
 		// can swap out for- eacher if we figure indexing, or even want it

@@ -45,7 +45,7 @@ func InitQT() error {
 	qt = quadtree.New(initQTBounds(), 0, nil)
 
 	//stick points into quadtree
-	e = GetDB().View(func(tx *bolt.Tx) error {
+	e = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 
 		ver := b.ForEach(func(key, val []byte) error {

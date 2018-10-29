@@ -27,7 +27,7 @@ func citiesInCellID(c s2.CellID) []simpleline.Point {
 
 	// perform a range lookup in the DB from bmin key to bmax key, cur is our DB cursor
 	var cell s2.CellID
-	GetDB().View(func(tx *bolt.Tx) error {
+	GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte("geohash"))
 		cur := b.Cursor()
 		for k, v := cur.Seek(bmin); k != nil && bytes.Compare(k, bmax) <= 0; k, v = cur.Next() {
@@ -84,7 +84,7 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 		start := time.Now()
 		//TODO make this not what it was
 
-		err = GetDB().View(func(tx *bolt.Tx) error {
+		err = GetDB("master").View(func(tx *bolt.Tx) error {
 			var err error
 			b := tx.Bucket([]byte(trackKey))
 

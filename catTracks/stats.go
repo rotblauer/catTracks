@@ -40,7 +40,7 @@ func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 	var err error
 	var points []trackPoint.TrackPoint
 
-	err = GetDB().View(func(tx *bolt.Tx) error {
+	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		var err error
 		b := tx.Bucket([]byte(trackKey))
 		c := b.Cursor()

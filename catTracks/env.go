@@ -14,10 +14,30 @@ const (
 )
 
 var testes = false
+var forwardPopulate string
+var tracksGZPath string
 
 // SetTestes run
 func SetTestes(flagger bool) {
 	testes = flagger
+}
+
+// SetForwardPopulate sets the 'downstream' urls that should be forwarded
+// any request that this client receives for populating points. Forward requests
+// will be sent as POST requests in identical JSON as they are received.
+// NOTE that forwardPopulate is a []string, so all uri's should be given in comma-separated
+// format.
+func SetForwardPopulate(arguments string) {
+	forwardPopulate = arguments
+	// // catch noop for legibility
+	// if arguments == "" {
+	// 	return
+	// }
+	// forwardPopulate = append(forwardPopulate, strings.Split(arguments, ",")...)
+}
+
+func SetLiveTracksGZ(pathto string) {
+	tracksGZPath = pathto
 }
 
 func getTestesPrefix() string {
@@ -29,7 +49,7 @@ func getTestesPrefix() string {
 
 // DeleteTestes wipes the entire database of all points with names prefixed with testes prefix. Saves an rm keystorke
 func DeleteTestes() error {
-	e := GetDB().Update(func(tx *bolt.Tx) error {
+	e := GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {

@@ -2,10 +2,12 @@ package catTracks
 
 //Handles
 import (
+	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"html/template"
+	"io/ioutil"
 	"net/http"
 	"strconv"
 	"time"
@@ -85,18 +87,105 @@ func getData(query *query) ([]byte, error) {
 	return data, nil
 }
 
+var backlogPopulators [][]byte
+
+// > https://stackoverflow.com/questions/24455147/how-do-i-send-a-json-string-in-a-post-request-in-go
+// url := "http://restapi3.apiary.io/notes"
+// fmt.Println("URL:>", url)
+
+// var jsonStr = []byte(`{"title":"Buy cheese and bread for breakfast."}`)
+// req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonStr))
+// req.Header.Set("X-Custom-Header", "myvalue")
+// req.Header.Set("Content-Type", "application/json")
+
+// client := &http.Client{}
+// resp, err := client.Do(req)
+// if err != nil {
+// 	panic(err)
+// }
+// defer resp.Body.Close()
+
+// fmt.Println("response Status:", resp.Status)
+// fmt.Println("response Headers:", resp.Header)
+// body, _ := ioutil.ReadAll(resp.Body)
+// fmt.Println("response Body:", string(body))
+func handleForwardPopulate(bod []byte) (err error) {
+
+	if forwardPopulate == "" {
+		log.Println("no forward url, not forwarding")
+		return
+	}
+
+	backlogPopulators = append(backlogPopulators, bod)
+
+	log.Println("forwarding to:", forwardPopulate, "#reqs:", len(backlogPopulators))
+
+	var index int
+	client := &http.Client{}
+
+	for i, body := range backlogPopulators {
+		index = i
+		req, e := http.NewRequest("POST", forwardPopulate, bytes.NewBuffer(body))
+		if e != nil {
+			err = e
+			break
+		}
+		req.Header.Set("Content-Type", "application/json")
+		resp, e := client.Do(req)
+		if e != nil {
+			err = e
+			break
+		}
+		err = resp.Body.Close()
+		if err != nil {
+			break
+		}
+	}
+
+	if err == nil {
+		backlogPopulators = [][]byte{}
+	} else {
+		backlogPopulators = backlogPopulators[index:]
+	}
+
+	return
+}
+
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	var trackPoints trackPoint.TrackPoints
 
+	var bod []byte
+	var err error
+	if forwardPopulate != "" {
+		bod, err = ioutil.ReadAll(r.Body)
+		// bod := []byte{}
+		// n, err :=
+		if err != nil {
+			log.Println("err reading body", err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		} else {
+			// log.Println("read body ok, read nbytes=", len(bod))
+			log.Println("read body ok, read nbytes=", len(bod))
+			// log.Println("bod=", string(bod))
+		}
+		// And now set a new body, which will simulate the same data we read:
+		// > https://stackoverflow.com/questions/43021058/golang-read-request-body#43021236
+		r.Body = ioutil.NopCloser(bytes.NewBuffer(bod))
+	}
+
 	if r.Body == nil {
+		log.Println("error: body nil")
 		http.Error(w, "Please send a request body", 500)
 		return
 	}
-	err := json.NewDecoder(r.Body).Decode(&trackPoints)
+	err = json.NewDecoder(r.Body).Decode(&trackPoints)
 	if err != nil {
+		log.Println("error: decode json")
 		http.Error(w, err.Error(), 400)
 		return
 	}
+
 	go func() {
 		errS := storePoints(trackPoints)
 		if errS != nil {
@@ -111,6 +200,17 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		log.Println("respond write err:", errW)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 	}
+
+	// if --forward-populate set, then make POST to set urls
+	// --forward-populate=[]string{<downstream.urls.that.wants.points/put/em/here>}
+
+	go func() {
+		if err := handleForwardPopulate(bod); err != nil {
+			log.Println("forward populate error: ", err)
+		} else {
+			log.Println("forward populate finished OK")
+		}
+	}()
 }
 
 func uploadCSV(w http.ResponseWriter, r *http.Request) {
@@ -159,7 +259,7 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 }
 
 func getLastKnown(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin","*")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 	b, e := getLastKnownData()
 	//b, e := json.Marshal(lastKnownMap)
 	if e != nil {
@@ -171,7 +271,7 @@ func getLastKnown(w http.ResponseWriter, r *http.Request) {
 }
 
 func getMetaData(w http.ResponseWriter, r *http.Request) {
-	w.Header().Add("Access-Control-Allow-Origin","*")
+	w.Header().Add("Access-Control-Allow-Origin", "*")
 
 	b, e := getmetadata()
 	if e != nil {

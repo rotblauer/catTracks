@@ -368,7 +368,7 @@ func storeStats(s *catStatsCalculated) error {
 
 	debugLog("store: len(val)", len(val), "bytes")
 
-	if e := GetDB().Update(func(tx *bolt.Tx) error {
+	if e := GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 		return b.Put(s.buildStorageKey(), val)
 	}); e != nil {
@@ -416,7 +416,7 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 
 	// check for pre-existence of immutable data
 	var preExisting *catStatsCalculated
-	if e := GetDB().View(func(tx *bolt.Tx) error {
+	if e := GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 		v := b.Get(buildStorageKeyFn(t, span))
 		if v != nil {
@@ -436,7 +436,7 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 
 	// collect Raw values
 	var daily *catStatsCalculated
-	if e := GetDB().View(func(tx *bolt.Tx) error {
+	if e := GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 		e := b.ForEach(func(k, v []byte) error {
 			var trackPointCurrent trackPoint.TrackPoint
@@ -477,7 +477,7 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 func getStatsByTimeSpan(t time.Time, d time.Duration) (catStatsCalculatedSlice, error) {
 	var out catStatsCalculatedSlice
 	startTime := t.Add(d)
-	if e := GetDB().View(func(tx *bolt.Tx) error {
+	if e := GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
 		if e := b.ForEach(func(k, v []byte) error {
 			debugLog(string(k), len(k))
