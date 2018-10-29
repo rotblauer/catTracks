@@ -50,7 +50,7 @@ func initBuckets(db *bolt.DB, buckets []string) error {
 func InitBoltDB() error {
 	var err error
 	// master
-	db, err = bolt.Open(path.Join("db", "tracks.db"), 0666, nil)
+	db, err = bolt.Open(masterdbpath, 0666, nil)
 	if err != nil {
 		fmt.Println("Could not initialize Bolt database @master. ", err)
 		return err
@@ -60,7 +60,7 @@ func InitBoltDB() error {
 	}
 
 	// edge
-	edgeDB, err = bolt.Open(path.Join("db", "edge.db"), 0666, nil)
+	edgeDB, err = bolt.Open(edgedbpath, 0666, nil)
 	if err != nil {
 		fmt.Println("Could not initialize Bolt database @edge. ", err)
 		return err

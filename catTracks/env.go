@@ -16,6 +16,9 @@ const (
 var testes = false
 var forwardPopulate string
 var tracksGZPath string
+var tracksGZPathEdge string
+var masterdbpath string
+var edgedbpath string
 
 // SetTestes run
 func SetTestes(flagger bool) {
@@ -38,6 +41,21 @@ func SetForwardPopulate(arguments string) {
 
 func SetLiveTracksGZ(pathto string) {
 	tracksGZPath = pathto
+}
+
+func SetLiveTracksGZEdge(pathto string) {
+	tracksGZPathEdge = pathto
+}
+
+func SetDBPath(whichdb, pathto string) {
+	switch whichdb {
+	case "master":
+		masterdbpath = pathto
+	case "edge":
+		edgedbpath = pathto
+	default:
+		panic("invalid db name")
+	}
 }
 
 func getTestesPrefix() string {

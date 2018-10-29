@@ -208,8 +208,11 @@ func trackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
 	var f F
+	var fedge F
 	featureChan := make(chan *geojson.Feature, 100000)
+	featureChanEdge := make(chan *geojson.Feature, 100000)
 	defer close(featureChan)
+	defer close(featureChanEdge)
 	if tracksGZPath != "" {
 		f = CreateGZ(tracksGZPath, gzip.BestCompression)
 		go func() {
@@ -219,13 +222,29 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 			CloseGZ(f)
 		}()
 	}
+	if tracksGZPathEdge != "" {
+		fedge = CreateGZ(tracksGZPathEdge, gzip.BestCompression)
+		go func() {
+			for feat := range featureChanEdge {
+				fedge.je.Encode(feat)
+			}
+			CloseGZ(fedge)
+		}()
+	}
 	for _, point := range trackPoints {
 		err = storePoint(point)
 		if err != nil {
 			return err
 		}
+		var t2f *geojson.Feature
+		if tracksGZPath != "" || tracksGZPathEdge != "" {
+			t2f = trackToFeature(point)
+		}
 		if tracksGZPath != "" {
-			featureChan <- trackToFeature(point)
+			featureChan <- t2f
+		}
+		if tracksGZPathEdge != "" {
+			featureChanEdge <- t2f
 		}
 	}
 	if err == nil {
