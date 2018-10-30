@@ -14,10 +14,12 @@ import (
 
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
+	"os"
+	"path"
 )
 
 // the html stuff of this thing
-var templates = template.Must(template.ParseGlob("templates/*.html"))
+var templates = template.Must(template.ParseGlob(path.Join(os.Getenv("GOPATH"), "src", "github.com", "rotblauer", "catTracks", "templates", "*.html")))
 
 //Welcome, loads and servers all (currently) data pointers
 func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
@@ -164,11 +166,10 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			log.Println("err reading body", err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
-		} else {
-			// log.Println("read body ok, read nbytes=", len(bod))
-			log.Println("read body ok, read nbytes=", len(bod))
-			// log.Println("bod=", string(bod))
 		}
+		// log.Println("read body ok, read nbytes=", len(bod))
+		log.Println("read body ok, read nbytes=", len(bod))
+		// log.Println("bod=", string(bod))
 		// And now set a new body, which will simulate the same data we read:
 		// > https://stackoverflow.com/questions/43021058/golang-read-request-body#43021236
 		r.Body = ioutil.NopCloser(bytes.NewBuffer(bod))
@@ -186,14 +187,15 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	go func() {
-		errS := storePoints(trackPoints)
-		if errS != nil {
-			log.Println("store err:", errS)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-		}
-		log.Println("stored trackpoints", "len:", trackPoints.Len())
-	}()
+	// go func() {
+	errS := storePoints(trackPoints)
+	if errS != nil {
+		log.Println("store err:", errS)
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	log.Println("stored trackpoints", "len:", trackPoints.Len())
+	// }()
 
 	// return empty json of empty trackpoints to not have to download tons of shit
 	if errW := json.NewEncoder(w).Encode(&trackPoint.TrackPoints{}); errW != nil {

@@ -180,7 +180,7 @@ func CloseGZ(f F) {
 	f.f.Close()
 }
 
-func trackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
+func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	var currentNote note.Note
 
 	// convert to a feature
@@ -206,29 +206,92 @@ func trackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 }
 
 func storePoints(trackPoints trackPoint.TrackPoints) error {
+	// note that these (flags) should only be used in conjunction with live json gzing
+	if masterlock != "" {
+		if _, err := os.Stat(masterlock); err == nil || os.IsExist(err) {
+			log.Println("master lock is locked - skipping req")
+			// http.Error(w, "masterlock - please try again later", http.StatusLocked)
+			return fmt.Errorf("dblocked")
+		}
+	} else {
+		os.Create(masterlock)
+		// defer os.Remove(masterlock)
+		// handle this in the goroutine encoder fns
+	}
+	if devoplock != "" {
+		if _, err := os.Stat(devoplock); err == nil || os.IsExist(err) {
+			log.Println("devoplock lock is locked - skipping req")
+			// http.Error(w, "devoplock - please try again later", http.StatusLocked)
+			return fmt.Errorf("dblocked")
+		}
+	} else {
+		os.Create(devoplock)
+		// defer os.Remove(devoplock)
+	}
+	if edgelock != "" {
+		if _, err := os.Stat(edgelock); err == nil || os.IsExist(err) {
+			log.Println("edgelock lock is locked - skipping req")
+			// http.Error(w, "edgelock - please try again later", http.StatusLocked)
+			return fmt.Errorf("dblocked")
+		}
+	} else {
+		os.Create(edgelock)
+		// defer os.Remove(edgelock)
+	}
+
 	var err error
 	var f F
+	var fdev F
 	var fedge F
 	featureChan := make(chan *geojson.Feature, 100000)
+	featureChanDevop := make(chan *geojson.Feature, 100000)
 	featureChanEdge := make(chan *geojson.Feature, 100000)
 	defer close(featureChan)
+	defer close(featureChanDevop)
 	defer close(featureChanEdge)
 	if tracksGZPath != "" {
 		f = CreateGZ(tracksGZPath, gzip.BestCompression)
 		go func() {
 			for feat := range featureChan {
+				if feat == nil {
+					continue
+				}
 				f.je.Encode(feat)
 			}
 			CloseGZ(f)
+			if masterlock != "" {
+				os.Remove(masterlock)
+			}
+		}()
+	}
+	if tracksGZPathDevop != "" {
+		fdev = CreateGZ(tracksGZPathDevop, gzip.BestCompression)
+		go func() {
+			for feat := range featureChanDevop {
+				if feat == nil {
+					continue
+				}
+				fdev.je.Encode(feat)
+			}
+			CloseGZ(fdev)
+			if devoplock != "" {
+				os.Remove(devoplock)
+			}
 		}()
 	}
 	if tracksGZPathEdge != "" {
 		fedge = CreateGZ(tracksGZPathEdge, gzip.BestCompression)
 		go func() {
 			for feat := range featureChanEdge {
+				if feat == nil {
+					continue
+				}
 				fedge.je.Encode(feat)
 			}
 			CloseGZ(fedge)
+			if edgelock != "" {
+				os.Remove(edgelock)
+			}
 		}()
 	}
 	for _, point := range trackPoints {
@@ -237,11 +300,14 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 			return err
 		}
 		var t2f *geojson.Feature
-		if tracksGZPath != "" || tracksGZPathEdge != "" {
-			t2f = trackToFeature(point)
+		if tracksGZPath != "" || tracksGZPathEdge != "" || tracksGZPathDevop != "" {
+			t2f = TrackToFeature(point)
 		}
 		if tracksGZPath != "" {
 			featureChan <- t2f
+		}
+		if tracksGZPathDevop != "" {
+			featureChanDevop <- t2f
 		}
 		if tracksGZPathEdge != "" {
 			featureChanEdge <- t2f

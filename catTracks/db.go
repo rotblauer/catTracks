@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
-	"path"
 
 	"github.com/boltdb/bolt" // TOOD: use coreos
 	"github.com/golang/geo/s2"
@@ -13,6 +12,7 @@ import (
 
 var (
 	db           *bolt.DB // master
+	devopDB      *bolt.DB
 	edgeDB       *bolt.DB
 	trackKey     = "tracks"
 	statsKey     = "stats"
@@ -25,6 +25,8 @@ func GetDB(name string) *bolt.DB {
 	switch name {
 	case "master", "":
 		return db
+	case "devop":
+		return devopDB
 	case "edge":
 		return edgeDB
 	default:
@@ -59,6 +61,17 @@ func InitBoltDB() error {
 		fmt.Println("Err initing buckets @master.", err)
 	}
 
+	// devop and edge databases aren't actually necessary or required or used at all. just for symmetry, and maybe for something unknown
+	// devop
+	devopDB, err = bolt.Open(devopdbpath, 0666, nil)
+	if err != nil {
+		fmt.Println("Could not initialize Bolt database @devop. ", err)
+		return err
+	}
+	// only init track key for devop db
+	if err := initBuckets(GetDB("devop"), []string{trackKey}); err != nil {
+		return err
+	}
 	// edge
 	edgeDB, err = bolt.Open(edgedbpath, 0666, nil)
 	if err != nil {

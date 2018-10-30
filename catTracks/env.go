@@ -15,10 +15,18 @@ const (
 
 var testes = false
 var forwardPopulate string
+
 var tracksGZPath string
+var tracksGZPathDevop string
 var tracksGZPathEdge string
+
 var masterdbpath string
+var devopdbpath string
 var edgedbpath string
+
+var (
+	masterlock, devoplock, edgelock string
+)
 
 // SetTestes run
 func SetTestes(flagger bool) {
@@ -43,14 +51,30 @@ func SetLiveTracksGZ(pathto string) {
 	tracksGZPath = pathto
 }
 
+func SetLiveTracksGZDevop(pathto string) {
+	tracksGZPathDevop = pathto
+}
+
 func SetLiveTracksGZEdge(pathto string) {
 	tracksGZPathEdge = pathto
 }
 
+func SetMasterLock(pathto string) {
+	masterlock = pathto
+}
+func SetDevopLock(pathto string) {
+	devoplock = pathto
+}
+func SetEdgeLock(pathto string) {
+	edgelock = pathto
+}
+
 func SetDBPath(whichdb, pathto string) {
 	switch whichdb {
-	case "master":
+	case "master", "":
 		masterdbpath = pathto
+	case "devop":
+		devopdbpath = pathto
 	case "edge":
 		edgedbpath = pathto
 	default:
