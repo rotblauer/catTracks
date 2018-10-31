@@ -3,7 +3,10 @@ package catTracks
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sort"
+	"strconv"
+	"sync"
 	"time"
 
 	"compress/gzip"
@@ -207,6 +210,8 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 
 var NotifyNewEdge = make(chan bool, 1000)
 
+var masterGZLock sync.Mutex
+
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
 	// var f F
@@ -233,12 +238,29 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 			NotifyNewEdge <- true
 		}(fedge)
 	}
+	// only freya (no --proc flags, just append to master.json.gz for funsies)
+	if tracksGZPath != "" && tracksGZPathEdge == "" {
+		go func() {
+			masterGZLock.Lock()
+			defer masterGZLock.Unlock()
+			mgz := CreateGZ(tracksGZPath, gzip.BestCompression)
+			for feat := range featureChan {
+				if feat == nil {
+					continue
+				}
+				mgz.je.Encode(feat)
+			}
+			CloseGZ(mgz)
+		}()
+	}
+	plusn := 0
 	for _, point := range trackPoints {
 		e := storePoint(point)
 		if e != nil {
 			log.Println("store point error: ", e)
 			continue
 		}
+		plusn++
 		var t2f *geojson.Feature
 		if tracksGZPath != "" || tracksGZPathEdge != "" || tracksGZPathDevop != "" {
 			t2f = TrackToFeature(point)
@@ -248,6 +270,18 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}
 		if tracksGZPathEdge != "" {
 			featureChanEdge <- t2f
+		}
+	}
+	// 47131736
+	if tracksGZPath != "" {
+		p := filepath.Join(filepath.Dir(tracksGZPath), "TOTALTRACKSCOUNT")
+		b, be := ioutil.ReadFile(p)
+		if be == nil {
+			i, ie := strconv.Atoi(string(b))
+			if ie == nil {
+				i = i + plusn
+				ioutil.WriteFile(p, []byte(strconv.Itoa(i)), 0666)
+			}
 		}
 	}
 	if err == nil {
