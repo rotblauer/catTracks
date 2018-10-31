@@ -220,6 +220,8 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	go func() {
 		if err := handleForwardPopulate(bod); err != nil {
 			log.Println("forward populate error: ", err)
+			// this just to persist any request that fails in case this process is terminated (backlogs are stored in mem)
+			ioutil.WriteFile(fmt.Sprintf("dfp-%d", time.Now().UnixNano()), bod, 0666)
 		} else {
 			log.Println("forward populate finished OK")
 		}
