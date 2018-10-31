@@ -6,7 +6,7 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-	"html/template"
+	// "html/template"
 	"io/ioutil"
 	"net/http"
 	"strconv"
@@ -14,26 +14,35 @@ import (
 
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
-	"os"
-	"path"
+	// "os"
+	// "path"
 )
 
-// the html stuff of this thing
-var templates = template.Must(template.ParseGlob(path.Join(os.Getenv("GOPATH"), "src", "github.com", "rotblauer", "catTracks", "templates", "*.html")))
+// // the html stuff of this thing
+// var templates = func() *template.Template {
+// 	// p := path.Join(os.Getenv("GOPATH"), "src", "github.com", "rotblauer", "catTracks", "templates")
+// 	// if _, err := os.Stat(p); err != nil {
+// 	p := "templates"
+// 	// }
+// 	p = path.Join(p, "*.html")
+// 	// p := path.Join(os.Getenv("GOPATH"), "src", "github.com", "rotblauer", "catTracks", "templates", "*.html")
+// 	// p := path.Join(os.Getenv("GOPATH"), "src", "github.com", "rotblauer", "catTracks", "templates", "*.html")
+// 	return template.Must(template.ParseGlob(p))
+// }()
 
-//Welcome, loads and servers all (currently) data pointers
-func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "base", nil)
-}
-func getRaceTemplate(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "race", nil)
-}
-func getMapTemplate(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "map", nil)
-}
-func getLeafTemplate(w http.ResponseWriter, r *http.Request) {
-	templates.ExecuteTemplate(w, "leaf", nil)
-}
+//W// elcome, loads and servers all (currently) data pointers
+// func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
+// 	templates.ExecuteTemplate(w, "base", nil)
+// }
+// func getRaceTemplate(w http.ResponseWriter, r *http.Request) {
+// 	templates.ExecuteTemplate(w, "race", nil)
+// }
+// func getMapTemplate(w http.ResponseWriter, r *http.Request) {
+// 	templates.ExecuteTemplate(w, "map", nil)
+// }
+// func getLeafTemplate(w http.ResponseWriter, r *http.Request) {
+// 	templates.ExecuteTemplate(w, "leaf", nil)
+// }
 
 func socket(w http.ResponseWriter, r *http.Request) {
 	// see ./socket.go
@@ -192,7 +201,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		errS := storePoints(trackPoints)
 		if errS != nil {
 			log.Println("store err:", errS)
-			http.Error(w, err.Error(), http.StatusInternalServerError)
+			// http.Error(w, errS.Error(), http.StatusInternalServerError)
 			return
 		}
 		log.Println("stored trackpoints", "len:", trackPoints.Len())

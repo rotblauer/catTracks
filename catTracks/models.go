@@ -234,9 +234,10 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}(fedge)
 	}
 	for _, point := range trackPoints {
-		err = storePoint(point)
-		if err != nil {
-			return err
+		e := storePoint(point)
+		if e != nil {
+			log.Println("store point error: ", e)
+			continue
 		}
 		var t2f *geojson.Feature
 		if tracksGZPath != "" || tracksGZPathEdge != "" || tracksGZPathDevop != "" {

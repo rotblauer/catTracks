@@ -12,12 +12,12 @@ type Route struct {
 type Routes []Route
 
 var routes = Routes{
-	Route{
-		"Index",
-		"GET",
-		"/",
-		getIndexTemplate,
-	},
+	// Route{
+	// 	"Index",
+	// 	"GET",
+	// 	"/",
+	// 	getIndexTemplate,
+	// },
 	Route{
 		"PointPopulator",
 		"POST",
@@ -42,24 +42,24 @@ var routes = Routes{
 		"/api/ws",
 		socket,
 	},
-	Route{
-		"Map",
-		"GET",
-		"/map",
-		getMapTemplate,
-	},
-	Route{
-		"Leaf",
-		"GET",
-		"/leaf",
-		getLeafTemplate,
-	},
-	Route{
-		"Race",
-		"GET",
-		"/race",
-		getRaceTemplate,
-	},
+	// Route{
+	// 	"Map",
+	// 	"GET",
+	// 	"/map",
+	// 	getMapTemplate,
+	// },
+	// Route{
+	// 	"Leaf",
+	// 	"GET",
+	// 	"/leaf",
+	// 	getLeafTemplate,
+	// },
+	// Route{
+	// 	"Race",
+	// 	"GET",
+	// 	"/race",
+	// 	getRaceTemplate,
+	// },
 	Route{
 		"RaceJSON",
 		"GET",
