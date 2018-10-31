@@ -13,7 +13,6 @@ import (
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"os"
-	"os/user"
 	"path/filepath"
 )
 
@@ -46,16 +45,17 @@ func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error 
 		var keyN int
 
 		var tileDBLastUpdated time.Time
-		var homedir string
-		usr, err := user.Current()
-		if err != nil {
-			log.Println("get current user err", err)
-			homedir = os.Getenv("HOME")
-		} else {
-			homedir = usr.HomeDir
-		}
-		dbpath := filepath.Join(homedir, punktlichTileDBPathRelHome)
-		dbpath = filepath.Clean(dbpath)
+		// var homedir string
+		// usr, err := user.Current()
+		// if err != nil {
+		// 	log.Println("get current user err", err)
+		// 	homedir = os.Getenv("HOME")
+		// } else {
+		// 	homedir = usr.HomeDir
+		// }
+		// dbpath := filepath.Join(homedir, punktlichTileDBPathRelHome)
+		// dbpath = filepath.Clean(dbpath)
+		dbpath := GetDB("master").Path()
 		log.Println("dbpath", dbpath)
 		dbfi, err := os.Stat(dbpath)
 		if err == nil {
@@ -205,43 +205,12 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	return geojson.NewFeature(p, trimmedProps, 1)
 }
 
-func storePoints(trackPoints trackPoint.TrackPoints) error {
-	// note that these (flags) should only be used in conjunction with live json gzing
-	if masterlock != "" {
-		if _, err := os.Stat(masterlock); err == nil || os.IsExist(err) {
-			log.Println("master lock is locked - skipping req")
-			// http.Error(w, "masterlock - please try again later", http.StatusLocked)
-			return fmt.Errorf("dblocked")
-		}
-	} else {
-		os.Create(masterlock)
-		// defer os.Remove(masterlock)
-		// handle this in the goroutine encoder fns
-	}
-	if devoplock != "" {
-		if _, err := os.Stat(devoplock); err == nil || os.IsExist(err) {
-			log.Println("devoplock lock is locked - skipping req")
-			// http.Error(w, "devoplock - please try again later", http.StatusLocked)
-			return fmt.Errorf("dblocked")
-		}
-	} else {
-		os.Create(devoplock)
-		// defer os.Remove(devoplock)
-	}
-	if edgelock != "" {
-		if _, err := os.Stat(edgelock); err == nil || os.IsExist(err) {
-			log.Println("edgelock lock is locked - skipping req")
-			// http.Error(w, "edgelock - please try again later", http.StatusLocked)
-			return fmt.Errorf("dblocked")
-		}
-	} else {
-		os.Create(edgelock)
-		// defer os.Remove(edgelock)
-	}
+var NotifyNewEdge = make(chan bool, 1000)
 
+func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
-	var f F
-	var fdev F
+	// var f F
+	// var fdev F
 	var fedge F
 	featureChan := make(chan *geojson.Feature, 100000)
 	featureChanDevop := make(chan *geojson.Feature, 100000)
@@ -249,50 +218,20 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 	defer close(featureChan)
 	defer close(featureChanDevop)
 	defer close(featureChanEdge)
-	if tracksGZPath != "" {
-		f = CreateGZ(tracksGZPath, gzip.BestCompression)
-		go func() {
-			for feat := range featureChan {
+	if tracksGZPathEdge != "" {
+		fedgeName := fmt.Sprintf(tracksGZPathEdge+"-wip-%d", time.Now().UnixNano())
+		fedge = CreateGZ(fedgeName, gzip.BestCompression)
+		go func(f F) {
+			for feat := range featureChanEdge {
 				if feat == nil {
 					continue
 				}
 				f.je.Encode(feat)
 			}
 			CloseGZ(f)
-			if masterlock != "" {
-				os.Remove(masterlock)
-			}
-		}()
-	}
-	if tracksGZPathDevop != "" {
-		fdev = CreateGZ(tracksGZPathDevop, gzip.BestCompression)
-		go func() {
-			for feat := range featureChanDevop {
-				if feat == nil {
-					continue
-				}
-				fdev.je.Encode(feat)
-			}
-			CloseGZ(fdev)
-			if devoplock != "" {
-				os.Remove(devoplock)
-			}
-		}()
-	}
-	if tracksGZPathEdge != "" {
-		fedge = CreateGZ(tracksGZPathEdge, gzip.BestCompression)
-		go func() {
-			for feat := range featureChanEdge {
-				if feat == nil {
-					continue
-				}
-				fedge.je.Encode(feat)
-			}
-			CloseGZ(fedge)
-			if edgelock != "" {
-				os.Remove(edgelock)
-			}
-		}()
+			os.Rename(f.p, fmt.Sprintf(tracksGZPathEdge+"-fin-%d", time.Now().UnixNano()))
+			NotifyNewEdge <- true
+		}(fedge)
 	}
 	for _, point := range trackPoints {
 		err = storePoint(point)
@@ -305,9 +244,6 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}
 		if tracksGZPath != "" {
 			featureChan <- t2f
-		}
-		if tracksGZPathDevop != "" {
-			featureChanDevop <- t2f
 		}
 		if tracksGZPathEdge != "" {
 			featureChanEdge <- t2f
@@ -336,10 +272,16 @@ func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
 }
 
 func storePoint(tp trackPoint.TrackPoint) error {
-
 	var err error
 	if tp.Time.IsZero() {
 		tp.Time = time.Now()
+	}
+
+	if tp.Lat > 90 || tp.Lat < -90 {
+		return fmt.Errorf("invalid coordinate: lat=%d", tp.Lat)
+	}
+	if tp.Lng > 180 || tp.Lng < -180 {
+		return fmt.Errorf("invalid coordinate: lng=%d", tp.Lng)
 	}
 
 	err = GetDB("master").Update(func(tx *bolt.Tx) error {
@@ -356,11 +298,12 @@ func storePoint(tp trackPoint.TrackPoint) error {
 			e := json.Unmarshal(exists, &existingTrackpoint)
 			if e != nil {
 				fmt.Println("Checking on an existing trackpoint and got an error with one of the existing trackpoints unmarshaling.")
+				return fmt.Errorf("unmarshal error: %v", e)
 			}
 			// use Name and Uuid conditions because Uuid tracking was introduced after Name, so not all points/cats/apps have it. So Name is backwards-friendly.
 			if existingTrackpoint.Name == tp.Name && existingTrackpoint.Uuid == tp.Uuid {
 				fmt.Println("Got redundant track; not storing: ", tp.Name, tp.Uuid, tp.Time)
-				return nil
+				return fmt.Errorf("duplicate point")
 			}
 		}
 		// gets "" case nontestesing
@@ -379,6 +322,7 @@ func storePoint(tp trackPoint.TrackPoint) error {
 	})
 	if err != nil {
 		fmt.Println(err)
+		return err
 	}
 	return err
 }

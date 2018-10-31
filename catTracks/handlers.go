@@ -187,15 +187,16 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// go func() {
-	errS := storePoints(trackPoints)
-	if errS != nil {
-		log.Println("store err:", errS)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	log.Println("stored trackpoints", "len:", trackPoints.Len())
-	// }()
+	// goroutine keeps http req from blocking while points are processed
+	go func() {
+		errS := storePoints(trackPoints)
+		if errS != nil {
+			log.Println("store err:", errS)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		log.Println("stored trackpoints", "len:", trackPoints.Len())
+	}()
 
 	// return empty json of empty trackpoints to not have to download tons of shit
 	if errW := json.NewEncoder(w).Encode(&trackPoint.TrackPoints{}); errW != nil {
@@ -205,7 +206,8 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 
 	// if --forward-populate set, then make POST to set urls
 	// --forward-populate=[]string{<downstream.urls.that.wants.points/put/em/here>}
-
+	// goroutine keeps this request from block while pending this outgoing request
+	// this keeps an original POST from being dependent on a forward POST
 	go func() {
 		if err := handleForwardPopulate(bod); err != nil {
 			log.Println("forward populate error: ", err)

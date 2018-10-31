@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"encoding/json"
 	"fmt"
+	"log"
+	"path/filepath"
 
 	"github.com/boltdb/bolt" // TOOD: use coreos
 	"github.com/golang/geo/s2"
@@ -52,9 +54,14 @@ func initBuckets(db *bolt.DB, buckets []string) error {
 func InitBoltDB() error {
 	var err error
 	// master
+	// if e := os.MkdirAll(filepath.Dir(masterdbpath), 0666); e != nil {
+	// 	log.Fatal(e)
+	// }
 	db, err = bolt.Open(masterdbpath, 0666, nil)
 	if err != nil {
-		fmt.Println("Could not initialize Bolt database @master. ", err)
+		log.Printf("Could not initialize Bolt database @master err=%v path=%v", err, masterdbpath)
+		abs, _ := filepath.Abs(masterdbpath)
+		fmt.Printf("that is abs: %s", abs)
 		return err
 	}
 	if err := initBuckets(GetDB("master"), allBuckets); err != nil {
@@ -63,24 +70,31 @@ func InitBoltDB() error {
 
 	// devop and edge databases aren't actually necessary or required or used at all. just for symmetry, and maybe for something unknown
 	// devop
-	devopDB, err = bolt.Open(devopdbpath, 0666, nil)
-	if err != nil {
-		fmt.Println("Could not initialize Bolt database @devop. ", err)
-		return err
+	// os.MkdirAll(filepath.Dir(devopdbpath), 0666)
+	if devopdbpath != "" {
+		devopDB, err = bolt.Open(devopdbpath, 0666, nil)
+		if err != nil {
+			fmt.Println("Could not initialize Bolt database @devop. ", err)
+			return err
+		}
+		// only init track key for devop db
+		if err := initBuckets(GetDB("devop"), []string{trackKey}); err != nil {
+			return err
+		}
 	}
-	// only init track key for devop db
-	if err := initBuckets(GetDB("devop"), []string{trackKey}); err != nil {
-		return err
-	}
+
 	// edge
-	edgeDB, err = bolt.Open(edgedbpath, 0666, nil)
-	if err != nil {
-		fmt.Println("Could not initialize Bolt database @edge. ", err)
-		return err
-	}
-	// only init track key for edge db
-	if err := initBuckets(GetDB("edge"), []string{trackKey}); err != nil {
-		return err
+	if edgedbpath != "" {
+		// os.MkdirAll(filepath.Dir(edgedbpath), 0666)
+		edgeDB, err = bolt.Open(edgedbpath, 0666, nil)
+		if err != nil {
+			fmt.Println("Could not initialize Bolt database @edge. ", err)
+			return err
+		}
+		// only init track key for edge db
+		if err := initBuckets(GetDB("edge"), []string{trackKey}); err != nil {
+			return err
+		}
 	}
 	return nil
 }
