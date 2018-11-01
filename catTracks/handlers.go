@@ -163,6 +163,11 @@ func handleForwardPopulate(bod []byte) (err error) {
 }
 
 func populatePoints(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
+
+	log.Println("handling pop:", r)
+
 	var trackPoints trackPoint.TrackPoints
 
 	var bod []byte
