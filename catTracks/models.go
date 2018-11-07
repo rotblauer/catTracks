@@ -12,6 +12,7 @@ import (
 	"compress/gzip"
 	"github.com/boltdb/bolt"
 	"github.com/kpawlik/geojson"
+	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"os"
@@ -194,7 +195,7 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	trimmedProps["UnixTime"] = trackPointCurrent.Time.Unix()
 	trimmedProps["Elevation"] = trackPointCurrent.Elevation
 
-	if ns, e := trackPointCurrent.Notes.AsNoteStructured(); e == nil {
+	if ns, e := note.NotesField(trackPointCurrent.Notes).AsNoteStructured(); e == nil {
 		trimmedProps["Notes"] = ns.CustomNote
 		trimmedProps["Pressure"] = ns.Pressure
 		trimmedProps["Activity"] = ns.Activity
@@ -202,11 +203,12 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 			// TODO: ok to use mappy sub interface here?
 			trimmedProps["Visit"] = ns.Visit
 		}
-	} else if _, e := trackPointCurrent.Notes.AsFingerprint(); e == nil {
+	} else if _, e := note.NotesField(trackPointCurrent.Notes).AsFingerprint(); e == nil {
 		// maybe do something with identity consolidation?
 	} else {
-		trimmedProps["Notes"] = trackPointCurrent.Notes.AsNoteString()
+		trimmedProps["Notes"] = note.NotesField(trackPointCurrent.Notes).AsNoteString()
 	}
+
 	// var currentNote note.Note
 	// var currentNote note.NotesField
 	// e := json.Unmarshal([]byte(trackPointCurrent.Notes), &currentNote)

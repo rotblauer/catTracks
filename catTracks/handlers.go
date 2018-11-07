@@ -12,6 +12,7 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	// "os"
@@ -241,7 +242,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	for _, t := range trackPoints {
-		if ns, e := t.Notes.AsNoteStructured(); e == nil {
+		if ns, e := note.NotesField(t.Notes).AsNoteStructured(); e == nil {
 			if ns.HasValidVisit() {
 				info := IftttBodyCatVisit{
 					Name:  t.Name,
