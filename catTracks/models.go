@@ -12,7 +12,6 @@ import (
 	"compress/gzip"
 	"github.com/boltdb/bolt"
 	"github.com/kpawlik/geojson"
-	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	"log"
 	"os"
@@ -203,7 +202,7 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 			// TODO: ok to use mappy sub interface here?
 			trimmedProps["Visit"] = ns.Visit
 		}
-	} else if nf, e := trackPointCurrent.Notes.AsFingerprint(); e == nil {
+	} else if _, e := trackPointCurrent.Notes.AsFingerprint(); e == nil {
 		// maybe do something with identity consolidation?
 	} else {
 		trimmedProps["Notes"] = trackPointCurrent.Notes.AsNoteString()
