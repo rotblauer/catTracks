@@ -162,6 +162,14 @@ func handleForwardPopulate(bod []byte) (err error) {
 	return
 }
 
+var iftttWebhoook = "https://maker.ifttt.com/trigger/any_cat_visit/with/key/A_haNpM4rcpvsNYLFAy-8"
+
+type IftttBodyCatVisit struct {
+	Name    string `json:"value1"`
+	Place   string `json:"value2"`
+	MapsURL string `json:"value3"` // catonmap.net/{{value3}}
+}
+
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
@@ -231,6 +239,25 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			log.Println("forward populate finished OK")
 		}
 	}()
+
+	for _, t := range trackPoints {
+		if ns, e := t.Notes.AsNoteStructured(); e == nil {
+			if ns.HasValidVisit() {
+				info := IftttBodyCatVisit{
+					Name:  t.Name,
+					Place: ns.Visit.Place,
+					// x = lat, y = long
+					MapsURL: fmt.Sprintf("?z=%d&x=%d&y=%d&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
+				}
+				b, e := json.Marshal(info)
+				if e != nil {
+					log.Println("err marshal visit", e)
+					return
+				}
+				go http.Post(iftttWebhoook, "application/json", bytes.NewBuffer(b))
+			}
+		}
+	}
 }
 
 func uploadCSV(w http.ResponseWriter, r *http.Request) {
