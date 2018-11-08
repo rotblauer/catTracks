@@ -271,7 +271,7 @@ func runTippe(out, in string, tilesetname string, bolttilesout string) error {
 
 	err := tippmycanoe.Start()
 	if err != nil {
-		log.Println(os.Stderr, "Error starting Cmd", err)
+		log.Println("Error starting Cmd", err)
 		os.Exit(1)
 	}
 
