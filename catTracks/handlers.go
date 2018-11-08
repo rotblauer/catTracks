@@ -255,6 +255,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 					log.Println("err marshal visit", e)
 					return
 				}
+				log.Println("sending ifttt webhook", "url=", iftttWebhoook, "info=", info)
 				go http.Post(iftttWebhoook, "application/json", bytes.NewBuffer(b))
 			}
 		}
