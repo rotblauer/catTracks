@@ -49,5 +49,11 @@ func TestValidVisitGrabbing(t *testing.T) {
 		t.Error("err", err)
 	}
 
+	pl, err := visit.Place.AsPlace()
+	if err != nil {
+		t.Error(err)
+	}
+
 	t.Log("visit", visit)
+	t.Log("place", pl)
 }

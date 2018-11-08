@@ -171,6 +171,13 @@ type IftttBodyCatVisit struct {
 	MapsURL string `json:"value3"` // catonmap.net/{{value3}}
 }
 
+type IftttBodyCatVisit2 struct {
+	Value1 string `json:"value1"`
+	// April 29, 2013 at 12:01PM
+	Value2 string `json:"value2"` // catonmap.net/{{value3}}
+	Value3 int    `json:"value3"`
+}
+
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
@@ -254,13 +261,35 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		vis, err := ns.Visit.AsVisit()
 		if err != nil {
 			log.Println("error unmarshalling visit", err)
+			continue
 		}
-		info := IftttBodyCatVisit{
-			Name:  t.Name,
-			Place: vis.Place,
-			// x = lat, y = long
-			MapsURL: fmt.Sprintf("?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
+		// info := IftttBodyCatVisit{
+		// 	Name:  t.Name,
+		// 	Place: vis.Place,
+		// 	// x = lat, y = long
+		// 	MapsURL: fmt.Sprintf("?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
+		// }
+
+		place, err := vis.Place.AsPlace()
+		if err != nil {
+			log.Println("err parsing place", err)
+			continue
 		}
+
+		info := IftttBodyCatVisit2{
+			Value1: fmt.Sprintf(`%s visited %s
+
+%s
+%s
+
+http://catonmap.net?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent
+`, t.Name, place.Identity, place.Identity, place.Address, 14, place.Lat, place.Lng),
+			// April 29, 2013 at 12:01PM <-- ifttt
+			// Mon Jan 02 15:04:05 -0700 2006 <-- go std templater
+			Value2: vis.ArrivalTime.Format("January _2, 2006") + " at " + vis.ArrivalTime.Format(time.Kitchen),
+			Value3: int(vis.GetDuration().Round(time.Minute).Minutes()),
+		}
+
 		b, e := json.Marshal(info)
 		if e != nil {
 			log.Println("err marshal visit hooker", e)
