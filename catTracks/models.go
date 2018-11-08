@@ -327,10 +327,10 @@ func storePoint(tp trackPoint.TrackPoint) error {
 	}
 
 	if tp.Lat > 90 || tp.Lat < -90 {
-		return fmt.Errorf("invalid coordinate: lat=%d", tp.Lat)
+		return fmt.Errorf("invalid coordinate: lat=%.14f", tp.Lat)
 	}
 	if tp.Lng > 180 || tp.Lng < -180 {
-		return fmt.Errorf("invalid coordinate: lng=%d", tp.Lng)
+		return fmt.Errorf("invalid coordinate: lng=%.14f", tp.Lng)
 	}
 
 	err = GetDB("master").Update(func(tx *bolt.Tx) error {

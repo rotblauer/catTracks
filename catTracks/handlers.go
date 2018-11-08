@@ -241,24 +241,40 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
+	// "visit":"{\"validVisit\":false}"
 	for _, t := range trackPoints {
-		if ns, e := note.NotesField(t.Notes).AsNoteStructured(); e == nil {
-			if ns.HasValidVisit() {
-				info := IftttBodyCatVisit{
-					Name:  t.Name,
-					Place: ns.Visit.Place,
-					// x = lat, y = long
-					MapsURL: fmt.Sprintf("?z=%d&x=%d&y=%d&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
-				}
-				b, e := json.Marshal(info)
-				if e != nil {
-					log.Println("err marshal visit", e)
-					return
-				}
-				log.Println("sending ifttt webhook", "url=", iftttWebhoook, "info=", info)
-				go http.Post(iftttWebhoook, "application/json", bytes.NewBuffer(b))
-			}
+		ns, e := note.NotesField(t.Notes).AsNoteStructured()
+		if e != nil {
+			continue
+
 		}
+		if !ns.HasValidVisit() {
+			continue
+		}
+		vis, err := ns.Visit.AsVisit()
+		if err != nil {
+			log.Println("error unmarshalling visit", err)
+		}
+		info := IftttBodyCatVisit{
+			Name:  t.Name,
+			Place: vis.Place,
+			// x = lat, y = long
+			MapsURL: fmt.Sprintf("?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
+		}
+		b, e := json.Marshal(info)
+		if e != nil {
+			log.Println("err marshal visit hooker", e)
+			return
+		}
+		log.Println("sending ifttt webhook", "url=", iftttWebhoook, "info=", info)
+		go func() {
+			res, err := http.Post(iftttWebhoook, "application/json", bytes.NewBuffer(b))
+			if err != nil {
+				log.Println("err posting webhook", err)
+				return
+			}
+			log.Println("webhook posted", "res", res.Status)
+		}()
 	}
 }
 
