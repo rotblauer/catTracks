@@ -276,6 +276,14 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
+		mago := vis.ArrivalTime.Sub(time.Now()).Round(time.Minute).Minutes()
+		magoIFTTTword := fmt.Sprintf("%d minutes ago", mago)
+		if mago == 1 {
+			magoIFTTTword = fmt.Sprintf("%d minute ago", mago)
+		} else if mago == 0 {
+			magoIFTTTword = "Now"
+		}
+
 		info := IftttBodyCatVisit2{
 			Value1: fmt.Sprintf(`%s visited %s
 
@@ -286,7 +294,8 @@ http://catonmap.net?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent
 `, t.Name, place.Identity, place.Identity, place.Address, 14, place.Lat, place.Lng),
 			// April 29, 2013 at 12:01PM <-- ifttt
 			// Mon Jan 02 15:04:05 -0700 2006 <-- go std templater
-			Value2: vis.ArrivalTime.Format("January _2, 2006") + " at " + vis.ArrivalTime.Format(time.Kitchen),
+			// start date
+			Value2: magoIFTTTword, // vis.ArrivalTime.Format("January _2, 2006") + " at " + vis.ArrivalTime.Format(time.Kitchen),
 			Value3: int(vis.GetDuration().Round(time.Minute).Minutes()),
 		}
 
