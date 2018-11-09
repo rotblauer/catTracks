@@ -276,7 +276,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			continue
 		}
 
-		mago := time.Now().Sub(vis.ArrivalTime).Round(time.Minute).Minutes()
+		mago := int(time.Now().Sub(vis.ArrivalTime).Round(time.Minute).Minutes())
 		magoIFTTTword := fmt.Sprintf("%d minutes ago", mago)
 		if mago == 1 {
 			magoIFTTTword = fmt.Sprintf("%d minute ago", mago)
