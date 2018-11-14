@@ -9,6 +9,7 @@ import (
 	// "html/template"
 	"io/ioutil"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -163,18 +164,11 @@ func handleForwardPopulate(bod []byte) (err error) {
 	return
 }
 
-var iftttWebhoook = "https://maker.ifttt.com/trigger/any_cat_visit/with/key/A_haNpM4rcpvsNYLFAy-8"
+var iftttWebhoook = "https://maker.ifttt.com/trigger/any_cat_visit/with/key/" + os.Getenv("IFTTT_WEBHOOK_TOKEN")
 
 type IftttBodyCatVisit struct {
-	Name    string `json:"value1"`
-	Place   string `json:"value2"`
-	MapsURL string `json:"value3"` // catonmap.net/{{value3}}
-}
-
-type IftttBodyCatVisit2 struct {
 	Value1 string `json:"value1"`
-	// April 29, 2013 at 12:01PM
-	Value2 string `json:"value2"` // catonmap.net/{{value3}}
+	Value2 string `json:"value2"`
 	Value3 int    `json:"value3"`
 }
 
@@ -263,16 +257,10 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			log.Println("error unmarshalling visit", err)
 			continue
 		}
-		// info := IftttBodyCatVisit{
-		// 	Name:  t.Name,
-		// 	Place: vis.Place,
-		// 	// x = lat, y = long
-		// 	MapsURL: fmt.Sprintf("?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent&s=", 14, t.Lat, t.Lng),
-		// }
 
 		place, err := vis.Place.AsPlace()
 		if err != nil {
-			log.Println("err parsing place", err)
+			log.Println("error parsing place", err)
 			continue
 		}
 
@@ -284,7 +272,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 			magoIFTTTword = "Now"
 		}
 
-		info := IftttBodyCatVisit2{
+		info := IftttBodyCatVisit{
 			Value1: fmt.Sprintf(`%s visited %s
 
 %s
@@ -292,7 +280,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 
 http://catonmap.net?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent
 `, t.Name, place.Identity, place.Identity, place.Address, 14, place.Lat, place.Lng),
-			// April 29, 2013 at 12:01PM <-- ifttt
+			// April 29, 2013 at 12:01PM <-- ifttt (output fmt), unknown fmt for input
 			// Mon Jan 02 15:04:05 -0700 2006 <-- go std templater
 			// start date
 			Value2: magoIFTTTword, // vis.ArrivalTime.Format("January _2, 2006") + " at " + vis.ArrivalTime.Format(time.Kitchen),
@@ -313,6 +301,31 @@ http://catonmap.net?z=%d&x=%.14f&y=%.14f&t=tile-dark&l=recent
 			}
 			log.Println("webhook posted", "res", res.Status)
 		}()
+		// go func() {
+		// 	catmapurl := fmt.Sprintf("http://catonmap.net?z=%d&x=%.14f&y=%.14f", 14, place.Lat, place.Lng)
+		// 	p := struct {
+		// 		Value1 string `json:"value1"`
+		// 		Value2 string `json:"value2"`
+		// 		Value3 string `json:"value3"`
+		// 	}{
+		// 		Value1: t.Name,
+		// 		Value2: place.Identity,
+		// 		// Value3:
+		// 	}
+		// 	b, e := json.Marshal(b)
+		// 	if e != nil {
+		// 		log.Println("err marshalling isaac cat track hook", err)
+		// 		return
+		// 	}
+		// 	url := strings.Replace(iftttWebhoook, "any_cat_visit", "cat_visit_ia_twitter", -1)
+		// 	log.Println("sending ifttt webhook @isaac", "url=", url, "info=", p)
+		// 	res, err := http.Post(url, "application/json", bytes.NewBuffer(b))
+		// 	if err != nil {
+		// 		log.Println("err posting webhook", err)
+		// 		return
+		// 	}
+		// 	log.Println("webhook posted", "res", res.Status)
+		// }()
 	}
 }
 
@@ -349,7 +362,7 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		errS := storePoint(tp)
+		_, errS := storePoint(tp)
 		if errS != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return

@@ -19,7 +19,8 @@ var (
 	trackKey     = "tracks"
 	statsKey     = "stats"
 	statsDataKey = "storage" // use: bucket.Put(statsDataKey, value), bucket.Get(statsDataKey)
-	allBuckets   = []string{trackKey, statsKey, "names", "geohash"}
+	placesKey    = "places"
+	allBuckets   = []string{trackKey, statsKey, "names", "geohash", placesKey}
 )
 
 // GetDB is db getter.

@@ -176,12 +176,48 @@ func CreateGZ(s string, compressLevel int) (f F) {
 	return
 }
 
+func (f F) JE() *json.Encoder {
+	return f.je
+}
+
 func CloseGZ(f F) {
 	// Close the gzip first.
 	f.gf.Flush()
 	f.gf.Close()
 	f.f.Close()
 }
+
+// func TrackToFeaturePlace(tp trackPoint.TrackPoint) *geojson.Feature {
+// 	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(tp.Lng), geojson.Coord{tp.Lat}})
+
+// 	ns, err := note.NotesField(tp.Notes).AsNoteStructured()
+// 	if err != nil {
+// 		return nil
+// 	}
+
+// 	if !ns.HasValidVisit() {
+// 		return nil
+// 	}
+
+// 	visit, err := ns.Visit.AsVisit()
+// 	if err != nil {
+// 		return nil
+// 	}
+
+// 	place, err := visit.Place.AsPlace()
+// 	if err != nil {
+// 		return nil
+// 	}
+
+// 	props := make(map[string]interface{})
+// 	props["CatName"] = tp.Name
+// 	props["ArrivalTime"] = visit.ArrivalTime
+// 	props["DepartureTime"] = visit.DepartureTime
+// 	props["Identity"] = place.Identity
+// 	props["Address"] = place.Address
+// 	props["Activity"] = ns.Activity
+// 	return geojson.NewFeature(p, props, 1)
+// }
 
 func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	// convert to a feature
@@ -222,7 +258,24 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	return geojson.NewFeature(p, trimmedProps, 1)
 }
 
+func TrackToPlace(tp trackPoint.TrackPoint, visit note.NoteVisit) *geojson.Feature {
+	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(visit.PlaceParsed.Lng), geojson.Coord(visit.PlaceParsed.Lat)})
+
+	props := make(map[string]interface{})
+	props["Name"] = tp.Name
+	props["ReportedTime"] = tp.Time
+	props["ArrivalTime"] = visit.ArrivalTime
+	props["DepartureTime"] = visit.DepartureTime
+	props["PlaceIdentity"] = visit.PlaceParsed.Identity
+	props["PlaceAddress"] = visit.PlaceParsed.Address
+	props["Accuracy"] = visit.PlaceParsed.Acc
+
+	return geojson.NewFeature(p, props, 1)
+}
+
 var NotifyNewEdge = make(chan bool, 1000)
+var NotifyNewPlace = make(chan bool, 1000)
+var FeaturePlaceChan = make(chan *geojson.Feature, 100000)
 
 var masterGZLock sync.Mutex
 
@@ -267,9 +320,25 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 			CloseGZ(mgz)
 		}()
 	}
+	// // tracksGzpath only cuz too lazy to add another flag for places, and we'll use the tracsgz path dir
+	// if tracksGZPathEdge != "" && placesLayer {
+	// 	go func() {
+	// 		PlacesGZLock.Lock()
+	// 		defer PlacesGZLock.Unlock()
+	// 		pgz := CreateGZ(filepath.Join(filepath.Dir(tracksGZPathEdge), "places.json.gz"), gzip.BestCompression)
+	// 		for feat := range featurePlaceChan {
+	// 			if feat == nil {
+	// 				continue
+	// 			}
+	// 			pgz.je.Encode(feat)
+	// 		}
+	// 		CloseGZ(pgz)
+	// 		NotifyNewPlace <- true
+	// 	}()
+	// }
 	plusn := 0
 	for _, point := range trackPoints {
-		e := storePoint(point)
+		visit, e := storePoint(point)
 		if e != nil {
 			log.Println("store point error: ", e)
 			continue
@@ -284,6 +353,10 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}
 		if tracksGZPathEdge != "" {
 			featureChanEdge <- t2f
+		}
+		// tp has note has visit
+		if !visit.ReportedTime.IsZero() && placesLayer {
+			FeaturePlaceChan <- TrackToPlace(point, visit)
 		}
 	}
 	// 47131736
@@ -320,17 +393,18 @@ func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
 	return k
 }
 
-func storePoint(tp trackPoint.TrackPoint) error {
+func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 	var err error
+	var visit note.NoteVisit
 	if tp.Time.IsZero() {
 		tp.Time = time.Now()
 	}
 
 	if tp.Lat > 90 || tp.Lat < -90 {
-		return fmt.Errorf("invalid coordinate: lat=%.14f", tp.Lat)
+		return visit, fmt.Errorf("invalid coordinate: lat=%.14f", tp.Lat)
 	}
 	if tp.Lng > 180 || tp.Lng < -180 {
-		return fmt.Errorf("invalid coordinate: lng=%.14f", tp.Lng)
+		return visit, fmt.Errorf("invalid coordinate: lng=%.14f", tp.Lng)
 	}
 
 	err = GetDB("master").Update(func(tx *bolt.Tx) error {
@@ -366,14 +440,44 @@ func storePoint(tp trackPoint.TrackPoint) error {
 		if err != nil {
 			return err
 		}
+
 		fmt.Println("Saved trackpoint: ", tp)
+
+		// handle storing place
+		ns, err := note.NotesField(tp.Notes).AsNoteStructured()
+		if err != nil {
+			return nil
+		}
+		if !ns.HasValidVisit() {
+			return nil
+		}
+		visit, err = ns.Visit.AsVisit()
+		if err != nil {
+			return nil
+		}
+
+		visit.PlaceParsed = visit.Place.MustAsPlace()
+		visit.ReportedTime = tp.Time
+		visit.Duration = visit.GetDuration()
+
+		visitJSON, err := json.Marshal(visit)
+		if err != nil {
+			return err
+		}
+
+		pb := tx.Bucket([]byte(placesKey))
+		err = pb.Put(key, visitJSON)
+		if err != nil {
+			return err
+		}
+		fmt.Println("Saved visit: ", visit)
+
 		return nil
 	})
 	if err != nil {
 		fmt.Println(err)
-		return err
 	}
-	return err
+	return visit, err
 }
 
 func getAllStoredPoints() (tps trackPoint.TPs, e error) {

@@ -24,6 +24,8 @@ var masterdbpath string
 var devopdbpath string
 var edgedbpath string
 
+var placesLayer bool
+
 var (
 	masterlock, devoplock, edgelock string
 )
@@ -80,6 +82,10 @@ func SetDBPath(whichdb, pathto string) {
 	default:
 		panic("invalid db name")
 	}
+}
+
+func SetPlacesLayer(b bool) {
+	placesLayer = b
 }
 
 func getTestesPrefix() string {

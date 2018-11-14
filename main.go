@@ -1,7 +1,9 @@
 package main
 
 import (
+	"compress/gzip"
 	"flag"
+	"github.com/kpawlik/geojson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -11,6 +13,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/rotblauer/catTracks/catTracks"
 	"github.com/rotblauer/tileTester2/undump"
@@ -29,6 +32,8 @@ func main() {
 	var dbpath, devopdbpath, edgedbpath string
 	var dbpathtiles, devopdbpathtiles, edgedbpathtiles string
 	var masterlock, devlock, edgelock string
+
+	var placesLayer bool
 
 	var procmaster, procedge bool
 
@@ -58,6 +63,7 @@ func main() {
 
 	flag.BoolVar(&procmaster, "proc-master", false, "run getem for master tiles")
 	flag.BoolVar(&procedge, "proc-edge", false, "run getem for edge tiles")
+	flag.BoolVar(&placesLayer, "places-layer", false, "generate layer for valid ios places")
 
 	flag.Parse()
 
@@ -72,6 +78,8 @@ func main() {
 	catTracks.SetMasterLock(masterlock)
 	catTracks.SetDevopLock(devlock)
 	catTracks.SetEdgeLock(edgelock)
+
+	catTracks.SetPlacesLayer(placesLayer)
 
 	// mkdir -p db/tracks.db
 	// os.MkdirAll(filepath.Dir(edgedbpath), 0666)
@@ -179,6 +187,8 @@ func main() {
 				case <-quitChan:
 					return
 				case <-catTracks.NotifyNewEdge:
+
+					// look for any finished edge geojson gz files
 					mu.Lock()
 					d := filepath.Dir(tracksjsongzpathedge)
 					matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
@@ -190,6 +200,7 @@ func main() {
 						mu.Unlock()
 						continue
 					}
+
 					// cat and append all -fin- edges to edge.json.gz
 					for _, m := range matches {
 						b, err := ioutil.ReadFile(m)
@@ -250,7 +261,64 @@ func main() {
 		}()
 	}
 
+	if placesLayer {
+		go func() {
+			var placesProcLock sync.Mutex
+			places := []*geojson.Feature{}
+			// Even though this runs on the /1sec range, it won't fire until the previous run has finished;
+			for _ = range time.Tick(1 * time.Second) {
+				select {
+				case <-quitChan:
+					return
+				case p := <-catTracks.FeaturePlaceChan:
+					places = append(places, p)
+					log.Println("+place:", p)
+				default:
+					if lenp := len(places); lenp > 0 {
+						log.Println("processing", lenp, "places: ", places)
+						// eg. /var/tdata/places.json.gz
+						baseDataDir := filepath.Dir(tracksjsongzpathedge)
+						placesJSONGZ := filepath.Join(baseDataDir, "places.json.gz")
+
+						placesProcLock.Lock() // might be unnecessary
+
+						pgz := catTracks.CreateGZ(placesJSONGZ, gzip.BestCompression)
+						for _, f := range places {
+							if f == nil {
+								continue
+							}
+							pgz.JE().Encode(f)
+						}
+						catTracks.CloseGZ(pgz)
+
+						// reset local places
+						places = []*geojson.Feature{}
+
+						wipTilesDB := filepath.Join(baseDataDir, "places-tiles.wip.db")
+						err := runTippe(filepath.Join(baseDataDir, "places.out"), placesJSONGZ, "catTrackPlace", wipTilesDB)
+						if err != nil {
+							log.Println("tippe/places/err:", err)
+							placesProcLock.Unlock()
+							continue
+						}
+
+						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "places-tiles.db"))
+						os.Remove(filepath.Join(baseDataDir, "places.out.mbtiles"))
+
+						placesProcLock.Unlock()
+
+						http.Get("http://localhost:8080/places/refresh")
+
+						log.Println("finished processing", lenp, "places")
+					}
+					continue
+				}
+			}
+		}()
+	}
+
 	http.ListenAndServe(":"+strconv.Itoa(porty), nil)
+	quitChan <- true
 	quitChan <- true
 	quitChan <- true
 }
