@@ -223,7 +223,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 				}
 			}
 			if qf.LngMin != nil {
-				if nv.PlaceParsed.Lng > *qf.LngMin {
+				if nv.PlaceParsed.Lng < *qf.LngMin {
 					continue ITERATOR
 				}
 			}
