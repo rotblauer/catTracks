@@ -54,6 +54,8 @@ type QueryFilterPlaces struct {
 	LatMax *float64 `schema:"latmax"`
 	LngMin *float64 `schema:"lngmin"`
 	LngMax *float64 `schema:"lngmax"`
+
+	IncludeStats bool `schema:"stats"`
 }
 
 // var DefaultQFP = QueryFilterPlaces{
@@ -81,6 +83,14 @@ type QueryFilterPlaces struct {
 // 	return bt[i].ArrivalTime.Before(bt[j].ArrivalTime)
 // }
 
+type VisitsResponse struct {
+	Visits    []*note.NoteVisit `json:"visits"`
+	Stats     bolt.BucketStats  `json"bucketStats"`
+	StatsTook time.Duration     `json:"statsTook"` // how long took to get bucket stats (for 10mm++ points, long time)
+	Scanned   int               `json:"scanned"`   // num visits checked before mtaching filters
+	Matches   int               `json:"matches"`   // num visits matching before paging/index filters
+}
+
 // btw places are actually visits. fucked that one up.
 func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	// TODO
@@ -89,11 +99,19 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	// - sortable interface places
 	// - places to json, new type in Note
 
+	var res = VisitsResponse{}
 	var visits = []*note.NoteVisit{}
 	var scannedN, matchingN int // nice convenience returnables for query stats, eg. matched 4/14 visits, querier can know this
 
 	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(placesKey))
+
+		if qf.IncludeStats {
+			t1 := time.Now()
+			res.Stats = b.Stats()
+			res.StatsTook = time.Since(t1)
+		}
+
 		if b == nil {
 			return fmt.Errorf("no places bolt bucket exists")
 		}
@@ -233,9 +251,13 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	if qf.StartIndex > len(visits) || qf.StartIndex < 0 {
 		qf.StartIndex = len(visits)
 	}
-	visits = visits[qf.StartIndex:qf.EndIndex]
 
-	out, err = json.Marshal(visits)
+	res.Visits = visits[qf.StartIndex:qf.EndIndex]
+	res.Matches = matchingN
+	res.Scanned = scannedN
+
+	out, err = json.Marshal(res)
+
 	return
 }
 
