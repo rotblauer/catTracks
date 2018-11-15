@@ -12,6 +12,7 @@ import (
 
 	"compress/gzip"
 	"github.com/boltdb/bolt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/kpawlik/geojson"
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -98,6 +99,8 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	// - filter during key iter
 	// - sortable interface places
 	// - places to json, new type in Note
+
+	log.Println("handling visits q:", spew.Sdump(qf))
 
 	var res = VisitsResponse{}
 	var visits = []*note.NoteVisit{}
@@ -248,8 +251,11 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	if qf.EndIndex == 0 || qf.EndIndex > len(visits) || qf.EndIndex < 0 {
 		qf.EndIndex = len(visits)
 	}
-	if qf.StartIndex > len(visits) || qf.StartIndex < 0 {
+	if qf.StartIndex > len(visits) {
 		qf.StartIndex = len(visits)
+	}
+	if qf.StartIndex < 0 {
+		qf.StartIndex = 0
 	}
 
 	res.Visits = visits[qf.StartIndex:qf.EndIndex]
