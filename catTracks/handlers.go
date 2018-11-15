@@ -1,12 +1,12 @@
 package catTracks
 
-//Handles
 import (
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	// "html/template"
+	"github.com/gorilla/schema"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -395,5 +395,37 @@ func getMetaData(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
 	fmt.Println("Got metadata:", len(b), "bytes")
+	w.Write(b)
+}
+
+var decoder = schema.NewDecoder()
+
+func handleGetPlaces(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+
+	// parse params
+	// NOTE:
+	// func (r *Request) ParseForm() error
+	// ParseForm populates r.Form and r.PostForm.
+	//
+	// For all requests, ParseForm parses the raw query from the URL and
+	// updates r.Form.
+
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid form: "+err.Error(), http.StatusBadRequest)
+	}
+	var qf QueryFilterPlaces
+	err = decoder.Decode(&qf, r.Form) // note using r.Form, not r.PostForm
+	if err != nil {
+		http.Error(w, "err decoding request: "+err.Error(), http.StatusBadRequest)
+	}
+
+	b, e := getPlaces(qf)
+	if e != nil {
+		log.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Got places:", len(b), "bytes")
 	w.Write(b)
 }

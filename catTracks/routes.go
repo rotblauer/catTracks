@@ -84,4 +84,10 @@ var routes = Routes{
 		"/metadata",
 		getMetaData,
 	},
+	Route{
+		"GetVisits",
+		"GET",
+		"/visits",
+		handleGetPlaces,
+	},
 }

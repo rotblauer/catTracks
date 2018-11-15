@@ -1,6 +1,7 @@
 package catTracks
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -29,6 +30,213 @@ type Metadata struct {
 	LastUpdatedBy      string
 	LastUpdatedPointsN int
 	TileDBLastUpdated  time.Time
+}
+
+type QueryFilterPlaces struct {
+	Names []string `schema:"names"`
+
+	// start,end x arrive,depart,report
+	StartArrivalT   time.Time `schema:"startArrivalT"`
+	EndArrivalT     time.Time `schema:"endArrivalT"`
+	StartDepartureT time.Time `schema:"startDepartureT"`
+	EndDepartureT   time.Time `schema:"endDepartureT"`
+	StartReportedT  time.Time `schema:"startReportedT"`
+	EndReportedT    time.Time `schema:"endReportedT"`
+
+	ReverseChrono bool `schema:"rc"` // when true, oldest first; default to newest first
+
+	// paginatables
+	StartIndex int `schema:"startI"` // 0 indexed;
+	EndIndex   int `schema:"endI"`   // diff end-start = per/pagination lim
+
+	// for geo rect bounding, maybe
+	LatMin *float64 `schema:"latmin"`
+	LatMax *float64 `schema:"latmax"`
+	LngMin *float64 `schema:"lngmin"`
+	LngMax *float64 `schema:"lngmax"`
+}
+
+// var DefaultQFP = QueryFilterPlaces{
+// 	Names:    []string{},
+// 	EndIndex: 30, // given zero values, reverse and StartIndex=0, this returns 30 most recent places
+// 	LatMin:   math.MaxFloat64,
+// 	LatMax:   math.MaxFloat64,
+// 	LngMin:   math.MaxFloat64,
+// 	LatMax:   math.MaxFloat64,
+// }
+
+// // ByTime implements Sort interface for NoteVisit
+// type ByTime []note.NoteVisit
+
+// func (bt ByTime) Len() int {
+// 	return len(bt)
+// }
+
+// func (bt ByTime) Swap(i, j int) {
+// 	bt[i], bt[j] = bt[j], bt[i]
+// }
+
+// // Less compares ARRIVALTIME. This might need to be expanded or differentiated.
+// func (bt ByTime) Less(i, j int) bool {
+// 	return bt[i].ArrivalTime.Before(bt[j].ArrivalTime)
+// }
+
+// btw places are actually visits. fucked that one up.
+func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
+	// TODO
+	// - wire to router with query params
+	// - filter during key iter
+	// - sortable interface places
+	// - places to json, new type in Note
+
+	var visits = []*note.NoteVisit{}
+	var scannedN, matchingN int // nice convenience returnables for query stats, eg. matched 4/14 visits, querier can know this
+
+	err = GetDB("master").View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(placesKey))
+		if b == nil {
+			return fmt.Errorf("no places bolt bucket exists")
+		}
+		c := b.Cursor()
+
+		// unclosed forloop conditions
+		k, vis := c.First()
+		condit := func() bool {
+			return k != nil
+		}
+
+		// use fancy seekers/condits if reported time query parameter comes thru
+		// when there's a lot of visits, this might be moar valuable
+		// Note that reported time is trackpoint time, and that's the key we range over. Same key as tp.
+		if !qf.StartReportedT.IsZero() {
+			k, vis = c.Seek(i64tob(qf.StartReportedT.UnixNano()))
+		}
+		if !qf.EndReportedT.IsZero() {
+			condit = func() bool {
+				// i64tob uses big endian with 8 bytes
+				return k != nil && bytes.Compare(k[:8], i64tob(qf.EndReportedT.UnixNano())) <= 0
+			}
+		}
+
+	ITERATOR:
+		for ; condit(); k, vis = c.Next() {
+
+			scannedN++
+
+			var nv = &note.NoteVisit{}
+
+			err := json.Unmarshal(vis, nv)
+			if err != nil {
+				log.Println("error unmarshalling visit for query:", err)
+				continue
+			}
+
+			// filter: names
+			if len(qf.Names) > 0 && nv.Name == "" {
+				// fuck... gotta x-reference tp to check cat names
+				var tp = &trackPoint.TrackPoint{}
+
+				bt := tx.Bucket([]byte(trackKey))
+				tpv := bt.Get(k)
+				if tpv == nil {
+					log.Println("no trackpoint stored for visit:", nv)
+					continue
+				}
+				err = json.Unmarshal(tpv, tp)
+				if err != nil {
+					log.Println("err unmarshalling tp for visit query:", err)
+					continue
+				}
+				nv.Name = tp.Name
+			}
+			if len(qf.Names) > 0 {
+				var ok bool
+				for _, n := range qf.Names {
+					if n == nv.Name {
+						ok = true
+						break
+					}
+				}
+				if !ok {
+					// doesn't match any of the given whitelisted names
+					continue ITERATOR
+				}
+			}
+
+			// filter: start/endT
+			if !qf.StartArrivalT.IsZero() {
+				if nv.ArrivalTime.Before(qf.StartArrivalT) {
+					continue ITERATOR
+				}
+			}
+			if !qf.StartDepartureT.IsZero() {
+				if nv.DepartureTime.Before(qf.StartDepartureT) {
+					continue ITERATOR
+				}
+			}
+			if !qf.EndArrivalT.IsZero() {
+				if nv.ArrivalTime.After(qf.EndArrivalT) {
+					continue ITERATOR
+				}
+			}
+			if !qf.EndDepartureT.IsZero() {
+				if nv.DepartureTime.After(qf.EndDepartureT) {
+					continue ITERATOR
+				}
+			}
+
+			// filter: lat,lng x min,max
+			if qf.LatMin != nil {
+				if nv.PlaceParsed.Lat < *qf.LatMin {
+					continue ITERATOR
+				}
+			}
+			if qf.LatMax != nil {
+				if nv.PlaceParsed.Lat > *qf.LatMax {
+					continue ITERATOR
+				}
+			}
+			if qf.LngMax != nil {
+				if nv.PlaceParsed.Lng > *qf.LngMax {
+					continue ITERATOR
+				}
+			}
+			if qf.LngMin != nil {
+				if nv.PlaceParsed.Lng > *qf.LngMin {
+					continue ITERATOR
+				}
+			}
+
+			matchingN++
+			visits = append(visits, nv)
+		}
+		return nil
+	})
+
+	// filter: handle reverse Chrono
+	if qf.ReverseChrono {
+		// sort with custom Less function in closure
+		sort.Slice(visits, func(i, j int) bool {
+			return visits[i].ArrivalTime.Before(visits[j].ArrivalTime)
+		})
+	} else {
+		sort.Slice(visits, func(i, j int) bool {
+			return visits[i].ArrivalTime.After(visits[j].ArrivalTime)
+		})
+	}
+
+	// filter: paginate with indexes, limited oob's
+	// FIXME this might not even be right, just tryna avoid OoB app killers (we could theor allow negs, with fance reversing wrapping, but tldd)
+	if qf.EndIndex == 0 || qf.EndIndex > len(visits) || qf.EndIndex < 0 {
+		qf.EndIndex = len(visits)
+	}
+	if qf.StartIndex > len(visits) || qf.StartIndex < 0 {
+		qf.StartIndex = len(visits)
+	}
+	visits = visits[qf.StartIndex:qf.EndIndex]
+
+	out, err = json.Marshal(visits)
+	return
 }
 
 func getmetadata() (out []byte, err error) {
