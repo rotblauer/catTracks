@@ -295,7 +295,7 @@ func main() {
 						places = []*geojson.Feature{}
 
 						wipTilesDB := filepath.Join(baseDataDir, "places-tiles.wip.db")
-						err := runTippe(filepath.Join(baseDataDir, "places.out"), placesJSONGZ, "catTrackPlace", wipTilesDB)
+						err := runTippeLite(filepath.Join(baseDataDir, "places.out"), placesJSONGZ, "catTrackPlace", wipTilesDB)
 						if err != nil {
 							log.Println("tippe/places/err:", err)
 							placesProcLock.Unlock()
@@ -323,7 +323,36 @@ func main() {
 	quitChan <- true
 }
 
-func dotiproc() {
+func runTippeLite(out, in string, tilesetname string, bolttilesout string) error {
+	tippCmd, tippargs, tipperr := getTippyProcessLite(out, in, tilesetname)
+	if tipperr != nil {
+		return tipperr
+	}
+
+	log.Println("> [", tilesetname, "]", tippCmd, tippargs)
+	tippmycanoe := exec.Command(tippCmd, tippargs...)
+	tippmycanoe.Stdout = os.Stdout
+	tippmycanoe.Stderr = os.Stderr
+
+	err := tippmycanoe.Start()
+	if err != nil {
+		log.Println("Error starting Cmd", err)
+		os.Exit(1)
+	}
+
+	if err := tippmycanoe.Wait(); err != nil {
+		return err
+	}
+
+	log.Println("Dump: Migrating .mbtiles file back into a bolt db: ", bolttilesout)
+
+	absoluteOut, err := filepath.Abs(out + ".mbtiles")
+	if err != nil {
+		log.Printf("err: %v", err)
+		return err
+	}
+	undump.MbtilesToBolt(absoluteOut, bolttilesout)
+	return nil
 }
 
 func runTippe(out, in string, tilesetname string, bolttilesout string) error {
@@ -356,6 +385,58 @@ func runTippe(out, in string, tilesetname string, bolttilesout string) error {
 	}
 	undump.MbtilesToBolt(absoluteOut, bolttilesout)
 	return nil
+}
+
+// doesn't do as much squashing
+func getTippyProcessLite(out string, in string, tilesetname string) (tippCmd string, tippargs []string, err error) {
+	//tippy process
+	//Mapping extremely dense point data with vector tiles
+	//https://www.mapbox.com/blog/vector-density/
+	//WARNINGS:
+	//Highest supported zoom with detail 14 is 18
+	tippCmd = "/usr/local/bin/tippecanoe"
+	tippargs = []string{
+		//-ag or --calculate-feature-density: Add a new attribute, tippecanoe_feature_density, to each feature, to record how densely features are spaced in that area of the tile. You can use this attribute in the style to produce a glowing effect where points are densely packed. It can range from 0 in the sparsest areas to 255 in the densest.
+		"-ag",
+		//-M bytes or --maximum-tile-bytes=bytes: Use the specified number of bytes as the maximum compressed tile size instead of 500K.
+		// "-M", "1000000",
+		//-O features or --maximum-tile-features=features: Use the specified number of features as the maximum in a tile instead of 200,000.
+		"-O", "200",
+		//-aC or --cluster-densest-as-needed: If a tile is too large, try to reduce its size by increasing the minimum spacing between features, and leaving one placeholder feature from each group. The remaining feature will be given a "cluster": true attribute to indicate that it represents a cluster, a "point_count" attribute to indicate the number of features that were clustered into it, and a "sqrt_point_count" attribute to indicate the relative width of a feature to represent the cluster. If
+		"--cluster-densest-as-needed",
+		//-g gamma or --gamma=_gamma_: Rate at which especially dense dots are dropped (default 0, for no effect). A gamma of 2 reduces the number of dots less than a pixel apart to the square root of their original number.
+		"-g", "0",
+		// TODO: document.
+		"--full-detail", "14",
+		"--minimum-detail", "12",
+		//-r rate or --drop-rate=rate: Rate at which dots are dropped at zoom levels below basezoom (default 2.5). If you use -rg, it will guess a drop rate that will keep at most 50,000 features in the densest tile. You can also specify a marker-width with -rgwidth to allow fewer features in the densest tile to compensate for the larger marker, or -rfnumber to allow at most number features in the densest tile.
+		"-rg",
+		"-rf1000",
+		"--minimum-zoom", "3",
+		//-z zoom or --maximum-zoom=zoom: Don't copy tiles from higher zoom levels than the specified zoom
+		"--maximum-zoom", "20",
+		"-l", tilesetname, // TODO: what's difference layer vs name?
+		//-n name or --name=name: Set the tileset name
+		"-n", tilesetname,
+		"-o", out + ".mbtiles",
+		//-f or --force: Delete the mbtiles file if it already exists instead of giving an error
+		"--force",
+		"-P", in,
+		//-ao or --reorder: Reorder features to put ones with the same properties in sequence, to try to get them to coalesce. You probably want to use this if you use --coalesce.
+		// "--reorder",
+	}
+
+	// 'in' should be an existing file
+	_, err = os.Stat(in)
+	if err != nil {
+		return
+	}
+
+	// Use alternate tippecanoe path if 'bash -c which tippecanoe' returns something without error and different than default
+	if b, e := exec.Command("bash -c", "which", "tippecanoe").Output(); e == nil && string(b) != tippCmd {
+		tippCmd = string(b)
+	}
+	return
 }
 
 func getTippyProcess(out string, in string, tilesetname string) (tippCmd string, tippargs []string, err error) {
