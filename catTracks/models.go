@@ -132,7 +132,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			}
 
 			// filter: names
-			if len(qf.Names) > 0 && nv.Name == "" {
+			if len(qf.Names) > 0 || nv.Name == "" {
 				// fuck... gotta x-reference tp to check cat names
 				var tp = &trackPoint.TrackPoint{}
 
@@ -664,6 +664,7 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return nil
 		}
 
+		visit.Name = tp.Name
 		visit.PlaceParsed = visit.Place.MustAsPlace()
 		visit.ReportedTime = tp.Time
 		visit.Duration = visit.GetDuration()
