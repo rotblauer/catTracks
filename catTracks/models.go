@@ -61,7 +61,9 @@ type QueryFilterPlaces struct {
 	LngMax *float64 `schema:"lngmax"`
 
 	IncludeStats bool `schema:"stats"`
-	GoogleNearby bool `schema:"googleNearby"`
+
+	GoogleNearby       bool `schema:"googleNearby"`
+	GoogleNearbyPhotos bool `schema:"googleNearbyPhotos"`
 }
 
 // var DefaultQFP = QueryFilterPlaces{
@@ -284,36 +286,37 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 					}
 				}
 
-				var gnp = make(map[string]string)
+				if qf.GoogleNearbyPhotos {
+					var gnp = make(map[string]string)
 
-				pp := tx.Bucket([]byte(googlefindnearbyphotos))
+					pp := tx.Bucket([]byte(googlefindnearbyphotos))
 
-				// use tp==visit==photos key seeker
-				c := pp.Cursor()
-				for pk, v := c.Seek(k); pk != nil && bytes.HasPrefix(pk, k); pk, v = c.Next() {
-					gnp[string(pk[len(k):])] = string(v)
-				}
-
-				// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
-				if len(gnp) == 0 {
-					// go grab em
-					// google ref photos
-					placePhotos, err := nv.GoogleNearbyImagesQ()
-					if err != nil {
-						log.Println("could not query visit photos", err)
-					} else {
-						for ref, b64 := range placePhotos {
-							key := append(k, []byte(ref)...)
-							if err := pp.Put(key, []byte(b64)); err != nil {
-								log.Println("err storing photoref:b64", err)
-							}
-						}
-						nv.GoogleNearbyPhotos = placePhotos
+					// use tp==visit==photos key seeker
+					c := pp.Cursor()
+					for pk, v := c.Seek(k); pk != nil && bytes.HasPrefix(pk, k); pk, v = c.Next() {
+						gnp[string(pk[len(k):])] = string(v)
 					}
-				} else {
-					nv.GoogleNearbyPhotos = gnp
-				}
 
+					// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
+					if len(gnp) == 0 {
+						// go grab em
+						// google ref photos
+						placePhotos, err := nv.GoogleNearbyImagesQ()
+						if err != nil {
+							log.Println("could not query visit photos", err)
+						} else {
+							for ref, b64 := range placePhotos {
+								key := append(k, []byte(ref)...)
+								if err := pp.Put(key, []byte(b64)); err != nil {
+									log.Println("err storing photoref:b64", err)
+								}
+							}
+							nv.GoogleNearbyPhotos = placePhotos
+						}
+					} else {
+						nv.GoogleNearbyPhotos = gnp
+					}
+				}
 			}
 
 			visits = append(visits, nv)
