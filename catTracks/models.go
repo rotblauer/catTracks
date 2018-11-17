@@ -257,7 +257,8 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			// lookup local google
 			if qf.GoogleNearby {
 				pg := tx.Bucket([]byte(googlefindnearby))
-				gr := pg.Get(k)
+				// gr := pg.Get(k)
+				gr := []byte{} // nil
 				if gr != nil {
 					r := &gm.PlacesSearchResponse{}
 					if err := json.Unmarshal(gr, &r); err == nil {
