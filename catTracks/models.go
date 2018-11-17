@@ -5,8 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"net/http"
-	"net/url"
 	"sort"
 	"strconv"
 	"sync"
@@ -263,6 +261,18 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 					var r gm.PlacesSearchResponse
 					if err := json.Unmarshal(gr, &r); err == nil {
 						nv.GoogleNearby = r
+					}
+				} else {
+					// hasn't BEEN googled yet, google it and SAVE an ok response
+					r, err := nv.GoogleNearbyQ()
+					if err == nil {
+						b, err := json.Marshal(r)
+						if err == nil {
+							pg.Put(k, b)
+						}
+						nv.GoogleNearby = r
+					} else {
+						log.Println("could not googlenearby", err, "visit", nv)
 					}
 				}
 			}
@@ -630,6 +640,34 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}
 		// tp has note has visit
 		if !visit.ReportedTime.IsZero() && placesLayer {
+
+			// google it
+			go func() {
+				g, err := visit.GoogleNearbyQ()
+				if err != nil {
+					log.Println("google nearby failed", err)
+					return
+				}
+
+				b, err := json.Marshal(g)
+				if err != nil {
+					log.Println("err marshalling googlenearby res", err)
+					return
+				}
+
+				if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+					pg := tx.Bucket([]byte(googlefindnearby))
+					err = pg.Put(buildTrackpointKey(point), b)
+					if err != nil {
+						log.Println("could not write google response to bucket", err)
+						return err
+					}
+					return nil
+				}); err != nil {
+					log.Println("err saving googlenearby info", err)
+				}
+			}()
+
 			FeaturePlaceChan <- TrackToPlace(point, visit)
 		}
 	}
@@ -747,40 +785,6 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return err
 		}
 		fmt.Println("Saved visit: ", visit)
-
-		// google it
-		go func() {
-			u, err := url.Parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json")
-			if err != nil {
-				log.Println("could not parse google url", err)
-				return
-			}
-			u.Query().Set("location", fmt.Sprintf("%.14f,%.14f", visit.PlaceParsed.Lat, visit.PlaceParsed.Lng))
-			u.Query().Set("radius", "50")
-			u.Query().Set("rankby", "prominence") // also distance, tho distance needs name= or type= or somethin
-			u.Query().Set("key", os.Getenv("GOOGLE_PLACES_API_KEY"))
-
-			res, err := http.Get(u.RequestURI())
-			if err != nil {
-				log.Println("error google nearby http req", err)
-				return
-			}
-
-			b := []byte{}
-			_, err = res.Body.Read(b)
-			if err != nil {
-				log.Println("could not read res body", err)
-				return
-			}
-
-			pg := tx.Bucket([]byte(googlefindnearby))
-			err = pg.Put(key, b)
-			if err != nil {
-				log.Println("could not write google response to bucket", err)
-				return
-			}
-		}()
-
 		return nil
 	})
 	if err != nil {
