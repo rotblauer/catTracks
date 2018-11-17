@@ -295,7 +295,8 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 				}
 
 				// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
-				if len(gnp) == 0 {
+				// if len(gnp) == 0 {
+				if true {
 					// go grab em
 					// google ref photos
 					placePhotos, err := nv.GoogleNearbyImagesQ()
