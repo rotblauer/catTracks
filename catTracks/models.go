@@ -258,7 +258,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 				pg := tx.Bucket([]byte(googlefindnearby))
 				gr := pg.Get(k)
 				if gr != nil {
-					var r gm.PlacesSearchResponse
+					r := &gm.PlacesSearchResponse{}
 					if err := json.Unmarshal(gr, &r); err == nil {
 						nv.GoogleNearby = r
 					}
@@ -266,6 +266,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 					// hasn't BEEN googled yet, google it and SAVE an ok response
 					r, err := nv.GoogleNearbyQ()
 					if err == nil {
+						log.Println("googleNearby OK", spew.Sprintln(r))
 						b, err := json.Marshal(r)
 						if err == nil {
 							pg.Put(k, b)
@@ -648,6 +649,8 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 					log.Println("google nearby failed", err)
 					return
 				}
+
+				log.Println("googleNearby OK", spew.Sprintln(g))
 
 				b, err := json.Marshal(g)
 				if err != nil {
