@@ -283,6 +283,37 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 						log.Println("could not googlenearby", err, "visit", nv)
 					}
 				}
+
+				var gnp = make(map[string]string)
+
+				pp := tx.Bucket([]byte(googlefindnearbyphotos))
+
+				// use tp==visit==photos key seeker
+				c := pp.Cursor()
+				for pk, v := c.Seek(k); pk != nil && bytes.HasPrefix(pk, k); pk, v = c.Next() {
+					gnp[string(pk[len(k):])] = string(v)
+				}
+
+				// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
+				if len(gnp) == 0 {
+					// go grab em
+					// google ref photos
+					placePhotos, err := nv.GoogleNearbyImagesQ()
+					if err != nil {
+						log.Println("could not query visit photos", err)
+					} else {
+						for ref, b64 := range placePhotos {
+							key := append(k, []byte(ref)...)
+							if err := pp.Put(key, []byte(b64)); err != nil {
+								log.Println("err storing photoref:b64", err)
+							}
+						}
+						nv.GoogleNearbyPhotos = placePhotos
+					}
+				} else {
+					nv.GoogleNearbyPhotos = gnp
+				}
+
 			}
 
 			visits = append(visits, nv)
@@ -675,6 +706,29 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 					return nil
 				}); err != nil {
 					log.Println("err saving googlenearby info", err)
+					return
+				}
+
+				visit.GoogleNearby = g
+				placePhotos, err := visit.GoogleNearbyImagesQ()
+				if err != nil {
+					log.Println("could not query visit photos", err)
+					return
+				}
+				if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+					pp := tx.Bucket([]byte(googlefindnearbyphotos))
+					var e error // only return last err (nonhalting)
+					for ref, b64 := range placePhotos {
+						key := append(buildTrackpointKey(point), []byte(ref)...)
+						if err := pp.Put(key, []byte(b64)); err != nil {
+							log.Println("err storing photoref:b64", err)
+							e = err
+						}
+					}
+					return e
+				}); err != nil {
+					log.Println("err saving googlenearby PHOTOS info", err)
+					return
 				}
 			}()
 
