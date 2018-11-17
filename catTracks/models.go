@@ -111,7 +111,8 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 	var visits = []*note.NoteVisit{}
 	var scannedN, matchingN int // nice convenience returnables for query stats, eg. matched 4/14 visits, querier can know this
 
-	err = GetDB("master").View(func(tx *bolt.Tx) error {
+	// FIXME: only Update r b/c case we want to go grab the google nearby for a visit. not necessary otherwise
+	err = GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(placesKey))
 
 		if qf.IncludeStats {
