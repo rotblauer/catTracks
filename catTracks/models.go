@@ -5,20 +5,24 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"sync"
 	"time"
 
 	"compress/gzip"
+	"log"
+	"os"
+	"path/filepath"
+
 	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/kpawlik/geojson"
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"log"
-	"os"
-	"path/filepath"
+	gm "googlemaps.github.io/maps"
 )
 
 var punktlichTileDBPathRelHome = filepath.Join("punktlich.rotblauer.com", "tester.db")
@@ -34,7 +38,9 @@ type Metadata struct {
 }
 
 type QueryFilterPlaces struct {
+	Uuids []string `schema:"uuids"`
 	Names []string `schema:"names"`
+	// PushTokens []string `schema:"pushTokens"` // TODO
 
 	// start,end x arrive,depart,report
 	StartArrivalT   time.Time `schema:"startArrivalT"`
@@ -57,6 +63,7 @@ type QueryFilterPlaces struct {
 	LngMax *float64 `schema:"lngmax"`
 
 	IncludeStats bool `schema:"stats"`
+	GoogleNearby bool `schema:"googleNearby"`
 }
 
 // var DefaultQFP = QueryFilterPlaces{
@@ -149,7 +156,25 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			err := json.Unmarshal(vis, nv)
 			if err != nil {
 				log.Println("error unmarshalling visit for query:", err)
-				continue
+				continue ITERATOR
+			}
+
+			// filter: uuids using key[9:] (since buildTrackpointKey appends 8-byte timenano + uuid...)
+			// and vis uses "foreign key index" from trackPoint master db
+			if len(qf.Uuids) > 0 {
+				var ok bool
+				for _, u := range qf.Uuids {
+					if bytes.Equal(k[9:], []byte(u)) {
+						ok = true
+						break
+					}
+				}
+				if !ok {
+					continue ITERATOR
+				}
+			}
+			if nv.Uuid == "" {
+				nv.Uuid = string(k[9:])
 			}
 
 			// filter: names
@@ -229,6 +254,19 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			}
 
 			matchingN++
+
+			// lookup local google
+			if qf.GoogleNearby {
+				pg := tx.Bucket([]byte(googlefindnearby))
+				gr := pg.Get(k)
+				if gr != nil {
+					var r gm.PlacesSearchResponse
+					if err := json.Unmarshal(gr, &r); err == nil {
+						nv.GoogleNearby = r
+					}
+				}
+			}
+
 			visits = append(visits, nv)
 		}
 		return nil
@@ -692,6 +730,7 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return nil
 		}
 
+		visit.Uuid = tp.Uuid
 		visit.Name = tp.Name
 		visit.PlaceParsed = visit.Place.MustAsPlace()
 		visit.ReportedTime = tp.Time
@@ -708,6 +747,39 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return err
 		}
 		fmt.Println("Saved visit: ", visit)
+
+		// google it
+		go func() {
+			u, err := url.Parse("https://maps.googleapis.com/maps/api/place/nearbysearch/json")
+			if err != nil {
+				log.Println("could not parse google url", err)
+				return
+			}
+			u.Query().Set("location", fmt.Sprintf("%.14f,%.14f", visit.PlaceParsed.Lat, visit.PlaceParsed.Lng))
+			u.Query().Set("radius", "50")
+			u.Query().Set("rankby", "prominence") // also distance, tho distance needs name= or type= or somethin
+			u.Query().Set("key", os.Getenv("GOOGLE_PLACES_API_KEY"))
+
+			res, err := http.Get(u.RequestURI())
+			if err != nil {
+				log.Println("error google nearby http req", err)
+				return
+			}
+
+			b := []byte{}
+			_, err = res.Body.Read(b)
+			if err != nil {
+				log.Println("could not read res body", err)
+				return
+			}
+
+			pg := tx.Bucket([]byte(googlefindnearby))
+			err = pg.Put(key, b)
+			if err != nil {
+				log.Println("could not write google response to bucket", err)
+				return
+			}
+		}()
 
 		return nil
 	})

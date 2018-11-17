@@ -13,14 +13,15 @@ import (
 )
 
 var (
-	db           *bolt.DB // master
-	devopDB      *bolt.DB
-	edgeDB       *bolt.DB
-	trackKey     = "tracks"
-	statsKey     = "stats"
-	statsDataKey = "storage" // use: bucket.Put(statsDataKey, value), bucket.Get(statsDataKey)
-	placesKey    = "places"
-	allBuckets   = []string{trackKey, statsKey, "names", "geohash", placesKey}
+	db               *bolt.DB // master
+	devopDB          *bolt.DB
+	edgeDB           *bolt.DB
+	trackKey         = "tracks"
+	statsKey         = "stats"
+	statsDataKey     = "storage" // use: bucket.Put(statsDataKey, value), bucket.Get(statsDataKey)
+	placesKey        = "places"
+	googlefindnearby = "googlefindnearby"
+	allBuckets       = []string{trackKey, statsKey, "names", "geohash", placesKey, googlefindnearby}
 )
 
 // GetDB is db getter.
