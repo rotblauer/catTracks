@@ -90,4 +90,10 @@ var routes = Routes{
 		"/visits",
 		handleGetPlaces,
 	},
+	Route{
+		"GetVisitPhotos",
+		"GET",
+		"/googleNearbyPhotos",
+		handleGetGoogleNearbyPhotos,
+	},
 }

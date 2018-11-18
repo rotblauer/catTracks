@@ -2,13 +2,25 @@ package catTracks
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"image"
 	"io/ioutil"
 	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
+
+	// Package image/jpeg is not used explicitly in the code below,
+	// but is imported for its initialization side-effect, which allows
+	// image.Decode to understand JPEG formatted images. Uncomment these
+	// two lines to also understand GIF and PNG images:
+	_ "image/gif"
+	"image/jpeg"
+	"image/png"
 
 	"compress/gzip"
 	"log"
@@ -66,6 +78,10 @@ type QueryFilterPlaces struct {
 	GoogleNearbyPhotos bool `schema:"googleNearbyPhotos"`
 }
 
+type QueryFilterGoogleNearbyPhotos struct {
+	PhotoReference string `schema:"photoreference"`
+}
+
 // var DefaultQFP = QueryFilterPlaces{
 // 	Names:    []string{},
 // 	EndIndex: 30, // given zero values, reverse and StartIndex=0, this returns 30 most recent places
@@ -90,6 +106,41 @@ type QueryFilterPlaces struct {
 // func (bt ByTime) Less(i, j int) bool {
 // 	return bt[i].ArrivalTime.Before(bt[j].ArrivalTime)
 // }
+
+// decode base64 from db and return image
+func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err error) {
+	var data []byte
+	err = GetDB("master").View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(googlefindnearbyphotos))
+		data = b.Get([]byte(qf.PhotoReference))
+		if data == nil {
+			return errors.New("resource does not exist")
+		}
+		return nil
+	})
+	if err != nil {
+		return data, err
+	}
+
+	reader := base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(data))
+	// config, format, err := image.DecodeConfig(reader)
+	// if err != nil {
+	// 	log.Fatal(err)
+	// }
+	// fmt.Println("Width:", config.Width, "Height:", config.Height, "Format:", format)
+	m, s, err := image.Decode(reader)
+	if err != nil {
+		return nil, err
+	}
+
+	buf := bytes.NewBuffer(out)
+	if strings.Contains(s, "jpeg") {
+		err = jpeg.Encode(buf, m, nil)
+	} else {
+		err = png.Encode(buf, m)
+	}
+	return
+}
 
 type VisitsResponse struct {
 	Visits    []*note.NoteVisit `json:"visits"`

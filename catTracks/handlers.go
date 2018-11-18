@@ -5,17 +5,20 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+
 	// "html/template"
-	"github.com/gorilla/schema"
 	"io/ioutil"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
 
+	"github.com/gorilla/schema"
+
+	"log"
+
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
-	"log"
 	// "os"
 	// "path"
 )
@@ -399,6 +402,27 @@ func getMetaData(w http.ResponseWriter, r *http.Request) {
 }
 
 var decoder = schema.NewDecoder()
+
+// returns response type image
+func handleGetGoogleNearbyPhotos(w http.ResponseWriter, r *http.Request) {
+	err := r.ParseForm()
+	if err != nil {
+		http.Error(w, "invalid form: "+err.Error(), http.StatusBadRequest)
+	}
+	var qf QueryFilterGoogleNearbyPhotos
+	err = decoder.Decode(&qf, r.Form) // note using r.Form, not r.PostForm
+	if err != nil {
+		http.Error(w, "err decoding request: "+err.Error(), http.StatusBadRequest)
+	}
+
+	b, e := getGoogleNearbyPhotos(qf)
+	if e != nil {
+		log.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Got googlenearby photos:", len(b), "bytes")
+	w.Write(b)
+}
 
 func handleGetPlaces(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
