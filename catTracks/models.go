@@ -142,39 +142,40 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 
 			res, er := http.Get(u.String())
 			if er != nil {
+				log.Println("err", er)
 				err = er
 				return out, err
 			}
 
 			b, er := ioutil.ReadAll(res.Body)
 			if er != nil {
+				log.Println("err", er)
 				out, err = b, er
 				return out, er
 			}
 			er = res.Body.Close()
 			if er != nil {
+				log.Println("err", er)
 				return out, er
 			}
-			bb := []byte{}
-			copy(bb, b)
 
-			log.Println("res google photo len=", len(b), "==", len(bb))
+			log.Println("res google photo len=", len(b))
 
 			b64s := base64.StdEncoding.EncodeToString(b)
+			data = []byte(b64s)
+			log.Println("b64:", b64s)
 
 			if er := GetDB("master").Update(func(tx *bolt.Tx) error {
 				b := tx.Bucket([]byte(googlefindnearbyphotos))
-				err := b.Put([]byte(qf.PhotoReference), []byte(b64s))
+				err := b.Put([]byte(qf.PhotoReference), data)
 				return err
 			}); er != nil {
 				err = er
+				log.Println("err", er)
 				return out, err
 			} else {
 				log.Println("saved google photo OK", qf.PhotoReference, "slen", len(b64s))
-				// woohoo, and don't have to encodeb64 back and forth
 			}
-			return bb, nil
-
 		} else {
 			return data, err
 		}
