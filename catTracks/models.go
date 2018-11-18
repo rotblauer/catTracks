@@ -368,7 +368,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 				if gr != nil {
 					r := &gm.PlacesSearchResponse{}
 					if err := json.Unmarshal(gr, &r); err == nil {
-						log.Println("found existing gn data", spew.Sdump(r))
+						// log.Println("found existing gn data", spew.Sdump(r))
 						nv.GoogleNearby = r
 					}
 				} else {
@@ -376,7 +376,7 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 					log.Println("no existing gnb data, querying...")
 					r, err := nv.GoogleNearbyQ()
 					if err == nil && r != nil {
-						log.Println("googleNearby OK", spew.Sdump(r))
+						log.Println("googleNearby OK")
 						b, err := json.Marshal(r)
 						if err == nil {
 							if err := pg.Put(k, b); err != nil {
@@ -799,7 +799,7 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 				continue
 			}
 
-			log.Println("googleNearby OK", spew.Sdump(g))
+			log.Println("googleNearby OK")
 
 			b, err := json.Marshal(g)
 			if err != nil {
@@ -842,7 +842,6 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 			} else {
 				log.Println("saved googlenearby ", len(placePhotos), "photos")
 			}
-
 		}
 	}
 	// 47131736
