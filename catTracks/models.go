@@ -60,7 +60,7 @@ type QueryFilterPlaces struct {
 	LngMin *float64 `schema:"lngmin"`
 	LngMax *float64 `schema:"lngmax"`
 
-	IncludeStats bool `schema:"stats"`
+	IncludeStats bool `schema:"stats,omitempty"`
 
 	GoogleNearby       bool `schema:"googleNearby"`
 	GoogleNearbyPhotos bool `schema:"googleNearbyPhotos"`
@@ -93,10 +93,10 @@ type QueryFilterPlaces struct {
 
 type VisitsResponse struct {
 	Visits    []*note.NoteVisit `json:"visits"`
-	Stats     bolt.BucketStats  `json"bucketStats"`
-	StatsTook time.Duration     `json:"statsTook"` // how long took to get bucket stats (for 10mm++ points, long time)
-	Scanned   int               `json:"scanned"`   // num visits checked before mtaching filters
-	Matches   int               `json:"matches"`   // num visits matching before paging/index filters
+	Stats     bolt.BucketStats  `json"bucketStats,omitempty"`
+	StatsTook time.Duration     `json:"statsTook,omitempty"` // how long took to get bucket stats (for 10mm++ points, long time)
+	Scanned   int               `json:"scanned"`             // num visits checked before mtaching filters
+	Matches   int               `json:"matches"`             // num visits matching before paging/index filters
 }
 
 // btw places are actually visits. fucked that one up.
