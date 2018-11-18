@@ -291,10 +291,14 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 
 					pp := tx.Bucket([]byte(googlefindnearbyphotos))
 
-					// use tp==visit==photos key seeker
-					c := pp.Cursor()
-					for pk, v := c.Seek(k); pk != nil && bytes.HasPrefix(pk, k); pk, v = c.Next() {
-						gnp[string(pk[len(k):])] = string(v)
+					for _, r := range nv.GoogleNearby.Results {
+						if len(r.Photos) == 0 {
+							continue
+						}
+						ref := r.Photos[0].PhotoReference
+						if b64 := pp.Get([]byte(ref)); b64 != nil {
+							gnp[ref] = string(b64)
+						}
 					}
 
 					// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
@@ -306,8 +310,8 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 							log.Println("could not query visit photos", err)
 						} else {
 							for ref, b64 := range placePhotos {
-								key := append(k, []byte(ref)...)
-								if err := pp.Put(key, []byte(b64)); err != nil {
+								pp.Delete(append(k, []byte(ref)...)) // remove dumb-indexed
+								if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
 									log.Println("err storing photoref:b64", err)
 								}
 							}
@@ -722,8 +726,7 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 					pp := tx.Bucket([]byte(googlefindnearbyphotos))
 					var e error // only return last err (nonhalting)
 					for ref, b64 := range placePhotos {
-						key := append(buildTrackpointKey(point), []byte(ref)...)
-						if err := pp.Put(key, []byte(b64)); err != nil {
+						if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
 							log.Println("err storing photoref:b64", err)
 							e = err
 						}
