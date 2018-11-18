@@ -134,7 +134,10 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 			q := u.Query()
 			q.Set("maxwidth", "400")
 			q.Set("key", os.Getenv("GOOGLE_PLACES_API_KEY"))
+
 			q.Set("photoreference", qf.PhotoReference)
+			log.Println("photoref", qf.PhotoReference)
+
 			u.RawQuery = q.Encode()
 
 			res, er := http.Get(u.String())
@@ -152,6 +155,10 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 			if er != nil {
 				return out, er
 			}
+			bb := []byte{}
+			copy(bb, b)
+
+			log.Println("res google photo len=", len(b), "==", len(bb))
 
 			b64s := base64.StdEncoding.EncodeToString(b)
 
@@ -163,9 +170,10 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 				err = er
 				return out, err
 			} else {
+				log.Println("saved google photo OK", qf.PhotoReference, "slen", len(b64s))
 				// woohoo, and don't have to encodeb64 back and forth
 			}
-			return b, nil
+			return bb, nil
 
 		} else {
 			return data, err
