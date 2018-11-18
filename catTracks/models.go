@@ -310,7 +310,6 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 							log.Println("could not query visit photos", err)
 						} else {
 							for ref, b64 := range placePhotos {
-								pp.Delete(append(k, []byte(ref)...)) // remove dumb-indexed
 								if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
 									log.Println("err storing photoref:b64", err)
 								}
