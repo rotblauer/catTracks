@@ -139,6 +139,10 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 	} else {
 		err = png.Encode(buf, m)
 	}
+	if err != nil {
+		return out, err
+	}
+	out, err = ioutil.ReadAll(buf)
 	return
 }
 
