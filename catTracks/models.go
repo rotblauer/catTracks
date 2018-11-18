@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"image"
 	"io/ioutil"
+	"net/http"
+	"net/url"
 	"sort"
 	"strconv"
 	"strings"
@@ -110,16 +112,64 @@ type QueryFilterGoogleNearbyPhotos struct {
 // decode base64 from db and return image
 func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err error) {
 	var data []byte
+	var dne = errors.New("resource does not exist")
 	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(googlefindnearbyphotos))
 		data = b.Get([]byte(qf.PhotoReference))
 		if data == nil {
-			return errors.New("resource does not exist")
+			return dne
 		}
 		return nil
 	})
 	if err != nil {
-		return data, err
+		if err == dne {
+			log.Println("err", err, "querying googlenearby photos api to fill gap")
+
+			// https://maps.googleapis.com/maps/api/place/photo
+			u, er := url.Parse("https://maps.googleapis.com/maps/api/place/photo")
+			if err != nil {
+				err = er
+				return out, err
+			}
+			q := u.Query()
+			q.Set("maxwidth", "400")
+			q.Set("key", os.Getenv("GOOGLE_PLACES_API_KEY"))
+			q.Set("photoreference", qf.PhotoReference)
+			u.RawQuery = q.Encode()
+
+			res, er := http.Get(u.String())
+			if er != nil {
+				err = er
+				return out, err
+			}
+
+			b, er := ioutil.ReadAll(res.Body)
+			if er != nil {
+				out, err = b, er
+				return out, er
+			}
+			er = res.Body.Close()
+			if er != nil {
+				return out, er
+			}
+
+			b64s := base64.StdEncoding.EncodeToString(b)
+
+			if er := GetDB("master").Update(func(tx *bolt.Tx) error {
+				b := tx.Bucket([]byte(googlefindnearbyphotos))
+				err := b.Put([]byte(qf.PhotoReference), []byte(b64s))
+				return err
+			}); er != nil {
+				err = er
+				return out, err
+			} else {
+				// woohoo, and don't have to encodeb64 back and forth
+			}
+			return b, nil
+
+		} else {
+			return data, err
+		}
 	}
 
 	reader := base64.NewDecoder(base64.StdEncoding, bytes.NewBuffer(data))
@@ -740,59 +790,59 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		}
 		// tp has note has visit
 		if !visit.ReportedTime.IsZero() && placesLayer {
+			FeaturePlaceChan <- TrackToPlace(point, visit)
 
 			// google it
-			go func() {
-				g, err := visit.GoogleNearbyQ()
+			g, err := visit.GoogleNearbyQ()
+			if err != nil {
+				log.Println("google nearby failed", err)
+				continue
+			}
+
+			log.Println("googleNearby OK", spew.Sdump(g))
+
+			b, err := json.Marshal(g)
+			if err != nil {
+				log.Println("err marshalling googlenearby res", err)
+				continue
+			}
+
+			if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+				pg := tx.Bucket([]byte(googlefindnearby))
+				err = pg.Put(buildTrackpointKey(point), b)
 				if err != nil {
-					log.Println("google nearby failed", err)
-					return
+					log.Println("could not write google response to bucket", err)
+					return err
 				}
+				return nil
+			}); err != nil {
+				log.Println("err saving googlenearby info", err)
+				continue
+			}
 
-				log.Println("googleNearby OK", spew.Sdump(g))
-
-				b, err := json.Marshal(g)
-				if err != nil {
-					log.Println("err marshalling googlenearby res", err)
-					return
-				}
-
-				if err := GetDB("master").Update(func(tx *bolt.Tx) error {
-					pg := tx.Bucket([]byte(googlefindnearby))
-					err = pg.Put(buildTrackpointKey(point), b)
-					if err != nil {
-						log.Println("could not write google response to bucket", err)
-						return err
+			visit.GoogleNearby = g
+			placePhotos, err := visit.GoogleNearbyImagesQ()
+			if err != nil {
+				log.Println("err could not query visit photos", err)
+				continue
+			}
+			if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+				pp := tx.Bucket([]byte(googlefindnearbyphotos))
+				var e error // only return last err (nonhalting)
+				for ref, b64 := range placePhotos {
+					if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
+						log.Println("err storing photoref:b64", err)
+						e = err
 					}
-					return nil
-				}); err != nil {
-					log.Println("err saving googlenearby info", err)
-					return
 				}
+				return e
+			}); err != nil {
+				log.Println("err saving googlenearby PHOTOS info", err)
+				continue
+			} else {
+				log.Println("saved googlenearby ", len(placePhotos), "photos")
+			}
 
-				visit.GoogleNearby = g
-				placePhotos, err := visit.GoogleNearbyImagesQ()
-				if err != nil {
-					log.Println("could not query visit photos", err)
-					return
-				}
-				if err := GetDB("master").Update(func(tx *bolt.Tx) error {
-					pp := tx.Bucket([]byte(googlefindnearbyphotos))
-					var e error // only return last err (nonhalting)
-					for ref, b64 := range placePhotos {
-						if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
-							log.Println("err storing photoref:b64", err)
-							e = err
-						}
-					}
-					return e
-				}); err != nil {
-					log.Println("err saving googlenearby PHOTOS info", err)
-					return
-				}
-			}()
-
-			FeaturePlaceChan <- TrackToPlace(point, visit)
 		}
 	}
 	// 47131736
