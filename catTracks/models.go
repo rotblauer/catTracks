@@ -116,7 +116,7 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(googlefindnearbyphotos))
 		data = b.Get([]byte(qf.PhotoReference))
-		if data == nil || len(data) == 0 {
+		if data == nil {
 			return dne
 		}
 		return nil
@@ -127,8 +127,9 @@ func getGoogleNearbyPhotos(qf QueryFilterGoogleNearbyPhotos) (out []byte, err er
 
 			// https://maps.googleapis.com/maps/api/place/photo
 			u, er := url.Parse("https://maps.googleapis.com/maps/api/place/photo")
-			if err != nil {
+			if er != nil {
 				err = er
+				log.Println("err", er)
 				return out, err
 			}
 			q := u.Query()
