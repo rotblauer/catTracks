@@ -22,7 +22,8 @@ var (
 	placesKey              = "places"
 	googlefindnearby       = "googlefindnearby"
 	googlefindnearbyphotos = "googlefindnearbyphotos"
-	allBuckets             = []string{trackKey, statsKey, "names", "geohash", placesKey, googlefindnearby, googlefindnearbyphotos}
+	placesByCoord          = "placesByCoord"
+	allBuckets             = []string{trackKey, statsKey, "names", "geohash", placesKey, googlefindnearby, googlefindnearbyphotos, placesByCoord}
 )
 
 // GetDB is db getter.

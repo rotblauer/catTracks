@@ -91,6 +91,12 @@ var routes = Routes{
 		handleGetPlaces,
 	},
 	Route{
+		"GetVisits2",
+		"GET",
+		"/visits2",
+		handleGetPlaces2,
+	},
+	Route{
 		"GetVisitPhotos",
 		"GET",
 		"/googleNearbyPhotos",

@@ -3,11 +3,13 @@ package catTracks
 import (
 	"bytes"
 	"encoding/base64"
+	"encoding/binary"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"image"
 	"io/ioutil"
+	"math"
 	"net/http"
 	"net/url"
 	"sort"
@@ -73,6 +75,9 @@ type QueryFilterPlaces struct {
 	LatMax *float64 `schema:"latmax"`
 	LngMin *float64 `schema:"lngmin"`
 	LngMax *float64 `schema:"lngmax"`
+
+	BoundingBoxSW []float64 `schema:"bboxSW"`
+	BoundingBoxNE []float64 `schema:"bboxNE"`
 
 	IncludeStats bool `schema:"stats,omitempty"`
 
@@ -212,6 +217,283 @@ type VisitsResponse struct {
 	StatsTook time.Duration     `json:"statsTook,omitempty"` // how long took to get bucket stats (for 10mm++ points, long time)
 	Scanned   int               `json:"scanned"`             // num visits checked before mtaching filters
 	Matches   int               `json:"matches"`             // num visits matching before paging/index filters
+}
+
+// btw places are actually visits. fucked that one up.
+func getPlaces2(qf QueryFilterPlaces) (out []byte, err error) {
+	// TODO
+	// - wire to router with query params
+	// - filter during key iter
+	// - sortable interface places
+	// - places to json, new type in Note
+
+	log.Println("handling visits (2) q:", spew.Sdump(qf))
+
+	var res = VisitsResponse{}
+	var visits = []*note.NoteVisit{}
+	var scannedN, matchingN int // nice convenience returnables for query stats, eg. matched 4/14 visits, querier can know this
+
+	filterVisQF := func(tx *bolt.Tx, k []byte, qf QueryFilterPlaces, nv *note.NoteVisit) bool {
+		// filter: uuids using key[9:] (since buildTrackpointKey appends 8-byte timenano + uuid...)
+		// and vis uses "foreign key index" from trackPoint master db
+		if len(qf.Uuids) > 0 {
+			var ok bool
+			for _, u := range qf.Uuids {
+				if bytes.Equal(k[9:], []byte(u)) {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				return false // ==ok
+			}
+		}
+		if nv.Uuid == "" {
+			nv.Uuid = string(k[9:])
+		}
+
+		// filter: names
+		if len(qf.Names) > 0 || nv.Name == "" {
+			// fuck... gotta x-reference tp to check cat names
+			var tp = &trackPoint.TrackPoint{}
+
+			bt := tx.Bucket([]byte(trackKey))
+			tpv := bt.Get(k)
+			if tpv == nil {
+				log.Println("no trackpoint stored for visit:", nv)
+				return false
+			}
+			err = json.Unmarshal(tpv, tp)
+			if err != nil {
+				log.Println("err unmarshalling tp for visit query:", err)
+				return false
+			}
+			nv.Name = tp.Name
+		}
+		if len(qf.Names) > 0 {
+			var ok bool
+			for _, n := range qf.Names {
+				if n == nv.Name {
+					ok = true
+					break
+				}
+			}
+			if !ok {
+				// doesn't match any of the given whitelisted names
+				return false
+			}
+		}
+
+		// filter: start/endT
+		if !qf.StartArrivalT.IsZero() {
+			if nv.ArrivalTime.Before(qf.StartArrivalT) {
+				return false
+			}
+		}
+		if !qf.StartDepartureT.IsZero() {
+			if nv.DepartureTime.Before(qf.StartDepartureT) {
+				return false
+			}
+		}
+		if !qf.EndArrivalT.IsZero() {
+			if nv.ArrivalTime.After(qf.EndArrivalT) {
+				return false
+			}
+		}
+		if !qf.EndDepartureT.IsZero() {
+			if nv.DepartureTime.After(qf.EndDepartureT) {
+				return false
+			}
+		}
+		return true
+	}
+
+	getVisitGoogleInfo := func(tx *bolt.Tx, k []byte, nv *note.NoteVisit) {
+		// lookup local google
+		if qf.GoogleNearby {
+			pg := tx.Bucket([]byte(googlefindnearby))
+			gr := pg.Get(k)
+			if gr != nil {
+				r := &gm.PlacesSearchResponse{}
+				if err := json.Unmarshal(gr, &r); err == nil {
+					// log.Println("found existing gn data", spew.Sdump(r))
+					nv.GoogleNearby = r
+				}
+			} else {
+				// hasn't BEEN googled yet, google it and SAVE an ok response
+				log.Println("no existing gnb data, querying...")
+				r, err := nv.GoogleNearbyQ()
+				if err == nil && r != nil {
+					log.Println("googleNearby OK")
+					b, err := json.Marshal(r)
+					if err == nil {
+						if err := pg.Put(k, b); err != nil {
+							log.Println("could not write gnb to db", err)
+						} else {
+							log.Println("saved gnb OK")
+						}
+					}
+					nv.GoogleNearby = r
+				} else {
+					log.Println("could not googlenearby", err, "visit", nv)
+				}
+			}
+
+			if qf.GoogleNearbyPhotos {
+				var gnp = make(map[string]string)
+
+				pp := tx.Bucket([]byte(googlefindnearbyphotos))
+
+				for _, r := range nv.GoogleNearby.Results {
+					if len(r.Photos) == 0 {
+						continue
+					}
+					ref := r.Photos[0].PhotoReference
+					if b64 := pp.Get([]byte(ref)); b64 != nil {
+						gnp[ref] = string(b64)
+					}
+				}
+
+				// if we got NOTHING, then lookup. this, this is mostly ugly ROLLOUT feature
+				if len(gnp) == 0 {
+					// go grab em
+					// google ref photos
+					placePhotos, err := nv.GoogleNearbyImagesQ()
+					if err != nil {
+						log.Println("could not query visit photos", err)
+					} else {
+						for ref, b64 := range placePhotos {
+							if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
+								log.Println("err storing photoref:b64", err)
+							}
+						}
+						nv.GoogleNearbyPhotos = placePhotos
+					}
+				} else {
+					nv.GoogleNearbyPhotos = gnp
+				}
+			}
+		}
+	}
+
+	// FIXME: only Update r b/c case we want to go grab the google nearby for a visit. not necessary otherwise
+	err = GetDB("master").Update(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(placesKey))
+		if b == nil {
+			return fmt.Errorf("no places bolt bucket exists")
+		}
+		c := b.Cursor()
+
+		if qf.IncludeStats {
+			t1 := time.Now()
+			res.Stats = b.Stats()
+			res.StatsTook = time.Since(t1)
+		}
+
+		// unclosed forloop conditions
+		k, vis := c.First()
+		condit := func() bool {
+			return k != nil
+		}
+
+		if qf.BoundingBoxSW != nil && qf.BoundingBoxNE != nil {
+			if len(qf.BoundingBoxSW) != 2 || len(qf.BoundingBoxNE) != 2 {
+				return fmt.Errorf("invalid bounding box params sw=%v ne=%v", qf.BoundingBoxSW, qf.BoundingBoxNE)
+			}
+			b = tx.Bucket([]byte(placesByCoord))
+			if b == nil {
+				return fmt.Errorf("no placesByCoord bolt bucket exists")
+			}
+			c = b.Cursor()
+
+			min := Float64bytesBig(qf.BoundingBoxSW[0] + 90)
+			min = append(min, Float64bytesBig(qf.BoundingBoxSW[1]+180)...)
+			if !qf.StartReportedT.IsZero() {
+				min = append(min, i64tob(qf.StartReportedT.UnixNano())...)
+			} else {
+				min = append(min, i64tob(0)...)
+			}
+
+			max := Float64bytesBig(qf.BoundingBoxNE[0] + 90)
+			max = append(max, Float64bytesBig(qf.BoundingBoxNE[1]+180)...)
+			if !qf.EndReportedT.IsZero() {
+				max = append(max, i64tob(qf.EndReportedT.UnixNano())...)
+			} else {
+				max = append(max, i64tob(time.Now().UnixNano())...)
+			}
+
+			k, vis = c.Seek(min)
+			condit = func() bool {
+				return k != nil && bytes.Compare(k, max) <= 0
+			}
+		} else {
+			if !qf.StartReportedT.IsZero() {
+				// use fancy seekers/condits if reported time query parameter comes thru
+				// when there's a lot of visits, this might be moar valuable
+				// Note that reported time is trackpoint time, and that's the key we range over. Same key as tp.
+				k, vis = c.Seek(i64tob(qf.StartReportedT.UnixNano()))
+			}
+			if !qf.EndReportedT.IsZero() {
+				condit = func() bool {
+					// i64tob uses big endian with 8 bytes
+					return k != nil && bytes.Compare(k[:8], i64tob(qf.EndReportedT.UnixNano())) <= 0
+				}
+			}
+		}
+
+		for ; condit(); k, vis = c.Next() {
+
+			scannedN++
+
+			var nv = &note.NoteVisit{}
+
+			err := json.Unmarshal(vis, nv)
+			if err != nil {
+				log.Println("error unmarshalling visit for query:", err)
+				continue
+			}
+
+			match := filterVisQF(tx, k, qf, nv)
+			if match {
+				matchingN++
+				getVisitGoogleInfo(tx, k, nv)
+				visits = append(visits, nv)
+			}
+		}
+		return nil
+	})
+
+	// filter: handle reverse Chrono
+	if qf.ReverseChrono {
+		// sort with custom Less function in closure
+		sort.Slice(visits, func(i, j int) bool {
+			return visits[i].ArrivalTime.Before(visits[j].ArrivalTime)
+		})
+	} else {
+		sort.Slice(visits, func(i, j int) bool {
+			return visits[i].ArrivalTime.After(visits[j].ArrivalTime)
+		})
+	}
+
+	// filter: paginate with indexes, limited oob's
+	// FIXME this might not even be right, just tryna avoid OoB app killers (we could theor allow negs, with fance reversing wrapping, but tldd)
+	if qf.EndIndex == 0 || qf.EndIndex > len(visits) || qf.EndIndex < 0 {
+		qf.EndIndex = len(visits)
+	}
+	if qf.StartIndex > len(visits) {
+		qf.StartIndex = len(visits)
+	}
+	if qf.StartIndex < 0 {
+		qf.StartIndex = 0
+	}
+
+	res.Visits = visits[qf.StartIndex:qf.EndIndex]
+	res.Matches = matchingN
+	res.Scanned = scannedN
+
+	out, err = json.Marshal(res)
+
+	return
 }
 
 // btw places are actually visits. fucked that one up.
@@ -438,6 +720,15 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			}
 
 			visits = append(visits, nv)
+
+			// TODO MIGRATE ONLY; REMOVE ME
+			bpc := tx.Bucket([]byte(placesByCoord))
+			if stats := bpc.Stats(); stats.KeyN == 0 {
+				if err := storeVisitLatLng(tx, nv, vis); err != nil {
+					log.Println("err storing visit by lat+lng", err)
+					return err
+				}
+			}
 		}
 		return nil
 	})
@@ -801,56 +1092,9 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		// tp has note has visit
 		if !visit.ReportedTime.IsZero() && placesLayer {
 			FeaturePlaceChan <- TrackToPlace(point, visit)
-
-			// google it
-			g, err := visit.GoogleNearbyQ()
-			if err != nil {
-				log.Println("google nearby failed", err)
+			if err := storePointVisit(point, visit); err != nil {
+				log.Println("err storing point visit:", err)
 				continue
-			}
-
-			log.Println("googleNearby OK")
-
-			b, err := json.Marshal(g)
-			if err != nil {
-				log.Println("err marshalling googlenearby res", err)
-				continue
-			}
-
-			if err := GetDB("master").Update(func(tx *bolt.Tx) error {
-				pg := tx.Bucket([]byte(googlefindnearby))
-				err = pg.Put(buildTrackpointKey(point), b)
-				if err != nil {
-					log.Println("could not write google response to bucket", err)
-					return err
-				}
-				return nil
-			}); err != nil {
-				log.Println("err saving googlenearby info", err)
-				continue
-			}
-
-			visit.GoogleNearby = g
-			placePhotos, err := visit.GoogleNearbyImagesQ()
-			if err != nil {
-				log.Println("err could not query visit photos", err)
-				continue
-			}
-			if err := GetDB("master").Update(func(tx *bolt.Tx) error {
-				pp := tx.Bucket([]byte(googlefindnearbyphotos))
-				var e error // only return last err (nonhalting)
-				for ref, b64 := range placePhotos {
-					if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
-						log.Println("err storing photoref:b64", err)
-						e = err
-					}
-				}
-				return e
-			}); err != nil {
-				log.Println("err saving googlenearby PHOTOS info", err)
-				continue
-			} else {
-				log.Println("saved googlenearby ", len(placePhotos), "photos")
 			}
 		}
 	}
@@ -872,6 +1116,60 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 		storeLastKnown(trackPoints[l-1])
 	}
 	return err
+}
+
+func storePointVisit(point trackPoint.TrackPoint, visit note.NoteVisit) error {
+	// google it
+	g, err := visit.GoogleNearbyQ()
+	if err != nil {
+		log.Println("google nearby failed", err)
+		return err
+	}
+
+	log.Println("googleNearby OK")
+
+	b, err := json.Marshal(g)
+	if err != nil {
+		log.Println("err marshalling googlenearby res", err)
+		return err
+	}
+
+	if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+		pg := tx.Bucket([]byte(googlefindnearby))
+		err = pg.Put(buildTrackpointKey(point), b)
+		if err != nil {
+			log.Println("could not write google response to bucket", err)
+			return err
+		}
+		return nil
+	}); err != nil {
+		log.Println("err saving googlenearby info", err)
+		return err
+	}
+
+	visit.GoogleNearby = g
+	placePhotos, err := visit.GoogleNearbyImagesQ()
+	if err != nil {
+		log.Println("err could not query visit photos", err)
+		return err
+	}
+	if err := GetDB("master").Update(func(tx *bolt.Tx) error {
+		pp := tx.Bucket([]byte(googlefindnearbyphotos))
+		var e error // only return last err (nonhalting)
+		for ref, b64 := range placePhotos {
+			if err := pp.Put([]byte(ref), []byte(b64)); err != nil {
+				log.Println("err storing photoref:b64", err)
+				e = err
+			}
+		}
+		return e
+	}); err != nil {
+		log.Println("err saving googlenearby PHOTOS info", err)
+		return err
+	} else {
+		log.Println("saved googlenearby ", len(placePhotos), "photos")
+	}
+	return nil
 }
 
 func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
@@ -956,24 +1254,59 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 		visit.PlaceParsed = visit.Place.MustAsPlace()
 		visit.ReportedTime = tp.Time
 		visit.Duration = visit.GetDuration()
-
-		visitJSON, err := json.Marshal(visit)
-		if err != nil {
-			return err
-		}
-
-		pb := tx.Bucket([]byte(placesKey))
-		err = pb.Put(key, visitJSON)
-		if err != nil {
-			return err
-		}
-		fmt.Println("Saved visit: ", visit)
-		return nil
+		err = storeVisit(tx, key, visit)
+		return err
 	})
 	if err != nil {
 		fmt.Println(err)
 	}
 	return visit, err
+}
+
+func Float64frombytesBig(bytes []byte) float64 {
+	bits := binary.BigEndian.Uint64(bytes)
+	float := math.Float64frombits(bits)
+	return float
+}
+
+func Float64bytesBig(float float64) []byte {
+	bits := math.Float64bits(float)
+	bytes := make([]byte, 8)
+	binary.BigEndian.PutUint64(bytes, bits)
+	return bytes
+}
+
+func storeVisitLatLng(tx *bolt.Tx, visit *note.NoteVisit, visitJSON []byte) error {
+	k := Float64bytesBig(visit.PlaceParsed.Lat + 90)
+	k = append(k, Float64bytesBig(visit.PlaceParsed.Lng+180)...)
+	k = append(k, []byte(visit.ReportedTime.Format(time.RFC3339))...)
+
+	pll := tx.Bucket([]byte(placesByCoord))
+	err := pll.Put(k, visitJSON)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Saved visit by lat/lng: ", visit)
+	return nil
+}
+
+func storeVisit(tx *bolt.Tx, key []byte, visit note.NoteVisit) error {
+	visitJSON, err := json.Marshal(visit)
+	if err != nil {
+		return err
+	}
+
+	pb := tx.Bucket([]byte(placesKey))
+	err = pb.Put(key, visitJSON)
+	if err != nil {
+		return err
+	}
+	fmt.Println("Saved visit: ", visit)
+
+	if err := storeVisitLatLng(tx, &visit, visitJSON); err != nil {
+		return err
+	}
+	return nil
 }
 
 func getAllStoredPoints() (tps trackPoint.TPs, e error) {
