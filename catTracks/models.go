@@ -722,13 +722,13 @@ func getPlaces(qf QueryFilterPlaces) (out []byte, err error) {
 			visits = append(visits, nv)
 
 			// TODO MIGRATE ONLY; REMOVE ME
-			bpc := tx.Bucket([]byte(placesByCoord))
-			if stats := bpc.Stats(); stats.KeyN == 0 {
-				if err := storeVisitLatLng(tx, nv, vis); err != nil {
-					log.Println("err storing visit by lat+lng", err)
-					return err
-				}
-			}
+			// bpc := tx.Bucket([]byte(placesByCoord))
+			// if stats := bpc.Stats(); stats.KeyN == 0 {
+			// 	if err := storeVisitLatLng(tx, nv, vis); err != nil {
+			// 		log.Println("err storing visit by lat+lng", err)
+			// 		return err
+			// 	}
+			// }
 		}
 		return nil
 	})
