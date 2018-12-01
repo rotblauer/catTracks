@@ -1241,6 +1241,12 @@ func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
 		if err != nil {
 			return nil
 		}
+
+		if ns.HasPhoto() {
+			// lastknown - col
+			// store TRACKPOINT in bucket k // TODO
+		}
+
 		if !ns.HasValidVisit() {
 			return nil
 		}

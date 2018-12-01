@@ -3,7 +3,6 @@ package main
 import (
 	"compress/gzip"
 	"flag"
-	"github.com/kpawlik/geojson"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -14,6 +13,8 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
+	"github.com/kpawlik/geojson"
 
 	"github.com/rotblauer/catTracks/catTracks"
 	"github.com/rotblauer/tileTester2/undump"
@@ -119,20 +120,22 @@ func main() {
 					return
 				default:
 					// cat append all finished edge files to master.json.gz
+					log.Println("starting procmaster iter")
 					mu.Lock()
 					b, err := ioutil.ReadFile(tracksjsongzpathedge)
 					if err != nil {
 						if os.IsNotExist(err) {
 							os.Create(tracksjsongzpathedge)
-							mu.Unlock()
-							continue
+							// mu.Unlock()
+							// continue
+						} else {
+							log.Fatalln("procmaster/err:", err)
 						}
-						log.Fatalln("procmaster/err:", err)
 					}
 					mu.Unlock()
 					if len(b) == 0 {
 						// log.Println("procmaster/nonerr", "continue")
-						continue
+						// continue
 					}
 					fi, fe := os.OpenFile(tracksjsongzpath, os.O_WRONLY|os.O_APPEND, 0660)
 					if fe != nil {
@@ -163,6 +166,7 @@ func main() {
 					out := filepath.Join(filepath.Dir(dbpath), "out.wip")
 					in := tracksjsongzpath
 					bolttilesout := filepath.Join(filepath.Dir(dbpath), "master-tiles.wip.db")
+					log.Println("running master tippe")
 					if err := runTippe(out, in, "catTrack", bolttilesout); err != nil {
 						panic(err.Error())
 						// log.Println("TIPPERR master db tipp err:", err)
@@ -466,21 +470,71 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 
 	tippCmd = "/usr/local/bin/tippecanoe"
 	tippargs = []string{
-		"-ag",
-		"-M", "1000000",
-		"-O", "200000",
+		"-g", "3",
+		// "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
+		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
 		"--cluster-densest-as-needed",
-		"-g", "0.1",
+		"--cluster-distance", "2",
+
+		"--calculate-feature-density",
+		"-rg",
+		// "-rf100000",
+		// "-g", "2",
 		"--full-detail", "14",
 		"--minimum-detail", "12",
-		"-rg",
-		"-rf100000",
 		"--minimum-zoom", "3",
-		"--maximum-zoom", "20",
+		"--maximum-zoom", "18",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		"-n", tilesetname,
 		"-o", out + ".mbtiles",
-		"--force", "-P", in, "--reorder",
+		"--force",
+		"--read-parallel", in,
+		"--preserve-input-order",
+		// "--reorder",
+		// "--no-progress-indicator",
+		// "--version",
+
+		// // // R1:TIPPING dis mor
+		// // "-g", "3",
+		// // "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
+		// // "--maximum-tile-features", "200000", // num feats/tile,default=200000
+		// "--cluster-densest-as-needed",
+		// // "--cluster-distance", "2",
+		// "--calculate-feature-density",
+		// "-rg",
+		// // "-rf100000",
+		// // "-g", "2",
+		// "--full-detail", "14",
+		// "--minimum-detail", "12",
+		// "--minimum-zoom", "3",
+		// "--maximum-zoom", "18",
+		// "-l", tilesetname, // TODO: what's difference layer vs name?
+		// "-n", tilesetname,
+		// "-o", out + ".mbtiles",
+		// "--force",
+		// "--read-parallel", in,
+		// "--preserve-input-order",
+		// // "--reorder",
+		// // "--no-progress-indicator",
+		// // "--version",
+
+		// "-ag",
+		// "-M", "1000000",
+		// "-O", "200000",
+		// "--cluster-densest-as-needed",
+		// "-g", "0.1",
+		// "--full-detail", "14",
+		// "--minimum-detail", "12",
+		// "-rg",
+		// "-rf100000",
+		// "--minimum-zoom", "3",
+		// "--maximum-zoom", "20",
+		// "-l", tilesetname, // TODO: what's difference layer vs name?
+		// "-n", tilesetname,
+		// "-o", out + ".mbtiles",
+		// "--force",
+		// "-P", in,
+		// "--reorder",
 	}
 
 	// 'in' should be an existing file
