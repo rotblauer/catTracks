@@ -126,16 +126,16 @@ func main() {
 					if err != nil {
 						if os.IsNotExist(err) {
 							os.Create(tracksjsongzpathedge)
-							// mu.Unlock()
-							// continue
+							mu.Unlock()
+							continue
 						} else {
 							log.Fatalln("procmaster/err:", err)
 						}
 					}
 					mu.Unlock()
 					if len(b) == 0 {
-						// log.Println("procmaster/nonerr", "continue")
-						// continue
+						log.Println("procmaster/nonerr", "continue")
+						continue
 					}
 					fi, fe := os.OpenFile(tracksjsongzpath, os.O_WRONLY|os.O_APPEND, 0660)
 					if fe != nil {
