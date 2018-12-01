@@ -470,12 +470,36 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 
 	tippCmd = "/usr/local/bin/tippecanoe"
 	tippargs = []string{
+
+		// // "-g", "3", # running without gamma
+		// // "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
+		// // "--maximum-tile-features", "200000", // num feats/tile,default=200000
+		// "--cluster-densest-as-needed",
+		// "--cluster-distance", "2",
+		// "--calculate-feature-density",
+		// "-rg",
+		// // "-rf100000",
+		// // "-g", "2",
+		// "--full-detail", "14",
+		// "--minimum-detail", "12",
+		// "--minimum-zoom", "3",
+		// "--maximum-zoom", "19",
+		// "-l", tilesetname, // TODO: what's difference layer vs name?
+		// "-n", tilesetname,
+		// "-o", out + ".mbtiles",
+		// "--force",
+		// "--read-parallel", in,
+		// "--preserve-input-order",
+		// // "--reorder",
+		// // "--no-progress-indicator",
+		// // "--version",
+
+		// // R1:TIPPING dis mor
 		"-g", "3",
 		// "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
 		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
 		"--cluster-densest-as-needed",
-		"--cluster-distance", "2",
-
+		// "--cluster-distance", "2",
 		"--calculate-feature-density",
 		"-rg",
 		// "-rf100000",
@@ -489,34 +513,10 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		"-o", out + ".mbtiles",
 		"--force",
 		"--read-parallel", in,
-		"--preserve-input-order",
-		// "--reorder",
+		// "--preserve-input-order",
+		"--reorder",
 		// "--no-progress-indicator",
 		// "--version",
-
-		// // // R1:TIPPING dis mor
-		// // "-g", "3",
-		// // "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
-		// // "--maximum-tile-features", "200000", // num feats/tile,default=200000
-		// "--cluster-densest-as-needed",
-		// // "--cluster-distance", "2",
-		// "--calculate-feature-density",
-		// "-rg",
-		// // "-rf100000",
-		// // "-g", "2",
-		// "--full-detail", "14",
-		// "--minimum-detail", "12",
-		// "--minimum-zoom", "3",
-		// "--maximum-zoom", "18",
-		// "-l", tilesetname, // TODO: what's difference layer vs name?
-		// "-n", tilesetname,
-		// "-o", out + ".mbtiles",
-		// "--force",
-		// "--read-parallel", in,
-		// "--preserve-input-order",
-		// // "--reorder",
-		// // "--no-progress-indicator",
-		// // "--version",
 
 		// "-ag",
 		// "-M", "1000000",
