@@ -472,7 +472,42 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 	//Highest supported zoom with detail 14 is 18
 
 	tippCmd = "/usr/local/bin/tippecanoe"
+	// tilesFPBase := filepath.Join(filepath.Dir(out), "ttiles", "$1", "$2") // $1 and $2 are first 2 of 3 argument (Z, X) passed from tippe to arbitrary pre/post-processing shell cmd
 	tippargs = []string{
+
+		// ADD max tile bytes -> 300k? .. thinking dat must be a big slow; if ye have to download 10mb maps everytime load, no wonder slow
+		"--maximum-tile-bytes", "300000", // num bytes/tile,default: 500kb=500000
+		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
+		"--cluster-densest-as-needed",
+		// "--cluster-distance", "2",
+		"--cluster-distance=1",
+		"--calculate-feature-density",
+		"--accumulate-attribute=Elevation:mean", // -Eattribute:operation or --accumulate-attribute=attribute:operation: Preserve the named attribute from features that are dropped, coalesced-as-needed, or clustered. The operation may be sum, product, mean, max, min, concat, or comma to specify how the named attribute is accumulated onto the attribute of the same name in a feature that does survive, eg. --accumulate-attribute=POP_MAX:sum
+		"-EAccuracy:mean",
+		// "-EActivity:concat", // might get huge
+		"-ESpeed:mean",
+		"-EPressure:mean",
+		"-r1", // == --drop-rate
+		// "-rg",
+		// "-rf100000",
+		// "-g", "2",
+		// "--full-detail", "12",
+		// "--minimum-detail", "12",
+		"--minimum-zoom", "3",
+		"--maximum-zoom", "18",
+		"-l", tilesetname, // TODO: what's difference layer vs name?
+		"-n", tilesetname,
+		"-o", out + ".mbtiles",
+		"--force",
+		"--read-parallel", in,
+		"--preserve-input-order",
+
+		// -C 'mkdir -p tiles/$1/$2; tee tiles/$1/$2/$3.geojson'
+		// "-c", fmt.Sprintf(`mkdir -p %s; tee %s`, tilesFPBase, filepath.Join(tilesFPBase, "$3.geojson")),
+
+		// "--reorder",
+		// "--no-progress-indicator",
+		// "--version",
 
 		// // "-g", "3", # running without gamma
 		// // "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
@@ -497,29 +532,29 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// // "--no-progress-indicator",
 		// // "--version",
 
-		// // R1:TIPPING dis mor
-		"-g", "3",
-		// "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
-		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
-		"--cluster-densest-as-needed",
-		// "--cluster-distance", "2",
-		"--calculate-feature-density",
-		"-rg",
-		// "-rf100000",
-		// "-g", "2",
-		"--full-detail", "14",
-		"--minimum-detail", "12",
-		"--minimum-zoom", "3",
-		"--maximum-zoom", "18",
-		"-l", tilesetname, // TODO: what's difference layer vs name?
-		"-n", tilesetname,
-		"-o", out + ".mbtiles",
-		"--force",
-		"--read-parallel", in,
-		// "--preserve-input-order",
-		"--reorder",
-		// "--no-progress-indicator",
-		// "--version",
+		// // // R1:TIPPING dis mor
+		// "-g", "3",
+		// // "--maximum-tile-bytes", "50000", // num bytes/tile,default: 500kb=500000
+		// // "--maximum-tile-features", "200000", // num feats/tile,default=200000
+		// "--cluster-densest-as-needed",
+		// // "--cluster-distance", "2",
+		// "--calculate-feature-density",
+		// "-rg",
+		// // "-rf100000",
+		// // "-g", "2",
+		// "--full-detail", "14",
+		// "--minimum-detail", "12",
+		// "--minimum-zoom", "3",
+		// "--maximum-zoom", "18",
+		// "-l", tilesetname, // TODO: what's difference layer vs name?
+		// "-n", tilesetname,
+		// "-o", out + ".mbtiles",
+		// "--force",
+		// "--read-parallel", in,
+		// // "--preserve-input-order",
+		// "--reorder",
+		// // "--no-progress-indicator",
+		// // "--version",
 
 		// "-ag",
 		// "-M", "1000000",
