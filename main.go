@@ -178,7 +178,7 @@ func main() {
 					os.Rename(bolttilesout, dbpathtiles)
 					mu.Unlock()
 					http.Get("http://localhost:8080/master/refresh")
-					os.Remove(out + ".mbtiles")
+					// os.Remove(out + ".mbtiles")
 				}
 			}
 		}()
@@ -254,7 +254,7 @@ func main() {
 					mu.Lock()
 					log.Println("got lOCK")
 					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge-tiles.wip.db"), edgedbpathtiles)
-					os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
+					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
 					log.Println("sending refresh edge db get")
 					mu.Unlock()
@@ -307,7 +307,7 @@ func main() {
 						}
 
 						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "places-tiles.db"))
-						os.Remove(filepath.Join(baseDataDir, "places.out.mbtiles"))
+						// os.Remove(filepath.Join(baseDataDir, "places.out.mbtiles"))
 
 						placesProcLock.Unlock()
 
