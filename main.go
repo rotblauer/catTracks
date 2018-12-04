@@ -483,7 +483,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		"--cluster-distance=1",
 		"--calculate-feature-density",
 		// "-j", `-j '{ "*": [ "attribute-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }'`,
-		"-j", `'{ "catTrack": [ "any", ["<=", "Accuracy", "11"], [ "<=", "$zoom", 13 ] ] }'`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
+		"-j", `{ "catTrack": [ "any", ["<=", "Accuracy", 11], [ "<=", "$zoom", 13 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
 		"--accumulate-attribute=Elevation:mean", // -Eattribute:operation or --accumulate-attribute=attribute:operation: Preserve the named attribute from features that are dropped, coalesced-as-needed, or clustered. The operation may be sum, product, mean, max, min, concat, or comma to specify how the named attribute is accumulated onto the attribute of the same name in a feature that does survive, eg. --accumulate-attribute=POP_MAX:sum
 		"-EAccuracy:mean",
 		// "-EActivity:concat", // might get huge
