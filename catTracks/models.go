@@ -960,16 +960,20 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 
 	//currently need speed, name,time
 	trimmedProps := make(map[string]interface{})
-	trimmedProps["Speed"] = trackPointCurrent.Speed
+	trimmedProps["UUID"] = trackPointCurrent.Uuid
 	trimmedProps["Name"] = trackPointCurrent.Name
 	trimmedProps["Time"] = trackPointCurrent.Time
 	trimmedProps["UnixTime"] = trackPointCurrent.Time.Unix()
+	trimmedProps["Version"] = trackPointCurrent.Version
+	trimmedProps["Speed"] = trackPointCurrent.Speed
 	trimmedProps["Elevation"] = trackPointCurrent.Elevation
+	trimmedProps["Heading"] = trackPointCurrent.Heading
+	trimmedProps["Accuracy"] = trackPointCurrent.Accuracy
 
 	if ns, e := note.NotesField(trackPointCurrent.Notes).AsNoteStructured(); e == nil {
-		trimmedProps["Notes"] = ns.CustomNote
-		trimmedProps["Pressure"] = ns.Pressure
 		trimmedProps["Activity"] = ns.Activity
+		trimmedProps["Pressure"] = ns.Pressure
+		trimmedProps["Notes"] = ns.CustomNote
 		if ns.HasValidVisit() {
 			// TODO: ok to use mappy sub interface here?
 			trimmedProps["Visit"] = ns.Visit
@@ -977,7 +981,8 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	} else if _, e := note.NotesField(trackPointCurrent.Notes).AsFingerprint(); e == nil {
 		// maybe do something with identity consolidation?
 	} else {
-		trimmedProps["Notes"] = note.NotesField(trackPointCurrent.Notes).AsNoteString()
+		// NOOP normal
+		// trimmedProps["Notes"] = note.NotesField(trackPointCurrent.Notes).AsNoteString()
 	}
 
 	// var currentNote note.Note
