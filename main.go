@@ -133,10 +133,13 @@ func main() {
 						}
 					}
 					mu.Unlock()
-					if len(b) == 0 {
-						log.Println("procmaster/nonerr", "continue")
-						continue
-					}
+					// if len(b) == 0 {
+					// if there are no edge points to append to master, then don't do anything.
+					// if this happens, this means that no points have been added in, say, the last 2-4 hours,
+					// so something has gone terribly wrong
+					// log.Println("procmaster/nonerr-", "continue")
+					// continue
+					// }
 					fi, fe := os.OpenFile(tracksjsongzpath, os.O_WRONLY|os.O_APPEND, 0660)
 					if fe != nil {
 						if os.IsNotExist(fe) {
