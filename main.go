@@ -482,12 +482,13 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// "--cluster-distance", "2",
 		"--cluster-distance=1",
 		"--calculate-feature-density",
-		// "-j", `-j '{ "*": [ "attribute-filter", "FULLNAME", [ ">=", "$zoom", 9 ] ] }'`,
-		"-j", `{ "catTrack": [ "any", ["<=", "Accuracy", 11], [ "<=", "$zoom", 13 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
-		"--accumulate-attribute=Elevation:mean", // -Eattribute:operation or --accumulate-attribute=attribute:operation: Preserve the named attribute from features that are dropped, coalesced-as-needed, or clustered. The operation may be sum, product, mean, max, min, concat, or comma to specify how the named attribute is accumulated onto the attribute of the same name in a feature that does survive, eg. --accumulate-attribute=POP_MAX:sum
+		"-j", `{ "catTrack": [ "any", ["!has", "Accuracy"], ["<=", "Accuracy", 11], [ "<=", "$zoom", 12 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
+
+		// -Eattribute:operation or --accumulate-attribute=attribute:operation: Preserve the named attribute from features that are dropped, coalesced-as-needed, or clustered. The operation may be sum, product, mean, max, min, concat, or comma to specify how the named attribute is accumulated onto the attribute of the same name in a feature that does survive, eg. --accumulate-attribute=POP_MAX:sum
+		"-EElevation:max",
+		"-ESpeed:max", //mean",
 		"-EAccuracy:mean",
 		// "-EActivity:concat", // might get huge
-		"-ESpeed:mean",
 		"-EPressure:mean",
 		"-r1", // == --drop-rate
 		// "-rg",
@@ -496,7 +497,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// "--full-detail", "12",
 		// "--minimum-detail", "12",
 		"--minimum-zoom", "3",
-		"--maximum-zoom", "18",
+		"--maximum-zoom", "20",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		"-n", tilesetname,
 		"-o", out + ".mbtiles",
