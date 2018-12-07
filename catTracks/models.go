@@ -959,43 +959,58 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(trackPointCurrent.Lng), geojson.Coord(trackPointCurrent.Lat)})
 
 	//currently need speed, name,time
-	trimmedProps := make(map[string]interface{})
-	trimmedProps["UUID"] = trackPointCurrent.Uuid
-	trimmedProps["Name"] = trackPointCurrent.Name
-	trimmedProps["Time"] = trackPointCurrent.Time
-	trimmedProps["UnixTime"] = trackPointCurrent.Time.Unix()
-	trimmedProps["Version"] = trackPointCurrent.Version
-	trimmedProps["Speed"] = trackPointCurrent.Speed
-	trimmedProps["Elevation"] = trackPointCurrent.Elevation
-	trimmedProps["Heading"] = trackPointCurrent.Heading
-	trimmedProps["Accuracy"] = trackPointCurrent.Accuracy
+	props := make(map[string]interface{})
+	props["UUID"] = trackPointCurrent.Uuid
+	props["Name"] = trackPointCurrent.Name
+	props["Time"] = trackPointCurrent.Time
+	props["UnixTime"] = trackPointCurrent.Time.Unix()
+	props["Version"] = trackPointCurrent.Version
+	props["Speed"] = trackPointCurrent.Speed
+	props["Elevation"] = trackPointCurrent.Elevation
+	props["Heading"] = trackPointCurrent.Heading
+	props["Accuracy"] = trackPointCurrent.Accuracy
+
+	// not implemented yet
+	if hr := trackPointCurrent.HeartRate; hr != 0 {
+		props["HeartRate"] = hr
+	}
 
 	if ns, e := note.NotesField(trackPointCurrent.Notes).AsNoteStructured(); e == nil {
-		trimmedProps["Activity"] = ns.Activity
-		trimmedProps["Pressure"] = ns.Pressure
-		trimmedProps["Notes"] = ns.CustomNote
+		props["Activity"] = ns.Activity
+		props["Pressure"] = ns.Pressure
+		props["Notes"] = ns.CustomNote
 		if ns.HasValidVisit() {
 			// TODO: ok to use mappy sub interface here?
-			trimmedProps["Visit"] = ns.Visit
+			props["Visit"] = ns.Visit
 		}
+
+		if trackPointCurrent.HeartRate == 0 {
+			if i := ns.HeartRateI(); i > 0 {
+				props["HeartRate"] = i
+			}
+		}
+		// if trackPointCurrent.HeartRate == 0 && ns.HeartRateType != "" {
+		// 	props["HeartRateType"] = ns.HeartRateType
+		// }
+
 	} else if _, e := note.NotesField(trackPointCurrent.Notes).AsFingerprint(); e == nil {
 		// maybe do something with identity consolidation?
 	} else {
 		// NOOP normal
-		// trimmedProps["Notes"] = note.NotesField(trackPointCurrent.Notes).AsNoteString()
+		// props["Notes"] = note.NotesField(trackPointCurrent.Notes).AsNoteString()
 	}
 
 	// var currentNote note.Note
 	// var currentNote note.NotesField
 	// e := json.Unmarshal([]byte(trackPointCurrent.Notes), &currentNote)
 	// if e != nil {
-	// 	trimmedProps["Notes"] = currentNote.CustomNote
-	// 	trimmedProps["Pressure"] = currentNote.Pressure
-	// 	trimmedProps["Activity"] = currentNote.Activity
+	// 	props["Notes"] = currentNote.CustomNote
+	// 	props["Pressure"] = currentNote.Pressure
+	// 	props["Activity"] = currentNote.Activity
 	// } else {
-	// 	trimmedProps["Notes"] = trackPointCurrent.Notes
+	// 	props["Notes"] = trackPointCurrent.Notes
 	// }
-	return geojson.NewFeature(p, trimmedProps, 1)
+	return geojson.NewFeature(p, props, 1)
 }
 
 func TrackToPlace(tp trackPoint.TrackPoint, visit note.NoteVisit) *geojson.Feature {
