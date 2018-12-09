@@ -225,6 +225,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	if tok == "" {
 		log.Println("ERROR: no COTOKEN env var set")
 	} else {
+		log.Println("GOODNEWS: using COTOKEN for cat verification")
 		verified := false
 		if r.Header.Get("AuthorizationOfCats") == tok {
 			verified = true
