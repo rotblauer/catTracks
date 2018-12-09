@@ -125,7 +125,7 @@ var backlogPopulators [][]byte
 // fmt.Println("response Headers:", resp.Header)
 // body, _ := ioutil.ReadAll(resp.Body)
 // fmt.Println("response Body:", string(body))
-func handleForwardPopulate(bod []byte) (err error) {
+func handleForwardPopulate(r *http.Request, bod []byte) (err error) {
 
 	if forwardPopulate == "" {
 		log.Println("no forward url, not forwarding")
@@ -146,7 +146,14 @@ func handleForwardPopulate(bod []byte) (err error) {
 			err = e
 			break
 		}
-		req.Header.Set("Content-Type", "application/json")
+
+		// type Header map[string][]string
+		for k, v := range r.Header {
+			for _, vv := range v {
+				req.Header.Set(k, vv)
+			}
+		}
+		// req.Header.Set("Content-Type", "application/json")
 		resp, e := client.Do(req)
 		if e != nil {
 			err = e
@@ -258,7 +265,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	// goroutine keeps this request from block while pending this outgoing request
 	// this keeps an original POST from being dependent on a forward POST
 	go func() {
-		if err := handleForwardPopulate(bod); err != nil {
+		if err := handleForwardPopulate(r, bod); err != nil {
 			log.Println("forward populate error: ", err)
 			// this just to persist any request that fails in case this process is terminated (backlogs are stored in mem)
 			ioutil.WriteFile(fmt.Sprintf("dfp-%d", time.Now().UnixNano()), bod, 0666)
