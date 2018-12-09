@@ -233,13 +233,26 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Println()
 		verified := false
-		if r.Header.Get("AuthorizationOfCats") == tok {
-			verified = true
+		headerKey := "AuthorizationOfCats"
+		if h := r.Header.Get(headerKey); h != "" {
+			log.Println("using header verification...")
+			if h == tok {
+				log.Println("header OK")
+				verified = true
+			} else {
+				log.Println("header verification failed: ", h)
+			}
 		} else {
 			// catonmap.info:3001/populate?api_token=asdfasdfb
 			r.ParseForm()
-			if token := r.FormValue("api_token"); token == tok {
-				verified = true
+			if token := r.FormValue("api_token"); token != "" {
+				if token == tok {
+					log.Println("used token verification: OK")
+					verified = true
+				} else {
+					log.Println("token verification failed:", token)
+					verified = true
+				}
 			}
 		}
 		if verified {
