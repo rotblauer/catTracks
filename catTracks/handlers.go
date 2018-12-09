@@ -214,6 +214,28 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	tok := os.Getenv("COTOKEN")
+	if tok == "" {
+		log.Println("ERROR: no COTOKEN env var set")
+	} else {
+		verified := false
+		if r.Header.Get("AuthorizationOfCats") == tok {
+			verified = true
+		} else {
+			// catonmap.info:3001/populate?api_token=asdfasdfb
+			r.ParseForm()
+			if token := r.FormValue("api_token"); token == tok {
+				verified = true
+			}
+		}
+		if verified {
+			trackPoints.Verified()
+		} else {
+			trackPoints.Unverified(r)
+			log.Println("WARNING: unverified cattracks posted remote.host:", r.RemoteAddr)
+		}
+	}
+
 	// goroutine keeps http req from blocking while points are processed
 	go func() {
 		errS := storePoints(trackPoints)
