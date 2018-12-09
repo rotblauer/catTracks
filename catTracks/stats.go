@@ -38,7 +38,7 @@ func buildTimePeriodStats(numDays int) (stats timePeriodStats, e error) {
 func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 
 	var err error
-	var points []trackPoint.TrackPoint
+	var points []*trackPoint.TrackPoint
 
 	err = GetDB("master").View(func(tx *bolt.Tx) error {
 		var err error
@@ -50,7 +50,7 @@ func getPointsSince(since time.Time) (trackPoint.TrackPoints, error) {
 
 		// Iterate over the 90's.
 		for k, v := c.Seek(min); k != nil; k, v = c.Next() {
-			var tp trackPoint.TrackPoint
+			var tp *trackPoint.TrackPoint
 			json.Unmarshal(v, &tp)
 			points = append(points, tp)
 		}

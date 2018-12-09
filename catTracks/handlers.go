@@ -348,7 +348,7 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, line := range lines {
-		var tp trackPoint.TrackPoint
+		var tp *trackPoint.TrackPoint
 
 		tp.Name = line[0]
 

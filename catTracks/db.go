@@ -108,7 +108,7 @@ func BuildIndexBuckets() error {
 	err := db.View(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte(trackKey)).ForEach(func(key, val []byte) error {
 
-			var tp trackPoint.TrackPoint
+			var tp *trackPoint.TrackPoint
 			if err := json.Unmarshal(val, &tp); err != nil {
 				return err
 			}

@@ -41,7 +41,7 @@ import (
 
 var punktlichTileDBPathRelHome = filepath.Join("punktlich.rotblauer.com", "tester.db")
 
-type LastKnown map[string]trackPoint.TrackPoint
+type LastKnown map[string]*trackPoint.TrackPoint
 type Metadata struct {
 	KeyN               int
 	KeyNUpdated        time.Time
@@ -774,7 +774,7 @@ func getmetadata() (out []byte, err error) {
 	})
 	return
 }
-func storemetadata(lastpoint trackPoint.TrackPoint, lenpointsupdated int) error {
+func storemetadata(lastpoint *trackPoint.TrackPoint, lenpointsupdated int) error {
 	db := GetDB("master")
 	e := db.Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
@@ -862,7 +862,7 @@ func getLastKnownData() (out []byte, err error) {
 	return
 }
 
-func storeLastKnown(tp trackPoint.TrackPoint) {
+func storeLastKnown(tp *trackPoint.TrackPoint) {
 	//lastKnownMap[tp.Name] = tp
 	lk := LastKnown{}
 	if err := GetDB("master").Update(func(tx *bolt.Tx) error {
@@ -954,7 +954,7 @@ func CloseGZ(f F) {
 // 	return geojson.NewFeature(p, props, 1)
 // }
 
-func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
+func TrackToFeature(trackPointCurrent *trackPoint.TrackPoint) *geojson.Feature {
 	// convert to a feature
 	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(trackPointCurrent.Lng), geojson.Coord(trackPointCurrent.Lat)})
 
@@ -1013,7 +1013,7 @@ func TrackToFeature(trackPointCurrent trackPoint.TrackPoint) *geojson.Feature {
 	return geojson.NewFeature(p, props, 1)
 }
 
-func TrackToPlace(tp trackPoint.TrackPoint, visit note.NoteVisit) *geojson.Feature {
+func TrackToPlace(tp *trackPoint.TrackPoint, visit note.NoteVisit) *geojson.Feature {
 	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(visit.PlaceParsed.Lng), geojson.Coord(visit.PlaceParsed.Lat)})
 
 	props := make(map[string]interface{})
@@ -1138,7 +1138,7 @@ func storePoints(trackPoints trackPoint.TrackPoints) error {
 	return err
 }
 
-func storePointVisit(point trackPoint.TrackPoint, visit note.NoteVisit) error {
+func storePointVisit(point *trackPoint.TrackPoint, visit note.NoteVisit) error {
 	// google it
 	g, err := visit.GoogleNearbyQ()
 	if err != nil {
@@ -1192,7 +1192,7 @@ func storePointVisit(point trackPoint.TrackPoint, visit note.NoteVisit) error {
 	return nil
 }
 
-func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
+func buildTrackpointKey(tp *trackPoint.TrackPoint) []byte {
 	if tp.Uuid == "" {
 		if tp.ID != 0 {
 			return i64tob(tp.ID)
@@ -1206,7 +1206,7 @@ func buildTrackpointKey(tp trackPoint.TrackPoint) []byte {
 	return k
 }
 
-func storePoint(tp trackPoint.TrackPoint) (note.NoteVisit, error) {
+func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 	var err error
 	var visit note.NoteVisit
 	if tp.Time.IsZero() {
