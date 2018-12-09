@@ -181,6 +181,7 @@ func main() {
 					os.Rename(bolttilesout, dbpathtiles)
 					mu.Unlock()
 					http.Get("http://localhost:8080/master/refresh")
+					os.Rename(out+".mbtiles", out+".mbtiles.bak")
 					// os.Remove(out + ".mbtiles")
 				}
 			}
