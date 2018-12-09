@@ -104,7 +104,12 @@ func getData(query *query) ([]byte, error) {
 	return data, nil
 }
 
-var backlogPopulators [][]byte
+type forwardingQueueItem struct {
+	payload []byte
+	request *http.Request
+}
+
+var backlogPopulators []*forwardingQueueItem
 
 // > https://stackoverflow.com/questions/24455147/how-do-i-send-a-json-string-in-a-post-request-in-go
 // url := "http://restapi3.apiary.io/notes"
@@ -133,32 +138,36 @@ func handleForwardPopulate(r *http.Request, bod []byte) (err error) {
 		return
 	}
 
-	backlogPopulators = append(backlogPopulators, bod)
+	backlogPopulators = append(backlogPopulators, &forwardingQueueItem{
+		request: r,
+		payload: bod,
+	})
 
 	log.Println("forwarding to:", forwardPopulate, "#reqs:", len(backlogPopulators))
 
 	var index int
 	client := &http.Client{}
 
-	for i, body := range backlogPopulators {
+	for i, fqi := range backlogPopulators {
 		index = i
-		req, e := http.NewRequest("POST", forwardPopulate, bytes.NewBuffer(body))
+		req, e := http.NewRequest("POST", forwardPopulate, bytes.NewBuffer(fqi.payload))
 		if e != nil {
 			err = e
 			break
 		}
 
 		// type Header map[string][]string
-		for k, v := range r.Header {
+		for k, v := range fqi.request.Header {
 			for _, vv := range v {
 				req.Header.Set(k, vv)
 			}
 		}
-		// req.Header.Set("Content-Type", "application/json")
 		resp, e := client.Do(req)
 		if e != nil {
 			err = e
 			break
+		} else {
+			backlogPopulators = append(backlogPopulators[:i], backlogPopulators[i+1:]...)
 		}
 		err = resp.Body.Close()
 		if err != nil {
@@ -167,7 +176,7 @@ func handleForwardPopulate(r *http.Request, bod []byte) (err error) {
 	}
 
 	if err == nil {
-		backlogPopulators = [][]byte{}
+		backlogPopulators = []*forwardingQueueItem{}
 	} else {
 		backlogPopulators = backlogPopulators[index:]
 	}
