@@ -237,6 +237,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		}
 		if verified {
 			trackPoints.Verified()
+			log.Println("GOODNEWS: verified cattracks posted remote.host:", r.RemoteAddr)
 		} else {
 			trackPoints.Unverified(r)
 			log.Println("WARNING: unverified cattracks posted remote.host:", r.RemoteAddr)
