@@ -482,7 +482,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
 		"--cluster-densest-as-needed",
 		// "--cluster-distance", "2",
-		// "--cluster-distance=1",
+		"--cluster-distance=1",
 		"--calculate-feature-density",
 		// "-j", `{ "catTrack": [ "any", [">", "Speed", 0], ["!has", "Activity"] , [ "all", ["!=", "Activity", "Stationary"], ["!=", "Activity", "Unknown"] ] ] }`,
 		"-j", `{ "catTrack": [ "any", ["!has", "Accuracy"], ["<=", "Accuracy", 11], [ "<=", "$zoom", 12 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
