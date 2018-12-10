@@ -1,15 +1,18 @@
 #!/usr/bin/env bash
 
-# env GOOS=linux
-go build -o linux.trackermain main.go
+set -e
+
+echo "Building linux.trackermain binary..."
+env GOOS=linux go build -o linux.trackermain main.go
 
 # echo "Pushing da front."
 # ./push_front
 
-echo "Pushing da binary."
+echo "Pushing da binary to freya..."
 rsync -avz -L --progress -h\
  ./linux.trackermain freya:~/track.areteh.co/
 
+echo "Restarting track.areteh.co process on freya..."
 ssh freya <<\EOI
 cd track.areteh.co
 ./kickstart
