@@ -477,7 +477,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 	tippargs = []string{
 
 		// ADD max tile bytes -> 300k? .. thinking dat must be a big slow; if ye have to download 10mb maps everytime load, no wonder slow
-		"--maximum-tile-bytes", "300000", // num bytes/tile,default: 500kb=500000
+		"--maximum-tile-bytes", "330000", // num bytes/tile,default: 500kb=500000
 		// "--maximum-tile-bytes", "250000", // num bytes/tile,default: 500kb=500000
 		// "--maximum-tile-features", "200000", // num feats/tile,default=200000
 		"--cluster-densest-as-needed",
@@ -485,7 +485,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		"--cluster-distance=1",
 		"--calculate-feature-density",
 		// "-j", `{ "catTrack": [ "any", [">", "Speed", 0], ["!has", "Activity"] , [ "all", ["!=", "Activity", "Stationary"], ["!=", "Activity", "Unknown"] ] ] }`,
-		"-j", `{ "catTrack": [ "any", ["!has", "Accuracy"], ["<=", "Accuracy", 11], [ "<=", "$zoom", 12 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
+		"-j", `{ "catTrack": [ "any", ["!has", "Accuracy"], ["<=", "Accuracy", 200], [ "<=", "$zoom", 13 ] ] }`, // NOT catTrackEdge; only take high-accuracy (<=11m) points for high-level (close up) zooms
 
 		// -Eattribute:operation or --accumulate-attribute=attribute:operation: Preserve the named attribute from features that are dropped, coalesced-as-needed, or clustered. The operation may be sum, product, mean, max, min, concat, or comma to specify how the named attribute is accumulated onto the attribute of the same name in a feature that does survive, eg. --accumulate-attribute=POP_MAX:sum
 		"-EElevation:max",
