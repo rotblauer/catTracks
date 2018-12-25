@@ -1275,21 +1275,19 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return e
 		}
 
-		defer func() {
-			trackPointJSON, e := json.Marshal(tp)
-			if e != nil {
-				log.Println("Error marshaling trackpoint JSON: err=", e)
-				err = e
-				return
-			}
-			e = b.Put(key, trackPointJSON)
-			if e != nil {
-				log.Println("Error storing trackpoint: err=", e)
-				err = e
-				return
-			}
-			fmt.Println("Saved trackpoint: ", tp)
-		}()
+		trackPointJSON, e := json.Marshal(tp)
+		if e != nil {
+			log.Println("Error marshaling trackpoint JSON: err=", e)
+			err = e
+			return err
+		}
+		e = b.Put(key, trackPointJSON)
+		if e != nil {
+			log.Println("Error storing trackpoint: err=", e)
+			err = e
+			return err
+		}
+		fmt.Println("Saved trackpoint: ", tp)
 
 		shouldHandleImages := false
 		if ns.HasRawImage() && os.Getenv("AWS_BUCKETNAME") == "" {
