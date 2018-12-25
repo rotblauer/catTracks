@@ -1275,20 +1275,6 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 			return e
 		}
 
-		trackPointJSON, e := json.Marshal(tp)
-		if e != nil {
-			log.Println("Error marshaling trackpoint JSON: err=", e)
-			err = e
-			return err
-		}
-		e = b.Put(key, trackPointJSON)
-		if e != nil {
-			log.Println("Error storing trackpoint: err=", e)
-			err = e
-			return err
-		}
-		fmt.Println("Saved trackpoint: ", tp)
-
 		shouldHandleImages := false
 		if ns.HasRawImage() && os.Getenv("AWS_BUCKETNAME") == "" {
 			fmt.Println("saw image, but not configured for s3 upload, skipping image processing")
@@ -1304,6 +1290,7 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 			k := RandStringRunes(32)
 			ns.ImgS3 = os.Getenv("AWS_BUCKETNAME") + "/" + k
 			ns.ImgB64 = ""
+			tp.Notes = ns.MustAsString()
 			go func() {
 				if e := storeImage(k, b64); e != nil {
 					err = e
@@ -1313,28 +1300,37 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 			snapBuck := tx.Bucket([]byte(catsnapsKey))
 			trackPointJSON, e := json.Marshal(tp)
 			if e != nil {
-				log.Println("Error marshaling trackpoint JSON: err=", e)
+				log.Println("Error marshaling catsnap JSON: err=", e)
 				err = e
 				return err
 			}
 			e = snapBuck.Put(key, trackPointJSON)
 			if e != nil {
-				log.Println("Error storing trackpoint: err=", e)
+				log.Println("Error storing catsnap: err=", e)
 				err = e
 				return err
 			}
 			fmt.Println("Saved catsnap: ", tp)
 		}
 
-		// if ns.HasPhoto() {
-		// 	// lastknown - col
-		// 	// store TRACKPOINT in bucket k // TODO
-		// }
+		trackPointJSON, e := json.Marshal(tp)
+		if e != nil {
+			log.Println("Error marshaling trackpoint JSON: err=", e)
+			err = e
+			return err
+		}
+		e = b.Put(key, trackPointJSON)
+		if e != nil {
+			log.Println("Error storing trackpoint: err=", e)
+			err = e
+			return err
+		}
+		fmt.Println("Saved trackpoint: ", tp)
 
 		if ns.HasValidVisit() {
 			visit, err = ns.Visit.AsVisit()
 			if err != nil {
-				return nil
+				return fmt.Errorf("as visit err: %v", err)
 			}
 			visit.Uuid = tp.Uuid
 			visit.Name = tp.Name
@@ -1343,7 +1339,7 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 			visit.Duration = visit.GetDuration()
 			err = storeVisit(tx, key, visit)
 			if err != nil {
-				return err
+				return fmt.Errorf("storing visit err: %v", err)
 			}
 		}
 
@@ -1460,7 +1456,7 @@ func storeVisitLatLng(tx *bolt.Tx, visit *note.NoteVisit, visitJSON []byte) erro
 func storeVisit(tx *bolt.Tx, key []byte, visit note.NoteVisit) error {
 	visitJSON, err := json.Marshal(visit)
 	if err != nil {
-		return err
+		return fmt.Errorf("marshal visit err: %v", err)
 	}
 
 	pb := tx.Bucket([]byte(placesKey))
