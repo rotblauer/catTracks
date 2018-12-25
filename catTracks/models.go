@@ -1542,15 +1542,14 @@ func getCatSnaps() ([]byte, error) {
 			if err != nil {
 				return err
 			}
-			// HACK: patch up reckless base64 storing
-			if ns, e := note.NotesField(tp.Notes).AsNoteStructured(); e == nil {
-				ns.HasRawImage()
-				ns.ImgB64 = ""
-				tp.Notes = ns.MustAsString()
-				if by, err := json.Marshal(tp); err != nil {
-					b.Put(k, by)
-				}
-			}
+			// // HACK: patch up reckless base64 storing
+			// if ns, e := note.NotesField(tp.Notes).AsNoteStructured(); e == nil && ns.HasRawImage() {
+			// 	ns.ImgB64 = ""
+			// 	tp.Notes = ns.MustAsString()
+			// 	if by, err := json.Marshal(tp); err != nil {
+			// 		b.Put(k, by)
+			// 	}
+			// }
 			tps = append(tps, tp)
 			return nil
 		})
