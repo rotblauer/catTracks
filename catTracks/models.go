@@ -1532,13 +1532,22 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 
 func getCatSnaps() ([]byte, error) {
 	var tps []*trackPoint.TrackPoint
-	err := GetDB("master").View(func(tx *bolt.Tx) error {
+	err := GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(catsnapsKey))
 		b.ForEach(func(k, v []byte) error {
 			var tp *trackPoint.TrackPoint
 			err := json.Unmarshal(v, &tp)
 			if err != nil {
 				return err
+			}
+			// HACK: patch up reckless base64 storing
+			if ns, e := note.NotesField(tp.Notes).AsNoteStructured(); e == nil {
+				ns.HasRawImage()
+				ns.ImgB64 = ""
+				tp.Notes = ns.MustAsString()
+				if by, err := json.Marshal(tp); err != nil {
+					b.Put(k, by)
+				}
 			}
 			tps = append(tps, tp)
 			return nil
