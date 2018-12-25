@@ -1407,9 +1407,11 @@ func storeImage(key, b64 string) error {
 	// Uploads the object to S3. The Context will interrupt the request if the
 	// timeout expires.
 	_, err = svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-		Body:   bytes.NewReader(b),
+		Bucket:        aws.String(bucket),
+		Key:           aws.String(key),
+		Body:          bytes.NewReader(buf.Bytes()),
+		ContentType:   aws.String("image/jpeg"),
+		ContentLength: aws.Int64(int64(buf.Len())),
 	})
 	if err != nil {
 		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
