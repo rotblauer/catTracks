@@ -1323,7 +1323,7 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 				err = e
 				return err
 			}
-			fmt.Println("Saved trackpoint: ", tp)
+			fmt.Println("Saved catsnap: ", tp)
 		}
 
 		// if ns.HasPhoto() {
