@@ -23,7 +23,8 @@ var (
 	googlefindnearby       = "googlefindnearby"
 	googlefindnearbyphotos = "googlefindnearbyphotos"
 	placesByCoord          = "placesByCoord"
-	allBuckets             = []string{trackKey, statsKey, "names", "geohash", placesKey, googlefindnearby, googlefindnearbyphotos, placesByCoord}
+	catsnapsKey            = "catsnaps"
+	allBuckets             = []string{trackKey, statsKey, "names", "geohash", placesKey, googlefindnearby, googlefindnearbyphotos, placesByCoord, catsnapsKey}
 )
 
 // GetDB is db getter.

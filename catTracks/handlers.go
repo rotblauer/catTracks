@@ -542,3 +542,14 @@ func handleGetPlaces2(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Got places:", len(b), "bytes")
 	w.Write(b)
 }
+
+func handleGetCatSnaps(w http.ResponseWriter, r *http.Request) {
+	w.Header().Add("Access-Control-Allow-Origin", "*")
+	b, e := getCatSnaps()
+	if e != nil {
+		log.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+	fmt.Println("Got catsnaps", len(b), "bytes")
+	w.Write(b)
+}

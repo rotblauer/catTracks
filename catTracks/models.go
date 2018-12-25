@@ -2,6 +2,7 @@ package catTracks
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"encoding/binary"
 	"encoding/json"
@@ -10,6 +11,7 @@ import (
 	"image"
 	"io/ioutil"
 	"math"
+	"math/rand"
 	"net/http"
 	"net/url"
 	"sort"
@@ -37,9 +39,30 @@ import (
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
 	gm "googlemaps.github.io/maps"
+
+	"github.com/aws/aws-sdk-go/aws"
+	"github.com/aws/aws-sdk-go/aws/awserr"
+	"github.com/aws/aws-sdk-go/aws/request"
+	"github.com/aws/aws-sdk-go/aws/session"
+	"github.com/aws/aws-sdk-go/service/s3"
 )
 
+func init() {
+	rand.Seed(time.Now().UnixNano())
+}
+
 var punktlichTileDBPathRelHome = filepath.Join("punktlich.rotblauer.com", "tester.db")
+
+// https://stackoverflow.com/a/31832326/4401322
+var letterRunes = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
+
+func RandStringRunes(n int) string {
+	b := make([]rune, n)
+	for i := range b {
+		b[i] = letterRunes[rand.Intn(len(letterRunes))]
+	}
+	return string(b)
+}
 
 type LastKnown map[string]*trackPoint.TrackPoint
 type Metadata struct {
@@ -1245,21 +1268,64 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 		// gets "" case nontestesing
 		tp.Name = getTestesPrefix() + tp.Name
 
-		trackPointJSON, err := json.Marshal(tp)
-		if err != nil {
-			return err
-		}
-		err = b.Put(key, trackPointJSON)
-		if err != nil {
-			return err
-		}
-
-		fmt.Println("Saved trackpoint: ", tp)
-
 		// handle storing place
-		ns, err := note.NotesField(tp.Notes).AsNoteStructured()
-		if err != nil {
-			return nil
+		ns, e := note.NotesField(tp.Notes).AsNoteStructured()
+		if e != nil {
+			err = e
+			return e
+		}
+
+		defer func() {
+			trackPointJSON, e := json.Marshal(tp)
+			if e != nil {
+				log.Println("Error marshaling trackpoint JSON: err=", e)
+				err = e
+				return
+			}
+			e = b.Put(key, trackPointJSON)
+			if e != nil {
+				log.Println("Error storing trackpoint: err=", e)
+				err = e
+				return
+			}
+			fmt.Println("Saved trackpoint: ", tp)
+		}()
+
+		shouldHandleImages := false
+		if ns.HasRawImage() && os.Getenv("AWS_BUCKETNAME") == "" {
+			fmt.Println("saw image, but not configured for s3 upload, skipping image processing")
+			// NOTE: that this makes an incongruence between Freya and Rottor
+			ns.ImgB64 = "" // don't save the long string
+		} else {
+			shouldHandleImages = true
+		}
+		if ns.HasRawImage() && shouldHandleImages {
+			// decode base64 -> image
+			// define 'key' for s3 upload
+			b64 := ns.ImgB64
+			k := RandStringRunes(32)
+			ns.ImgS3 = os.Getenv("AWS_BUCKETNAME") + "/" + k
+			ns.ImgB64 = ""
+			go func() {
+				if e := storeImage(k, b64); e != nil {
+					err = e
+				}
+			}()
+
+			snapBuck := tx.Bucket([]byte(catsnapsKey))
+			trackPointJSON, e := json.Marshal(tp)
+			if e != nil {
+				log.Println("Error marshaling trackpoint JSON: err=", e)
+				err = e
+				return err
+			}
+			e = snapBuck.Put(key, trackPointJSON)
+			if e != nil {
+				log.Println("Error storing trackpoint: err=", e)
+				err = e
+				return err
+			}
+			fmt.Println("Saved trackpoint: ", tp)
 		}
 
 		// if ns.HasPhoto() {
@@ -1267,26 +1333,103 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 		// 	// store TRACKPOINT in bucket k // TODO
 		// }
 
-		if !ns.HasValidVisit() {
-			return nil
-		}
-		visit, err = ns.Visit.AsVisit()
-		if err != nil {
-			return nil
+		if ns.HasValidVisit() {
+			visit, err = ns.Visit.AsVisit()
+			if err != nil {
+				return nil
+			}
+			visit.Uuid = tp.Uuid
+			visit.Name = tp.Name
+			visit.PlaceParsed = visit.Place.MustAsPlace()
+			visit.ReportedTime = tp.Time
+			visit.Duration = visit.GetDuration()
+			err = storeVisit(tx, key, visit)
+			if err != nil {
+				return err
+			}
 		}
 
-		visit.Uuid = tp.Uuid
-		visit.Name = tp.Name
-		visit.PlaceParsed = visit.Place.MustAsPlace()
-		visit.ReportedTime = tp.Time
-		visit.Duration = visit.GetDuration()
-		err = storeVisit(tx, key, visit)
 		return err
 	})
 	if err != nil {
 		fmt.Println(err)
 	}
 	return visit, err
+}
+
+// store image:
+// - decodes images from base64 to image.Image
+// - uploades image to s3
+// - adds link to s3 file to trackPoint
+// - removes base64 string from trackPoint
+func storeImage(key, b64 string) error {
+	// Decode
+	unbased, err := base64.StdEncoding.DecodeString(b64)
+	if err != nil {
+		return err
+	}
+
+	r := bytes.NewReader(unbased)
+	im, err := jpeg.Decode(r)
+	if err != nil {
+		return err
+	}
+
+	b := []byte{}
+	buf := bytes.NewBuffer(b)
+	err = jpeg.Encode(buf, im, nil)
+	if err != nil {
+		return err
+	}
+
+	// S3
+
+	// All clients require a Session. The Session provides the client with
+	// shared configuration such as region, endpoint, and credentials. A
+	// Session should be shared where possible to take advantage of
+	// configuration and credential caching. See the session package for
+	// more information.
+	sess := session.Must(session.NewSession())
+
+	// Create a new instance of the service's client with a Session.
+	// Optional aws.Config values can also be provided as variadic arguments
+	// to the New function. This option allows you to provide service
+	// specific configuration.
+	svc := s3.New(sess)
+
+	// Create a context with a timeout that will abort the upload if it takes
+	// more than the passed in timeout.
+	ctx := context.Background()
+	var cancelFn func()
+	timeout := time.Second * 10
+	if timeout > 0 {
+		ctx, cancelFn = context.WithTimeout(ctx, timeout)
+	}
+	// Ensure the context is canceled to prevent leaking.
+	// See context package for more information, https://golang.org/pkg/context/
+	defer cancelFn()
+
+	bucket := os.Getenv("AWS_BUCKETNAME")
+	// Uploads the object to S3. The Context will interrupt the request if the
+	// timeout expires.
+	_, err = svc.PutObjectWithContext(ctx, &s3.PutObjectInput{
+		Bucket: aws.String(bucket),
+		Key:    aws.String(key),
+		Body:   bytes.NewReader(b),
+	})
+	if err != nil {
+		if aerr, ok := err.(awserr.Error); ok && aerr.Code() == request.CanceledErrorCode {
+			// If the SDK can determine the request or retry delay was canceled
+			// by a context the CanceledErrorCode error code will be returned.
+			fmt.Fprintf(os.Stderr, "upload canceled due to timeout, %v\n", err)
+		} else {
+			fmt.Fprintf(os.Stderr, "failed to upload object, %v\n", err)
+		}
+		return err
+	}
+
+	fmt.Printf("successfully uploaded file to %s/%s\n", bucket, key)
+	return nil
 }
 
 func Float64frombytesBig(bytes []byte) float64 {
@@ -1391,4 +1534,31 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 	sort.Sort(tps)
 
 	return tps, err
+}
+
+func getCatSnaps() ([]byte, error) {
+	var tps []*trackPoint.TrackPoint
+	err := GetDB("master").View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(catsnapsKey))
+		b.ForEach(func(k, v []byte) error {
+			var tp *trackPoint.TrackPoint
+			err := json.Unmarshal(v, &tp)
+			if err != nil {
+				return err
+			}
+			tps = append(tps, tp)
+			return nil
+		})
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	bs, err := json.Marshal(tps)
+	if err != nil {
+		return nil, err
+	}
+
+	return bs, err
 }

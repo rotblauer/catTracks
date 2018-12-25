@@ -102,4 +102,10 @@ var routes = Routes{
 		"/googleNearbyPhotos",
 		handleGetGoogleNearbyPhotos,
 	},
+	Route{
+		"GetCatSnaps",
+		"GET",
+		"/catsnaps",
+		handleGetCatSnaps,
+	},
 }
