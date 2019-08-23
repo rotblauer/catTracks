@@ -162,13 +162,13 @@ func handleForwardPopulate(r *http.Request, bod []byte) (err error) {
 				req.Header.Set(k, vv)
 			}
 		}
+
 		resp, e := client.Do(req)
 		if e != nil {
 			err = e
 			break
-		} else {
-			backlogPopulators = append(backlogPopulators[:i], backlogPopulators[i+1:]...)
 		}
+
 		err = resp.Body.Close()
 		if err != nil {
 			break
@@ -178,7 +178,13 @@ func handleForwardPopulate(r *http.Request, bod []byte) (err error) {
 	if err == nil {
 		backlogPopulators = []*forwardingQueueItem{}
 	} else {
-		backlogPopulators = backlogPopulators[index:]
+		if index < len(backlogPopulators) {
+			backlogPopulators = append(backlogPopulators[:index], backlogPopulators[index+1:]...)
+		} else {
+			backlogPopulators = []*forwardingQueueItem{}
+		}
+
+		log.Println("forwarding error:", err, "index", index, "len backlog", len(backlogPopulators))
 	}
 
 	return
