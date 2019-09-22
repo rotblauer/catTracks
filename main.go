@@ -17,7 +17,6 @@ import (
 	"github.com/kpawlik/geojson"
 
 	"github.com/rotblauer/catTracks/catTracks"
-	"github.com/rotblauer/tileTester2/undump"
 )
 
 //start the url handlers, special init for everything?
@@ -31,7 +30,6 @@ func main() {
 	var forwardurl string
 	var tracksjsongzpath, tracksjsongzpathdevop, tracksjsongzpathedge string
 	var dbpath, devopdbpath, edgedbpath string
-	var dbpathtiles, devopdbpathtiles, edgedbpathtiles string
 	var masterlock, devlock, edgelock string
 
 	var placesLayer bool
@@ -53,10 +51,6 @@ func main() {
 	// these don't go to a bolt db, just straight to .json.gz
 	flag.StringVar(&devopdbpath, "db-path-devop", "", "path to master tracks bolty db")
 	flag.StringVar(&edgedbpath, "db-path-edge", "", "path to edge tracks bolty db")
-
-	flag.StringVar(&dbpathtiles, "tiles-db-path-master", "", "path to master tiles tracks bolty db")
-	flag.StringVar(&devopdbpathtiles, "tiles-db-path-devop", "", "path to master tiles tracks bolty db")
-	flag.StringVar(&edgedbpathtiles, "tiles-db-path-edge", "", "path to edge tiles tracks bolty db")
 
 	flag.StringVar(&masterlock, "master-lock", "", "path to master db lock")
 	flag.StringVar(&devlock, "devop-lock", "", "path to devop db lock")
@@ -155,33 +149,30 @@ func main() {
 					fi.Close()
 
 					mu.Lock()
-					os.Truncate(tracksjsongzpathedge, 0)
+					// os.Truncate(tracksjsongzpathedge, 0)
 
 					// move tracks-edge.db (mbtiles in bolty) -> tracks-devop.db
 					os.Rename(tracksjsongzpathedge, tracksjsongzpathdevop)
-					os.Rename(edgedbpathtiles, devopdbpathtiles)
+					os.Rename(filepath.Join(dbpath, "tilesets", "edge.mbtiles"), filepath.Join(dbpath, "tilesets", "devop.mbtiles"))
+					os.Create(tracksjsongzpathedge)
+
 					mu.Unlock()
-					http.Get("http://localhost:8080/devop/refresh")
 
 					// run tippe and undump on master
 					// again, output should be to wip file, then mv
 					// runTippe(out, in string, tilesetname string, bolttilesout string)
-					out := filepath.Join(filepath.Dir(dbpath), "out.wip")
+					out := filepath.Join(filepath.Dir(dbpath), "master.mbtiles")
 					in := tracksjsongzpath
-					bolttilesout := filepath.Join(filepath.Dir(dbpath), "master-tiles.wip.db")
 					log.Println("running master tippe")
-					if err := runTippe(out, in, "catTrack", bolttilesout); err != nil {
+					if err := runTippe(out, in, "catTrack"); err != nil {
 						panic(err.Error())
 						// log.Println("TIPPERR master db tipp err:", err)
 						// return
 					}
 
 					// os.Rename(out+".json.gz", filepath.Join(filepath.Dir(dbpath), "master.json.gz"))
-					mu.Lock()
-					os.Rename(bolttilesout, dbpathtiles)
-					mu.Unlock()
-					http.Get("http://localhost:8080/master/refresh")
-					os.Rename(out+".mbtiles", out+".mbtiles.bak")
+
+					os.Rename(out, filepath.Join(filepath.Dir(dbpath), "tilesets", "master.mbtiles"))
 					// os.Remove(out + ".mbtiles")
 				}
 			}
@@ -248,7 +239,7 @@ func main() {
 						panic(e)
 					}
 					mu.Unlock()
-					err = runTippe(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out"), snapEdgePath, "catTrackEdge", filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge-tiles.wip.db"))
+					err = runTippe(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
 						log.Println("TIPPERR:", err)
 						continue
@@ -257,13 +248,10 @@ func main() {
 					log.Println("waiting for lock ege for migrating")
 					mu.Lock()
 					log.Println("got lOCK")
-					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge-tiles.wip.db"), edgedbpathtiles)
+					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.mbtiles"), filepath.Join(filepath.Dir(tracksjsongzpathedge), "tilesets", "edge.mbtiles"))
 					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
-					log.Println("sending refresh edge db get")
 					mu.Unlock()
-					http.Get("http://localhost:8080/edge/refresh")
-					log.Println("finished refresh edge db get")
 				}
 			}
 		}()
@@ -302,20 +290,18 @@ func main() {
 						// reset local places
 						places = []*geojson.Feature{}
 
-						wipTilesDB := filepath.Join(baseDataDir, "places-tiles.wip.db")
-						err := runTippeLite(filepath.Join(baseDataDir, "places.out"), placesJSONGZ, "catTrackPlace", wipTilesDB)
+						wipTilesDB := filepath.Join(baseDataDir, "places.mbtiles")
+						err := runTippeLite(wipTilesDB, placesJSONGZ, "catTrackPlace")
 						if err != nil {
 							log.Println("tippe/places/err:", err)
 							placesProcLock.Unlock()
 							continue
 						}
 
-						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "places-tiles.db"))
+						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "tilesets", "places-tiles.db"))
 						// os.Remove(filepath.Join(baseDataDir, "places.out.mbtiles"))
 
 						placesProcLock.Unlock()
-
-						http.Get("http://localhost:8080/places/refresh")
 
 						log.Println("finished processing", lenp, "places")
 					}
@@ -331,7 +317,7 @@ func main() {
 	quitChan <- true
 }
 
-func runTippeLite(out, in string, tilesetname string, bolttilesout string) error {
+func runTippeLite(out, in string, tilesetname string) error {
 	tippCmd, tippargs, tipperr := getTippyProcessLite(out, in, tilesetname)
 	if tipperr != nil {
 		return tipperr
@@ -351,19 +337,10 @@ func runTippeLite(out, in string, tilesetname string, bolttilesout string) error
 	if err := tippmycanoe.Wait(); err != nil {
 		return err
 	}
-
-	log.Println("Dump: Migrating .mbtiles file back into a bolt db: ", bolttilesout)
-
-	absoluteOut, err := filepath.Abs(out + ".mbtiles")
-	if err != nil {
-		log.Printf("err: %v", err)
-		return err
-	}
-	undump.MbtilesToBolt(absoluteOut, bolttilesout)
 	return nil
 }
 
-func runTippe(out, in string, tilesetname string, bolttilesout string) error {
+func runTippe(out, in string, tilesetname string) error {
 	tippCmd, tippargs, tipperr := getTippyProcess(out, in, tilesetname)
 	if tipperr != nil {
 		return tipperr
@@ -383,15 +360,6 @@ func runTippe(out, in string, tilesetname string, bolttilesout string) error {
 	if err := tippmycanoe.Wait(); err != nil {
 		return err
 	}
-
-	log.Println("Dump: Migrating .mbtiles file back into a bolt db: ", bolttilesout)
-
-	absoluteOut, err := filepath.Abs(out + ".mbtiles")
-	if err != nil {
-		log.Printf("err: %v", err)
-		return err
-	}
-	undump.MbtilesToBolt(absoluteOut, bolttilesout)
 	return nil
 }
 
@@ -426,7 +394,7 @@ func getTippyProcessLite(out string, in string, tilesetname string) (tippCmd str
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		//-n name or --name=name: Set the tileset name
 		"-n", tilesetname,
-		"-o", out + ".mbtiles",
+		"-o", out,
 		//-f or --force: Delete the mbtiles file if it already exists instead of giving an error
 		"--force",
 		"-P", in,
@@ -503,7 +471,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		"--maximum-zoom", "20",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		"-n", tilesetname,
-		"-o", out + ".mbtiles",
+		"-o", out,
 		"--force",
 		"--read-parallel", in,
 		// "--preserve-input-order",
