@@ -5,9 +5,9 @@ import (
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
-
 	// "html/template"
 	"io/ioutil"
+	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
@@ -15,8 +15,6 @@ import (
 	"time"
 
 	"github.com/gorilla/schema"
-
-	"log"
 
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
