@@ -153,7 +153,7 @@ func main() {
 
 					// move tracks-edge.db (mbtiles in bolty) -> tracks-devop.db
 					os.Rename(tracksjsongzpathedge, tracksjsongzpathdevop)
-					os.Rename(filepath.Join(dbpath, "tilesets", "edge.mbtiles"), filepath.Join(dbpath, "tilesets", "devop.mbtiles"))
+					os.Rename(filepath.Join(filepath.Dir(dbpath), "tilesets", "edge.mbtiles"), filepath.Join(filepath.Dir(dbpath), "tilesets", "devop.mbtiles"))
 					os.Create(tracksjsongzpathedge)
 
 					mu.Unlock()
@@ -298,7 +298,7 @@ func main() {
 							continue
 						}
 
-						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "tilesets", "places-tiles.db"))
+						os.Rename(wipTilesDB, filepath.Join(baseDataDir, "tilesets", "places.mbtiles"))
 						// os.Remove(filepath.Join(baseDataDir, "places.out.mbtiles"))
 
 						placesProcLock.Unlock()
