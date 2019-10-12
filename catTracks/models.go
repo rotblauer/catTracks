@@ -1059,6 +1059,9 @@ var masterGZLock sync.Mutex
 
 func storePoints(trackPoints trackPoint.TrackPoints) error {
 	var err error
+	if trackPoints.Len() == 0 {
+		return errors.New("0 trackpoints to store")
+	}
 	// var f F
 	// var fdev F
 	var fedge F
