@@ -1,10 +1,13 @@
 package catTracks
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/csv"
 	"encoding/json"
 	"fmt"
+	"io"
+
 	// "html/template"
 	"io/ioutil"
 	"log"
@@ -196,6 +199,27 @@ type IftttBodyCatVisit struct {
 	Value3 int    `json:"value3"`
 }
 
+// ToJSONbuffer converts some newline-delimited JSON to valid JSON buffer
+func toJSONbuffer(reader io.Reader) bytes.Buffer {
+	var buffer bytes.Buffer
+
+	r := bufio.NewReader(reader)
+
+	buffer.Write([]byte("["))
+	for {
+		bytes, err := r.ReadBytes(byte('\n'))
+		buffer.Write(bytes)
+		if err == io.EOF || string(bytes) == "" {
+			break
+		}
+		buffer.Write([]byte(","))
+	}
+	buffer.Write([]byte("]"))
+	buffer.Write([]byte("\n"))
+
+	return buffer
+}
+
 func populatePoints(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	w.Header().Add("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept, Authorization")
@@ -230,9 +254,15 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 	}
 	err = json.NewDecoder(r.Body).Decode(&trackPoints)
 	if err != nil {
-		log.Println("error: decode json")
-		http.Error(w, err.Error(), 400)
-		return
+		log.Println("error: decode json as array")
+
+		// try decoding as ndjson..
+		ndbuf := toJSONbuffer(r.Body)
+		err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusBadRequest)
+			return
+		}
 	}
 
 	tok := os.Getenv("COTOKEN")
