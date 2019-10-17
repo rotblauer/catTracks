@@ -221,7 +221,7 @@ func toJSONbuffer(reader io.Reader) []byte {
 		}
 		break
 	}
-	bytes.TrimSuffix(out, []byte(","))
+	out = bytes.TrimSuffix(out, []byte(","))
 	out = append(out, []byte{byte(']'), byte('\n')}...)
 
 	//r := bufio.NewReader(reader)
