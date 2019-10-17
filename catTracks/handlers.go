@@ -265,14 +265,22 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 
 		// try decoding as ndjson..
 		ndbuf := toJSONbuffer(ioutil.NopCloser(bytes.NewBuffer(bod)))
+		log.Println("attempting decode as ndjson instead..., length:", len(bod))
+
 		err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
 		if err != nil {
-			log.Println("could not decode req as ndjson, error:", err.Error())
+			log.Println("could not decode req as ndjson, error:", err.Error(), "body", ndbuf.String())
+
+			//err = json.Unmarshal(json.RawMessage(bod), &trackPoints)
+
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
+		} else {
+			log.Println("OK: decoded request as ndjson instead")
 		}
 	}
 
+	log.Println("checking token")
 	tok := os.Getenv("COTOKEN")
 	if tok == "" {
 		log.Println("ERROR: no COTOKEN env var set")
