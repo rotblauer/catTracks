@@ -259,17 +259,22 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-	err = json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(bod))).Decode(&trackPoints)
+
+	err = json.Unmarshal(bod, &trackPoints)
+	// err = json.NewDecoder(ioutil.NopCloser(bytes.NewBuffer(bod))).Decode(&trackPoints)
 	if err != nil {
 		log.Println("Could not decode json as array, body length was:", len(bod))
 
 		// try decoding as ndjson..
 		ndbuf := toJSONbuffer(ioutil.NopCloser(bytes.NewBuffer(bod)))
+
 		var ndbufbod []byte
 		ndbuf.Write(ndbufbod)
+
 		log.Println("attempting decode as ndjson instead..., length:", len(ndbufbod), string(ndbufbod))
 
-		err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
+		//err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
+		err = json.Unmarshal(ndbufbod, & trackPoints)
 		if err != nil {
 			log.Println("could not decode req as ndjson, error:", err.Error(), "body", ndbuf.String())
 
