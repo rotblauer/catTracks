@@ -202,18 +202,34 @@ type IftttBodyCatVisit struct {
 // ToJSONbuffer converts some newline-delimited JSON to valid JSON buffer
 func toJSONbuffer(reader io.Reader) bytes.Buffer {
 	var buffer bytes.Buffer
-
-	r := bufio.NewReader(reader)
-
 	buffer.Write([]byte("["))
+
+	scanner := bufio.NewScanner(reader)
 	for {
-		bytes, err := r.ReadBytes(byte('\n'))
-		buffer.Write(bytes)
-		if err == io.EOF || string(bytes) == "" {
-			break
+		ok := scanner.Scan()
+		if ok {
+			buffer.Write(scanner.Bytes())
+			buffer.Write([]byte(","))
+			continue
 		}
-		buffer.Write([]byte(","))
+		break
 	}
+
+	//r := bufio.NewReader(reader)
+
+	//buffer.Write([]byte("["))
+	//for {
+	//	bytes, _, err := r.ReadLine()
+	//	buffer.Write(bytes)
+	//	r.Peek(1)
+	//	if err == io.EOF || string(bytes) == "" {
+	//		break
+	//	}
+	//	buffer.Write([]byte(","))
+	//}
+	//if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
+	//	buffer.UnreadByte()
+	//}
 	buffer.Write([]byte("]"))
 	buffer.Write([]byte("\n"))
 
