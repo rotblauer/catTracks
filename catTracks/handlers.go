@@ -7,7 +7,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-
 	// "html/template"
 	"io/ioutil"
 	"log"
@@ -202,34 +201,46 @@ type IftttBodyCatVisit struct {
 // ToJSONbuffer converts some newline-delimited JSON to valid JSON buffer
 func toJSONbuffer(reader io.Reader) bytes.Buffer {
 	var buffer bytes.Buffer
-	buffer.Write([]byte("["))
-
-	scanner := bufio.NewScanner(reader)
-	for {
-		ok := scanner.Scan()
-		if ok {
-			buffer.Write(scanner.Bytes())
-			buffer.Write([]byte(","))
-			continue
-		}
-		break
-	}
-
-	//r := bufio.NewReader(reader)
 
 	//buffer.Write([]byte("["))
+	//scanner := bufio.NewScanner(reader)
 	//for {
-	//	bytes, _, err := r.ReadLine()
-	//	buffer.Write(bytes)
-	//	r.Peek(1)
-	//	if err == io.EOF || string(bytes) == "" {
-	//		break
+	//	ok := scanner.Scan()
+	//	if ok {
+	//		b := scanner.Bytes()
+	//		if bytes.
+	//		buffer.Write(b)
+	//		buffer.Write([]byte(","))
+	//		continue
 	//	}
-	//	buffer.Write([]byte(","))
+	//	break
 	//}
+
+	r := bufio.NewReader(reader)
+
+	buffer.Write([]byte("["))
+	for {
+		bytes, err := r.ReadBytes(byte('\n'))
+		//bytes, _, err := r.ReadLine()
+		buffer.Write(bytes)
+		//r.Peek(1)
+		if err == io.EOF || string(bytes) == "" {
+			break
+		}
+		buffer.Write([]byte(","))
+	}
+
+	bu := []byte{}
+	buffer.Write(bu)
+	bu = bytes.TrimSuffix(bu, []byte(","))
+
+	buffer.Reset()
+	buffer.Write(bu)
+
 	//if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
 	//	buffer.UnreadByte()
 	//}
+
 	buffer.Write([]byte("]"))
 	buffer.Write([]byte("\n"))
 
