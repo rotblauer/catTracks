@@ -265,7 +265,7 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 
 		// try decoding as ndjson..
 		ndbuf := toJSONbuffer(ioutil.NopCloser(bytes.NewBuffer(bod)))
-		log.Println("attempting decode as ndjson instead..., length:", len(bod))
+		log.Println("attempting decode as ndjson instead..., length:", len(bod), string(bod))
 
 		err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
 		if err != nil {
