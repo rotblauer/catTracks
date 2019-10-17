@@ -7,6 +7,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"regexp"
+
 	// "html/template"
 	"io/ioutil"
 	"log"
@@ -204,13 +206,17 @@ func toJSONbuffer(reader io.Reader) []byte {
 
 	//buffer.Write([]byte("["))
 
+	reg := regexp.MustCompile(`(?m)\S*`)
 	out := []byte("[")
 	scanner := bufio.NewScanner(reader)
 	for {
 		ok := scanner.Scan()
 		if ok {
-			out = append(out, scanner.Bytes()...)
-			out = append(out, []byte(",")...)
+			sb := scanner.Bytes()
+			if reg.Match(sb) {
+				out = append(out, scanner.Bytes()...)
+				out = append(out, []byte(",")...)
+			}
 			continue
 		}
 		break
