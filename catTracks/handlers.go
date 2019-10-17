@@ -199,52 +199,54 @@ type IftttBodyCatVisit struct {
 }
 
 // ToJSONbuffer converts some newline-delimited JSON to valid JSON buffer
-func toJSONbuffer(reader io.Reader) bytes.Buffer {
-	var buffer bytes.Buffer
+func toJSONbuffer(reader io.Reader) []byte {
+	//var buffer bytes.Buffer
 
 	//buffer.Write([]byte("["))
-	//scanner := bufio.NewScanner(reader)
-	//for {
-	//	ok := scanner.Scan()
-	//	if ok {
-	//		b := scanner.Bytes()
-	//		if bytes.
-	//		buffer.Write(b)
-	//		buffer.Write([]byte(","))
-	//		continue
-	//	}
-	//	break
-	//}
 
-	r := bufio.NewReader(reader)
-
-	buffer.Write([]byte("["))
+	out := []byte("[")
+	scanner := bufio.NewScanner(reader)
 	for {
-		bytes, err := r.ReadBytes(byte('\n'))
-		//bytes, _, err := r.ReadLine()
-		buffer.Write(bytes)
-		//r.Peek(1)
-		if err == io.EOF || string(bytes) == "" {
-			break
+		ok := scanner.Scan()
+		if ok {
+			out = append(out, scanner.Bytes()...)
+			out = append(out, []byte(",")...)
+			continue
 		}
-		buffer.Write([]byte(","))
+		break
 	}
+	bytes.TrimSuffix(out, []byte(","))
+	out = append(out, []byte{byte(']'), byte('\n')}...)
 
-	bu := []byte{}
-	buffer.Write(bu)
-	bu = bytes.TrimSuffix(bu, []byte(","))
-
-	buffer.Reset()
-	buffer.Write(bu)
-
-	//if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
-	//	buffer.UnreadByte()
+	//r := bufio.NewReader(reader)
+	//
+	//buffer.Write([]byte("["))
+	//for {
+	//	bytes, err := r.ReadBytes(byte('\n'))
+	//	//bytes, _, err := r.ReadLine()
+	//	buffer.Write(bytes)
+	//	//r.Peek(1)
+	//	if err == io.EOF || string(bytes) == "" {
+	//		break
+	//	}
+	//	buffer.Write([]byte(","))
 	//}
+	//
+	//bu := []byte{}
+	//buffer.Write(bu)
+	//bu = bytes.TrimSuffix(bu, []byte(","))
+	//
+	//buffer.Reset()
+	//buffer.Write(bu)
+	//
+	////if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
+	////	buffer.UnreadByte()
+	////}
+	//
+	//buffer.Write([]byte("]"))
+	//buffer.Write([]byte("\n"))
 
-	buffer.Write([]byte("]"))
-	buffer.Write([]byte("\n"))
-
-	return buffer
+	return out
 }
 
 func populatePoints(w http.ResponseWriter, r *http.Request) {
@@ -293,17 +295,14 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 		log.Println("Could not decode json as array, body length was:", len(bod))
 
 		// try decoding as ndjson..
-		ndbuf := toJSONbuffer(ioutil.NopCloser(bytes.NewBuffer(bod)))
+		ndbod := toJSONbuffer(ioutil.NopCloser(bytes.NewBuffer(bod)))
 
-		var ndbufbod []byte
-		ndbuf.Write(ndbufbod)
-
-		log.Println("attempting decode as ndjson instead..., length:", len(ndbufbod), string(ndbufbod))
+		log.Println("attempting decode as ndjson instead..., length:", len(ndbod), string(ndbod))
 
 		//err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
-		err = json.Unmarshal(ndbufbod, & trackPoints)
+		err = json.Unmarshal(ndbod, & trackPoints)
 		if err != nil {
-			log.Println("could not decode req as ndjson, error:", err.Error(), "body", ndbuf.String())
+			log.Println("could not decode req as ndjson, error:", err.Error())
 
 			//err = json.Unmarshal(json.RawMessage(bod), &trackPoints)
 
