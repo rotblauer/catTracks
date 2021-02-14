@@ -634,7 +634,17 @@ func handleGetPlaces2(w http.ResponseWriter, r *http.Request) {
 
 func handleGetCatSnaps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	b, e := getCatSnaps()
+	startQ := time.Unix(1, 0)
+	startRaw, ok := r.URL.Query()["tstart"]
+	if ok && len(startRaw) > 0 {
+		i64, err  := strconv.ParseInt(startRaw[0], 10, 64)
+		if err == nil {
+			startQ = time.Unix(i64, 0)
+		} else {
+			log.Printf("Invalid tstart value: %s (%v)\n", startRaw[0], err)
+		}
+	}
+	b, e := getCatSnaps(startQ)
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)

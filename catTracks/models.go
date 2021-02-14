@@ -1535,9 +1535,10 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 	return tps, err
 }
 
-func getCatSnaps() ([]byte, error) {
+func getCatSnaps(startTime time.Time) ([]byte, error) {
 	var tps []*trackPoint.TrackPoint
-	err := GetDB("master").Update(func(tx *bolt.Tx) error {
+	// err := GetDB("master").Update(func(tx *bolt.Tx) error {
+	err := GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(catsnapsKey))
 		b.ForEach(func(k, v []byte) error {
 			var tp *trackPoint.TrackPoint
@@ -1553,6 +1554,20 @@ func getCatSnaps() ([]byte, error) {
 			// 		b.Put(k, by)
 			// 	}
 			// }
+
+			// Skip catsnaps before parameterized start limit.
+			if tp.Time.Before(startTime) {
+				return nil
+			}
+
+			// HACK: skip all catsnaps with raw images.
+			// There are very few (maybe only one) of these.
+			// The above hack should have fixed this.
+			if ns, e := note.NotesField(tp.Notes).AsNoteStructured(); e == nil && ns.HasRawImage() {
+				return nil
+			} else if e == nil && !ns.HasS3Image() {
+				return nil
+			}
 			tps = append(tps, tp)
 			return nil
 		})
