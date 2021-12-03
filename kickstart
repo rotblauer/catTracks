@@ -14,7 +14,7 @@ kill $(ps aux | grep trackermain | awk '{print $2}') # kill trackermain
 
 
 pushd $HOME/track.areteh.co/;
-./linux.trackermain --port=3001 >> $HOME/track.areteh.co/logs.log 2>&1 &
+./linux.trackermain --port=3001 --forward-url https://api.catonmap.info/populate/ >> $HOME/track.areteh.co/logs.log 2>&1 &
 # node tile-server.js $mbtiles_file 8080 2>&1 &
 popd;
 
