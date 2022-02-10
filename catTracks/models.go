@@ -2,6 +2,7 @@ package catTracks
 
 import (
 	"bytes"
+	"compress/gzip"
 	"context"
 	"encoding/base64"
 	"encoding/binary"
@@ -9,17 +10,6 @@ import (
 	"errors"
 	"fmt"
 	"image"
-	"io/ioutil"
-	"math"
-	"math/rand"
-	"net/http"
-	"net/url"
-	"sort"
-	"strconv"
-	"strings"
-	"sync"
-	"time"
-
 	// Package image/jpeg is not used explicitly in the code below,
 	// but is imported for its initialization side-effect, which allows
 	// image.Decode to understand JPEG formatted images. Uncomment these
@@ -27,11 +17,19 @@ import (
 	_ "image/gif"
 	"image/jpeg"
 	"image/png"
-
-	"compress/gzip"
+	"io/ioutil"
 	"log"
+	"math"
+	"math/rand"
+	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
+	"sort"
+	"strconv"
+	"strings"
+	"sync"
+	"time"
 
 	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
@@ -886,7 +884,7 @@ func getLastKnownData() (out []byte, err error) {
 }
 
 func storeLastKnown(tp *trackPoint.TrackPoint) {
-	//lastKnownMap[tp.Name] = tp
+	// lastKnownMap[tp.Name] = tp
 	lk := LastKnown{}
 	if err := GetDB("master").Update(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(statsKey))
@@ -981,7 +979,7 @@ func TrackToFeature(trackPointCurrent *trackPoint.TrackPoint) *geojson.Feature {
 	// convert to a feature
 	p := geojson.NewPoint(geojson.Coordinate{geojson.Coord(trackPointCurrent.Lng), geojson.Coord(trackPointCurrent.Lat)})
 
-	//currently need speed, name,time
+	// currently need speed, name,time
 	props := make(map[string]interface{})
 	props["UUID"] = trackPointCurrent.Uuid
 	props["Name"] = trackPointCurrent.Name
@@ -1250,7 +1248,7 @@ func storePoint(tp *trackPoint.TrackPoint) (note.NoteVisit, error) {
 		b := tx.Bucket([]byte(trackKey))
 
 		// Note that tp.ID is not the db key. ID is a uniq identifier per cat only.
-		tp.ID = tp.Time.UnixNano() //dunno if can really get nanoy, or if will just *1000.
+		tp.ID = tp.Time.UnixNano() // dunno if can really get nanoy, or if will just *1000.
 
 		key := buildTrackpointKey(tp)
 
@@ -1502,7 +1500,7 @@ func getAllStoredPoints() (tps trackPoint.TPs, e error) {
 	return tps, e
 }
 
-//TODO make queryable ala which cat when
+// TODO make queryable ala which cat when
 // , channel chan *trackPoint.TrackPoint
 func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 
@@ -1535,7 +1533,7 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 	return tps, err
 }
 
-func getCatSnaps(startTime time.Time) ([]byte, error) {
+func getCatSnaps(startTime, endTime time.Time) ([]byte, error) {
 	var tps []*trackPoint.TrackPoint
 	// err := GetDB("master").Update(func(tx *bolt.Tx) error {
 	err := GetDB("master").View(func(tx *bolt.Tx) error {
@@ -1546,6 +1544,15 @@ func getCatSnaps(startTime time.Time) ([]byte, error) {
 			if err != nil {
 				return err
 			}
+
+			// Skip catsnaps before parameterized start limit.
+			if !startTime.IsZero() && tp.Time.Before(startTime) {
+				return nil
+			}
+			if !endTime.IsZero() && tp.Time.After(endTime) {
+				return nil
+			}
+
 			// // HACK: patch up reckless base64 storing
 			// if ns, e := note.NotesField(tp.Notes).AsNoteStructured(); e == nil && ns.HasRawImage() {
 			// 	ns.ImgB64 = ""
@@ -1554,11 +1561,6 @@ func getCatSnaps(startTime time.Time) ([]byte, error) {
 			// 		b.Put(k, by)
 			// 	}
 			// }
-
-			// Skip catsnaps before parameterized start limit.
-			if tp.Time.Before(startTime) {
-				return nil
-			}
 
 			// HACK: skip all catsnaps with raw images.
 			// There are very few (maybe only one) of these.

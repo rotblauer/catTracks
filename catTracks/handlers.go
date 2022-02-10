@@ -7,14 +7,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"regexp"
-
 	// "html/template"
 	"io/ioutil"
 	"log"
 	"net/http"
 	"net/http/httputil"
 	"os"
+	"regexp"
 	"strconv"
 	"time"
 
@@ -38,7 +37,7 @@ import (
 // 	return template.Must(template.ParseGlob(p))
 // }()
 
-//W// elcome, loads and servers all (currently) data pointers
+// W// elcome, loads and servers all (currently) data pointers
 // func getIndexTemplate(w http.ResponseWriter, r *http.Request) {
 // 	templates.ExecuteTemplate(w, "base", nil)
 // }
@@ -202,9 +201,9 @@ type IftttBodyCatVisit struct {
 
 // ToJSONbuffer converts some newline-delimited JSON to valid JSON buffer
 func toJSONbuffer(reader io.Reader) []byte {
-	//var buffer bytes.Buffer
+	// var buffer bytes.Buffer
 
-	//buffer.Write([]byte("["))
+	// buffer.Write([]byte("["))
 
 	reg := regexp.MustCompile(`(?m)\S*`)
 	out := []byte("[")
@@ -224,10 +223,10 @@ func toJSONbuffer(reader io.Reader) []byte {
 	out = bytes.TrimSuffix(out, []byte(","))
 	out = append(out, []byte{byte(']'), byte('\n')}...)
 
-	//r := bufio.NewReader(reader)
+	// r := bufio.NewReader(reader)
 	//
-	//buffer.Write([]byte("["))
-	//for {
+	// buffer.Write([]byte("["))
+	// for {
 	//	bytes, err := r.ReadBytes(byte('\n'))
 	//	//bytes, _, err := r.ReadLine()
 	//	buffer.Write(bytes)
@@ -236,21 +235,21 @@ func toJSONbuffer(reader io.Reader) []byte {
 	//		break
 	//	}
 	//	buffer.Write([]byte(","))
-	//}
+	// }
 	//
-	//bu := []byte{}
-	//buffer.Write(bu)
-	//bu = bytes.TrimSuffix(bu, []byte(","))
+	// bu := []byte{}
+	// buffer.Write(bu)
+	// bu = bytes.TrimSuffix(bu, []byte(","))
 	//
-	//buffer.Reset()
-	//buffer.Write(bu)
+	// buffer.Reset()
+	// buffer.Write(bu)
 	//
-	////if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
-	////	buffer.UnreadByte()
-	////}
+	// //if bytes.Equal(buffer.Bytes()[buffer.Len()-1:], []byte(",")) {
+	// //	buffer.UnreadByte()
+	// //}
 	//
-	//buffer.Write([]byte("]"))
-	//buffer.Write([]byte("\n"))
+	// buffer.Write([]byte("]"))
+	// buffer.Write([]byte("\n"))
 
 	return out
 }
@@ -305,12 +304,12 @@ func populatePoints(w http.ResponseWriter, r *http.Request) {
 
 		log.Println("attempting decode as ndjson instead..., length:", len(ndbod), string(ndbod))
 
-		//err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
-		err = json.Unmarshal(ndbod, & trackPoints)
+		// err = json.NewDecoder(&ndbuf).Decode(&trackPoints)
+		err = json.Unmarshal(ndbod, &trackPoints)
 		if err != nil {
 			log.Println("could not decode req as ndjson, error:", err.Error())
 
-			//err = json.Unmarshal(json.RawMessage(bod), &trackPoints)
+			// err = json.Unmarshal(json.RawMessage(bod), &trackPoints)
 
 			http.Error(w, err.Error(), http.StatusBadRequest)
 			return
@@ -521,14 +520,14 @@ func uploadCSV(w http.ResponseWriter, r *http.Request) {
 
 	}
 
-	http.Redirect(w, r, "/", 302) //the 300
+	http.Redirect(w, r, "/", 302) // the 300
 
 }
 
 func getLastKnown(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
 	b, e := getLastKnownData()
-	//b, e := json.Marshal(lastKnownMap)
+	// b, e := json.Marshal(lastKnownMap)
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
@@ -634,17 +633,26 @@ func handleGetPlaces2(w http.ResponseWriter, r *http.Request) {
 
 func handleGetCatSnaps(w http.ResponseWriter, r *http.Request) {
 	w.Header().Add("Access-Control-Allow-Origin", "*")
-	startQ := time.Unix(1, 0)
+	var startQ, endQ time.Time
 	startRaw, ok := r.URL.Query()["tstart"]
 	if ok && len(startRaw) > 0 {
-		i64, err  := strconv.ParseInt(startRaw[0], 10, 64)
+		i64, err := strconv.ParseInt(startRaw[0], 10, 64)
 		if err == nil {
 			startQ = time.Unix(i64, 0)
 		} else {
-			log.Printf("Invalid tstart value: %s (%v)\n", startRaw[0], err)
+			log.Printf("catsnaps: Invalid t-start value: %s (%v)\n", startRaw[0], err)
 		}
 	}
-	b, e := getCatSnaps(startQ)
+	endRaw, ok := r.URL.Query()["tend"]
+	if ok && len(endRaw) > 0 {
+		i64, err := strconv.ParseInt(endRaw[0], 10, 64)
+		if err == nil {
+			endQ = time.Unix(i64, 0)
+		} else {
+			log.Printf("catsnaps: Invalid t-end value: %s (%v)\n", endRaw[0], err)
+		}
+	}
+	b, e := getCatSnaps(startQ, endQ)
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
