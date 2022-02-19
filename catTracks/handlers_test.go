@@ -1,10 +1,11 @@
 package catTracks
 
 import (
-	"github.com/rotblauer/tileTester2/note"
-	"github.com/rotblauer/trackpoints/trackPoint"
 	"testing"
 	"time"
+
+	"github.com/rotblauer/tileTester2/note"
+	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
 func TestValidVisitGrabbing(t *testing.T) {
@@ -56,4 +57,12 @@ func TestValidVisitGrabbing(t *testing.T) {
 
 	t.Log("visit", visit)
 	t.Log("place", pl)
+}
+
+func TestTimeZeroing(t *testing.T) {
+	tim := time.Unix(0, 0)
+	t.Log(tim.IsZero())
+
+	var tim2 time.Time
+	t.Log(tim2.IsZero())
 }
