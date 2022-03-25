@@ -409,7 +409,7 @@ func getTippyProcessLite(out string, in string, tilesetname string) (tippCmd str
 		"-rf1000",
 		"--minimum-zoom", "3",
 		// -z zoom or --maximum-zoom=zoom: Don't copy tiles from higher zoom levels than the specified zoom
-		"--maximum-zoom", "20",
+		"--maximum-zoom", "18",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		// -n name or --name=name: Set the tileset name
 		"-n", tilesetname,
@@ -487,7 +487,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// "--full-detail", "12",
 		// "--minimum-detail", "12",
 		"--minimum-zoom", "3",
-		"--maximum-zoom", "20",
+		"--maximum-zoom", "18",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		"-n", tilesetname,
 		"-o", out,
