@@ -999,7 +999,12 @@ func TrackToFeature(trackPointCurrent *trackPoint.TrackPoint) *geojson.Feature {
 	if ns, e := note.NotesField(trackPointCurrent.Notes).AsNoteStructured(); e == nil {
 		props["Activity"] = ns.Activity
 		props["Pressure"] = ns.Pressure
-		props["Notes"] = ns.CustomNote
+		if ns.CustomNote != "" {
+			props["Notes"] = ns.CustomNote
+		}
+		if ns.ImgS3 != "" {
+			props["imgS3"] = ns.ImgS3
+		}
 		if ns.HasValidVisit() {
 			// TODO: ok to use mappy sub interface here?
 			props["Visit"] = ns.Visit
