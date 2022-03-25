@@ -1533,7 +1533,7 @@ func getPointsQT(query *query) (tps trackPoint.TPs, err error) {
 	return tps, err
 }
 
-func getCatSnaps(startTime, endTime time.Time) ([]byte, error) {
+func getCatSnaps(startTime, endTime time.Time) ([]*trackPoint.TrackPoint, error) {
 	var tps []*trackPoint.TrackPoint
 	// err := GetDB("master").Update(func(tx *bolt.Tx) error {
 	err := GetDB("master").View(func(tx *bolt.Tx) error {
@@ -1579,10 +1579,12 @@ func getCatSnaps(startTime, endTime time.Time) ([]byte, error) {
 		return nil, err
 	}
 
-	bs, err := json.Marshal(tps)
-	if err != nil {
-		return nil, err
-	}
+	return tps, nil
 
-	return bs, err
+	// bs, err := json.Marshal(tps)
+	// if err != nil {
+	// 	return nil, err
+	// }
+	//
+	// return bs, err
 }

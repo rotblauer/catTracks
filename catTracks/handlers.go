@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/gorilla/schema"
+	"github.com/kpawlik/geojson"
 
 	"github.com/rotblauer/tileTester2/note"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -531,8 +532,34 @@ func getLastKnown(w http.ResponseWriter, r *http.Request) {
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
+		return
 	}
 	fmt.Println("Got lastknown:", len(b), "bytes")
+
+	_, gj := r.URL.Query()["geojson"]
+	if gj {
+		// unmarshal to lastknown map
+		lk := LastKnown{}
+		e = json.Unmarshal(b, &lk)
+		if e != nil {
+			log.Println(e)
+			http.Error(w, e.Error(), http.StatusInternalServerError)
+			return
+		}
+		feats := []*geojson.Feature{}
+		for _, v := range lk {
+			feat := TrackToFeature(v)
+			feats = append(feats, feat)
+		}
+		fc := geojson.NewFeatureCollection(feats)
+		b, e = json.Marshal(fc)
+		if e != nil {
+			log.Println(e)
+			http.Error(w, e.Error(), http.StatusInternalServerError)
+			return
+		}
+	}
+
 	w.Write(b)
 }
 
@@ -652,11 +679,33 @@ func handleGetCatSnaps(w http.ResponseWriter, r *http.Request) {
 			log.Printf("catsnaps: Invalid t-end value: %s (%v)\n", endRaw[0], err)
 		}
 	}
-	b, e := getCatSnaps(startQ, endQ)
+	snapPoints, e := getCatSnaps(startQ, endQ)
 	if e != nil {
 		log.Println(e)
 		http.Error(w, e.Error(), http.StatusInternalServerError)
 	}
-	fmt.Println("Got catsnaps", len(b), "bytes")
-	w.Write(b)
+
+	var bs []byte
+
+	_, gj := r.URL.Query()["geojson"]
+	if gj {
+		features := []*geojson.Feature{}
+		for _, sp := range snapPoints {
+			feature := TrackToFeature(sp)
+			features = append(features, feature)
+		}
+
+		fc := geojson.NewFeatureCollection(features)
+		bs, e = json.Marshal(fc)
+	} else {
+		bs, e = json.Marshal(snapPoints)
+	}
+
+	if e != nil {
+		log.Println(e)
+		http.Error(w, e.Error(), http.StatusInternalServerError)
+	}
+
+	fmt.Println("Got catsnaps", len(snapPoints), "snaps", len(bs), "bytes")
+	w.Write(bs)
 }
