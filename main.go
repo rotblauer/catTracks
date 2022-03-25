@@ -97,13 +97,32 @@ func main() {
 	// 	log.Println("Error initing QT.")
 	// 	log.Println(qterr)
 	// }
+
+	// FIXME: This is deprecated/dilapidated because
+	// we don't actually use websockets for anything.
+	// But if we did, this would be a way and place to start
+	// hacking something in there.
 	catTracks.InitMelody()
-	catTracks.SetTestes(testesRun) // is false defaulter, false prefixes names with ""
 
+	// Defaults false, causing names prefixed with: ""
+	// Apparently configures a test environment.
+	catTracks.SetTestes(testesRun)
+
+	// Does boilerplate for setting up the router.
+	// Configures routes, which are defined in routes.go.
 	router := catTracks.NewRouter()
-
 	http.Handle("/", router)
 
+	// These are our always-on workers.
+	// They are go routines running `tippecanoe` commands
+	// to generate .mbtiles (mapbox tiles) map tiles.
+	// The 'master' routine generates map tiles for all cat tracks
+	// for the whole world. It takes a long time, around 24 hours.
+	// The 'edge' routines generates tiles for the latest
+	// cat tracks.
+	// IIRC, the master routine loop truncates the edge tracks
+	// list, so there is a period of time where (while master runs) some (eg. yesterday's) tracks
+	// are not expected to be shown on tiles.
 	var quitChan = make(chan bool)
 	var mu sync.Mutex
 	if procmaster {

@@ -2,15 +2,17 @@ package catTracks
 
 import (
 	"encoding/json"
-
-	"github.com/olahol/melody"
 	// "github.com/rotblauer/trackpoints/trackPoint"
 	"log"
+
+	"github.com/olahol/melody"
 )
 
 var m *melody.Melody
 
-//InitMelody does stuff
+// InitMelody sets up the websocket handler
+// which currently only handles the dilapidated QT (QuadTree) business.
+// Can probably safely be removed.
 func InitMelody() {
 	m = melody.New()
 
@@ -18,7 +20,7 @@ func InitMelody() {
 	m.HandleMessage(onMessageHandler)
 }
 
-//GetMelody does stuff
+// GetMelody does stuff
 func GetMelody() *melody.Melody {
 	return m
 }
@@ -45,6 +47,6 @@ func onMessageHandler(s *melody.Session, msg []byte) {
 
 }
 
-//on message
+// on message
 
-//on connect?
+// on connect?

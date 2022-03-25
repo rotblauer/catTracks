@@ -31,8 +31,8 @@ var (
 )
 
 // SetTestes run
-func SetTestes(flagger bool) {
-	testes = flagger
+func SetTestes(flagOption bool) {
+	testes = flagOption
 }
 
 // SetForwardPopulate sets the 'downstream' urls that should be forwarded
