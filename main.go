@@ -36,6 +36,8 @@ func main() {
 
 	var procmaster, procedge bool
 
+	var exportTarget string // target postgis endpoint
+
 	flag.IntVar(&porty, "port", 8080, "port to serve and protect")
 	flag.BoolVar(&clearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") // TODO clear only certain values, ie prefixed with testes based on testesRun
 	flag.BoolVar(&testesRun, "testes", false, "testes run prefixes name with testes-")              // hope that's your phone's name
@@ -59,6 +61,8 @@ func main() {
 	flag.BoolVar(&procmaster, "proc-master", false, "run getem for master tiles")
 	flag.BoolVar(&procedge, "proc-edge", false, "run getem for edge tiles")
 	flag.BoolVar(&placesLayer, "places-layer", false, "generate layer for valid ios places")
+
+	flag.StringVar(&exportTarget, "export.target", "postgres://postgres:mysecretpassword@localhost:5432/cattracks1?sslmode=prefer", "target postgis endpoint")
 
 	flag.Parse()
 
@@ -100,7 +104,7 @@ func main() {
 
 	if exportPostGIS != nil && *exportPostGIS {
 		log.Println("Exporting PostGIS")
-		catTrackslib.ExportPostGIS()
+		catTrackslib.ExportPostGIS(exportTarget)
 		return
 	}
 
