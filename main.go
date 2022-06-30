@@ -16,7 +16,7 @@ import (
 
 	"github.com/kpawlik/geojson"
 
-	"github.com/rotblauer/catTrackslib/catTracks"
+	"github.com/rotblauer/catTrackslib"
 )
 
 var exportPostGIS = flag.Bool("exportPostGIS", false, "export to postgis")
@@ -62,19 +62,19 @@ func main() {
 
 	flag.Parse()
 
-	catTracks.SetForwardPopulate(forwardurl)
-	catTracks.SetLiveTracksGZ(tracksjsongzpath)
-	catTracks.SetLiveTracksGZDevop(tracksjsongzpathdevop)
-	catTracks.SetLiveTracksGZEdge(tracksjsongzpathedge)
-	catTracks.SetDBPath("master", dbpath)
-	catTracks.SetDBPath("devop", devopdbpath)
-	catTracks.SetDBPath("edge", edgedbpath)
+	catTrackslib.SetForwardPopulate(forwardurl)
+	catTrackslib.SetLiveTracksGZ(tracksjsongzpath)
+	catTrackslib.SetLiveTracksGZDevop(tracksjsongzpathdevop)
+	catTrackslib.SetLiveTracksGZEdge(tracksjsongzpathedge)
+	catTrackslib.SetDBPath("master", dbpath)
+	catTrackslib.SetDBPath("devop", devopdbpath)
+	catTrackslib.SetDBPath("edge", edgedbpath)
 
-	catTracks.SetMasterLock(masterlock)
-	catTracks.SetDevopLock(devlock)
-	catTracks.SetEdgeLock(edgelock)
+	catTrackslib.SetMasterLock(masterlock)
+	catTrackslib.SetDevopLock(devlock)
+	catTrackslib.SetEdgeLock(edgelock)
 
-	catTracks.SetPlacesLayer(placesLayer)
+	catTrackslib.SetPlacesLayer(placesLayer)
 
 	// mkdir -p db/tracks.db
 	// os.MkdirAll(filepath.Dir(edgedbpath), 0666)
