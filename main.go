@@ -99,6 +99,7 @@ func main() {
 	// }
 
 	if exportPostGIS != nil && *exportPostGIS {
+		log.Println("Exporting PostGIS")
 		catTrackslib.ExportPostGIS()
 		return
 	}
