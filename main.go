@@ -16,7 +16,7 @@ import (
 
 	"github.com/kpawlik/geojson"
 
-	"github.com/rotblauer/catTracks/catTracks"
+	"github.com/rotblauer/catTrackslib/catTracks"
 )
 
 var exportPostGIS = flag.Bool("exportPostGIS", false, "export to postgis")
