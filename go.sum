@@ -74,6 +74,8 @@ github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZN
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
 github.com/rotblauer/catTrackslib v0.0.0-20220630173552-5bef79815ffc h1:aJxjjVH2XMqTkyEnVPhU3wHCmWTusWdrbGO/CIblbU0=
 github.com/rotblauer/catTrackslib v0.0.0-20220630173552-5bef79815ffc/go.mod h1:D/V/VWhcCHE7QVcJl+UGb+wy3nBYhIQV3iBBV1GGXU4=
+github.com/rotblauer/catTrackslib v1.0.0 h1:UGglYiW9gRtcpe05fjtrF+UOmWCcoImu0CIBmgRgccw=
+github.com/rotblauer/catTrackslib v1.0.0/go.mod h1:1tQAQPOOD35pWFeZpcnUceca5otkQeyfdcx5p5nfe6s=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e h1:dfAKz4H3qebrk+Pue0terJBngmqpGgvlltkxK/t4yvQ=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e/go.mod h1:QT1z+8u5GObIQDdDnxCVy4pyp5Mity3dhkx71NMM+kc=
 github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630170348-f4cc23102652/go.mod h1:UifoZEsiF26XUDT9MBTy4axnHFa6o8jTB9d3PqCtjas=
