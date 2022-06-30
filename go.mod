@@ -16,6 +16,7 @@ require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
 	github.com/montanaflynn/stats v0.6.6
 	github.com/olahol/melody v0.0.0-20180227134253-7bd65910e5ab
+	github.com/rotblauer/catTracks/catTracks v0.0.0-20220630171206-e710698459f8
 	github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e
 	github.com/rotblauer/trackpoints v1.0.0
 	github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630170348-f4cc23102652

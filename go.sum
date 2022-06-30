@@ -84,6 +84,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
+github.com/rotblauer/catTracks/catTracks v0.0.0-20220630171206-e710698459f8 h1:dUMyu4VGXTRV4qDWAnvVnshGyyfgbvEpnh9yJEnDhvA=
+github.com/rotblauer/catTracks/catTracks v0.0.0-20220630171206-e710698459f8/go.mod h1:YqCuyDsuIUpQDYEljIgbeXGp37pC4Q+J6Nj0M46BIMI=
 github.com/rotblauer/google-geolocate v0.0.0-20170109034844-ce12f6c55324/go.mod h1:N8iQ9odbvM/EUmJeHWBHuVL2xE/91r1F8HNoZqPWA3U=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e h1:dfAKz4H3qebrk+Pue0terJBngmqpGgvlltkxK/t4yvQ=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e/go.mod h1:QT1z+8u5GObIQDdDnxCVy4pyp5Mity3dhkx71NMM+kc=
