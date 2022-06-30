@@ -80,26 +80,26 @@ func main() {
 	// os.MkdirAll(filepath.Dir(edgedbpath), 0666)
 
 	// Open Bolt DB.
-	// catTracks.InitBoltDB()
-	if bolterr := catTracks.InitBoltDB(); bolterr == nil {
-		defer catTracks.GetDB("master").Close()
+	// catTrackslib.InitBoltDB()
+	if bolterr := catTrackslib.InitBoltDB(); bolterr == nil {
+		defer catTrackslib.GetDB("master").Close()
 	}
 	if clearDBTestes {
-		e := catTracks.DeleteTestes()
+		e := catTrackslib.DeleteTestes()
 		if e != nil {
 			log.Println(e)
 		}
 	}
 	if buildIndexes {
-		catTracks.BuildIndexBuckets() // cleverly always returns nil
+		catTrackslib.BuildIndexBuckets() // cleverly always returns nil
 	}
-	// if qterr := catTracks.InitQT(); qterr != nil {
+	// if qterr := catTrackslib.InitQT(); qterr != nil {
 	// 	log.Println("Error initing QT.")
 	// 	log.Println(qterr)
 	// }
 
 	if exportPostGIS != nil && *exportPostGIS {
-		catTracks.ExportPostGIS()
+		catTrackslib.ExportPostGIS()
 		return
 	}
 
@@ -107,15 +107,15 @@ func main() {
 	// we don't actually use websockets for anything.
 	// But if we did, this would be a way and place to start
 	// hacking something in there.
-	catTracks.InitMelody()
+	catTrackslib.InitMelody()
 
 	// Defaults false, causing names prefixed with: ""
 	// Apparently configures a test environment.
-	catTracks.SetTestes(testesRun)
+	catTrackslib.SetTestes(testesRun)
 
 	// Does boilerplate for setting up the router.
 	// Configures routes, which are defined in routes.go.
-	router := catTracks.NewRouter()
+	router := catTrackslib.NewRouter()
 	http.Handle("/", router)
 
 	// These are our always-on workers.
@@ -209,7 +209,7 @@ func main() {
 				select {
 				case <-quitChan:
 					return
-				case <-catTracks.NotifyNewEdge:
+				case <-catTrackslib.NotifyNewEdge:
 
 					// look for any finished edge geojson gz files
 					mu.Lock()
@@ -290,7 +290,7 @@ func main() {
 				select {
 				case <-quitChan:
 					return
-				case p := <-catTracks.FeaturePlaceChan:
+				case p := <-catTrackslib.FeaturePlaceChan:
 					places = append(places, p)
 					log.Println("+place:", p)
 				default:
@@ -302,14 +302,14 @@ func main() {
 
 						placesProcLock.Lock() // might be unnecessary
 
-						pgz := catTracks.CreateGZ(placesJSONGZ, gzip.BestCompression)
+						pgz := catTrackslib.CreateGZ(placesJSONGZ, gzip.BestCompression)
 						for _, f := range places {
 							if f == nil {
 								continue
 							}
 							pgz.JE().Encode(f)
 						}
-						catTracks.CloseGZ(pgz)
+						catTrackslib.CloseGZ(pgz)
 
 						// reset local places
 						places = []*geojson.Feature{}
