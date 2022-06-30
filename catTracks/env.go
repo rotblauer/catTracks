@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	bolt "go.etcd.io/bbolt"
+
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
