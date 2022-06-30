@@ -9,3 +9,7 @@ require (
 	github.com/stretchr/testify v1.8.0 // indirect
 	go.etcd.io/bbolt v1.3.6 // indirect
 )
+
+replace (
+	github.com/rotblauer/catTrackslib v1.0.1 => /home/ia/go/src/github.com/rotblauer/catTrackslib
+)
