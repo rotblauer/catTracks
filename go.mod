@@ -10,4 +10,5 @@ require (
 	go.opencensus.io v0.23.0 // indirect
 	golang.org/x/sys v0.0.0-20220627191245-f75cf1eec38b // indirect
 	golang.org/x/time v0.0.0-20220609170525-579cf78fd858 // indirect
+	go.etcd.io/bbolt v1.3.5
 )
