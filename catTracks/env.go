@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 

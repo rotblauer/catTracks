@@ -2,12 +2,11 @@ package catTracks
 
 import (
 	"encoding/json"
-	"time"
 	// "errors"
 	"fmt"
+	"time"
 
 	"github.com/asim/quadtree"
-	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
@@ -32,19 +31,19 @@ func initQTBounds() *quadtree.AABB {
 	return quadtree.NewAABB(p, half)
 }
 
-//InitQT initializes quadtree by iterating through all points and inserting them into in-memory (yikes!) qt
+// InitQT initializes quadtree by iterating through all points and inserting them into in-memory (yikes!) qt
 func InitQT() error {
 	var e error
 
-	//tinker with default qt sizing
+	// tinker with default qt sizing
 	quadtree.MaxDepth = 24
-	quadtree.Capacity = 72 //lets really blow it up
+	quadtree.Capacity = 72 // lets really blow it up
 
-	//being new quadtree
+	// being new quadtree
 	fmt.Println("initing qt...")
 	qt = quadtree.New(initQTBounds(), 0, nil)
 
-	//stick points into quadtree
+	// stick points into quadtree
 	e = GetDB("master").View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(trackKey))
 
@@ -81,13 +80,13 @@ func InitQT() error {
 func getPointsFromQT(query *query) (tps trackPoint.TPs) {
 	start := time.Now()
 
-	//build aabb rect
+	// build aabb rect
 	var center = make(map[string]float64)
 	center["lat"] = (query.Bounds.NorthEastLat + query.Bounds.SouthWestLat) / 2.0
 	center["lng"] = (query.Bounds.NorthEastLng + query.Bounds.SouthWestLng) / 2.0
 	cp := quadtree.NewPoint(center["lat"], center["lng"], nil)
 
-	//not totally sure what halfpoint means but best guess
+	// not totally sure what halfpoint means but best guess
 	half := trackPoint.Distance(center["lat"], center["lng"], center["lat"], query.Bounds.NorthEastLng)
 	hp := cp.HalfPoint(half)
 

@@ -19,7 +19,7 @@ import (
 	"github.com/rotblauer/catTracks/catTracks"
 )
 
-// start the url handlers, special init for everything?
+var exportPostGIS = flag.Bool("exportPostGIS", false, "export to postgis")
 
 // Toodle to do , Command line port arg, might mover er to main
 func main() {
@@ -97,6 +97,11 @@ func main() {
 	// 	log.Println("Error initing QT.")
 	// 	log.Println(qterr)
 	// }
+
+	if exportPostGIS != nil && *exportPostGIS {
+		catTracks.ExportPostGIS()
+		return
+	}
 
 	// FIXME: This is deprecated/dilapidated because
 	// we don't actually use websockets for anything.

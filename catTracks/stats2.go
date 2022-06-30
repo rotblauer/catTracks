@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/boltdb/bolt"
 	Stats "github.com/montanaflynn/stats"
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
@@ -84,7 +83,7 @@ func absSumDiff(ff Stats.Float64Data) float64 {
 }
 
 func (s *userStats) buildStatsFromRaw() *userStats {
-	//debugLog(us.Name, len(us.Raw.Accuracy))
+	// debugLog(us.Name, len(us.Raw.Accuracy))
 
 	us := &userStats{
 		Name: s.Name,
@@ -467,7 +466,7 @@ func calculateStatsByDateAndSpan(t time.Time, span time.Duration) (*catStatsCalc
 
 	for j, s := range daily.UserOrTeamStats {
 		daily.UserOrTeamStats[j] = s.buildStatsFromRaw()
-		//debugLog(s)
+		// debugLog(s)
 	}
 
 	return daily, nil

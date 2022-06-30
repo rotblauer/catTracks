@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/rotblauer/trackpoints/trackPoint"
 )
 
@@ -23,7 +22,7 @@ func buildTimePeriodStats(numDays int) (stats timePeriodStats, e error) {
 	}
 
 	catPts := make(map[string]trackPoint.CatStats)
-	for _, name := range pts.UniqueNames() { //erbody
+	for _, name := range pts.UniqueNames() { // erbody
 		catPts[name] = pts.ForName(name).Statistics()
 	}
 

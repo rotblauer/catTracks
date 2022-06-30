@@ -8,7 +8,6 @@ import (
 	"sort"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/deet/simpleline"
 	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
@@ -37,7 +36,7 @@ func citiesInCellID(c s2.CellID) []simpleline.Point {
 
 			var tp trackPoint.TrackPoint
 			json.Unmarshal(v, &tp)
-			//fsckerr
+			// fsckerr
 
 			coords = append(coords, &tp)
 
@@ -54,7 +53,7 @@ func citiesInCellID(c s2.CellID) []simpleline.Point {
 	return coords
 }
 
-//TODO make queryable ala which cat when
+// TODO make queryable ala which cat when
 // , channel chan *trackPoint.TrackPoint
 func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 
@@ -82,7 +81,7 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 	} else {
 
 		start := time.Now()
-		//TODO make this not what it was
+		// TODO make this not what it was
 
 		err = GetDB("master").View(func(tx *bolt.Tx) error {
 			var err error
@@ -105,7 +104,7 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 		fmt.Printf("Found %d points with iterator method - %s", len(coords), time.Since(start))
 	}
 
-	//? but why is there a null pointer error? how is the func being passed a nil query?
+	// ? but why is there a null pointer error? how is the func being passed a nil query?
 	var epsilon float64
 	if query != nil {
 		epsilon = query.Epsilon // just so we can separate incoming queryEps and wiggled-to Eps
@@ -113,7 +112,7 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 		epsilon = DefaultEpsilon // to default const
 	}
 
-	//simpleify line
+	// simpleify line
 	// results, sErr := simpleline.RDP(coords, 5, simpleline.Euclidean, true)
 	originalCount := len(coords)
 
@@ -123,11 +122,11 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 	} else {
 		l = DefaultLimit
 	}
-	//just a hacky shot at wiggler. pointslimits -> query eventually?
+	// just a hacky shot at wiggler. pointslimits -> query eventually?
 	var results []simpleline.Point
 	if originalCount > l {
 
-		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) //0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
+		results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true) // 0.001 bring a 5700pt run to prox 300 (.001 scale is lat and lng)
 		if err != nil {
 			fmt.Println("Errrrrrr", err)
 			results = coords // return coords, err //better dan nuttin //but not sure want to return the err...
@@ -138,7 +137,7 @@ func socketPointsByQueryGeohash(query *query) (trackPoint.TPs, error) {
 		for len(results) > l {
 			epsilon = epsilon + epsilon/(1-epsilon)
 			fmt.Println("wiggling eps: ", epsilon)
-			//or could do with results stead of coords?
+			// or could do with results stead of coords?
 			results, err = simpleline.RDP(coords, epsilon, simpleline.Euclidean, true)
 			if err != nil {
 				fmt.Println("Errrrrrr", err)

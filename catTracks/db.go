@@ -7,9 +7,9 @@ import (
 	"log"
 	"path/filepath"
 
-	"github.com/boltdb/bolt" // TOOD: use coreos
 	"github.com/golang/geo/s2"
 	"github.com/rotblauer/trackpoints/trackPoint"
+	bolt "go.etcd.io/bbolt"
 )
 
 var (
@@ -104,7 +104,7 @@ func InitBoltDB() error {
 	return nil
 }
 
-//BuildIndexBuckets populates name, lat, and long buckets from main "tracks" (time) bucket.
+// BuildIndexBuckets populates name, lat, and long buckets from main "tracks" (time) bucket.
 func BuildIndexBuckets() error {
 	err := db.View(func(tx *bolt.Tx) error {
 		err := tx.Bucket([]byte(trackKey)).ForEach(func(key, val []byte) error {

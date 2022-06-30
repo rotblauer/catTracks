@@ -31,7 +31,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/boltdb/bolt"
 	"github.com/davecgh/go-spew/spew"
 	"github.com/kpawlik/geojson"
 	"github.com/rotblauer/tileTester2/note"
