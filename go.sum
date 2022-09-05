@@ -82,6 +82,8 @@ github.com/rotblauer/catTrackslib v1.0.0 h1:UGglYiW9gRtcpe05fjtrF+UOmWCcoImu0CIB
 github.com/rotblauer/catTrackslib v1.0.0/go.mod h1:1tQAQPOOD35pWFeZpcnUceca5otkQeyfdcx5p5nfe6s=
 github.com/rotblauer/catTrackslib v1.0.1 h1:cSEQ+DH50DMuQRG22KX1Mrqye9ORJgTd8tSfFI8DrfU=
 github.com/rotblauer/catTrackslib v1.0.1/go.mod h1:1tQAQPOOD35pWFeZpcnUceca5otkQeyfdcx5p5nfe6s=
+github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255 h1:Y0ZPdNEXrTxQA5prYMXr7+saw2OGqYUWa0fI8VKVw0s=
+github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255/go.mod h1:Qn4suWYDvnPynJf8AfAKXBxfp6Gh12JovEGejNUOAlg=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e h1:dfAKz4H3qebrk+Pue0terJBngmqpGgvlltkxK/t4yvQ=
 github.com/rotblauer/tileTester2 v0.0.0-20190203193258-ee43a1e88d7e/go.mod h1:QT1z+8u5GObIQDdDnxCVy4pyp5Mity3dhkx71NMM+kc=
 github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630170348-f4cc23102652/go.mod h1:UifoZEsiF26XUDT9MBTy4axnHFa6o8jTB9d3PqCtjas=
