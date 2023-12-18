@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
-	github.com/rotblauer/catTrackslib v1.1.1
+	github.com/rotblauer/catTrackslib v1.1.3
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -34,4 +34,4 @@ require (
 	googlemaps.github.io/maps v1.7.0 // indirect
 )
 
-//replace github.com/rotblauer/catTrackslib v1.0.1 => /home/ia/go/src/github.com/rotblauer/catTrackslib
+//replace github.com/rotblauer/catTrackslib v1.1.2 => /home/ia/go/src/github.com/rotblauer/catTrackslib

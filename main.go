@@ -149,6 +149,19 @@ func main() {
 				case <-quitChan:
 					return
 				default:
+
+					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
+						if fi.Size() < 100 {
+							log.Println("edge.json.gz is too small, skipping")
+							time.Sleep(time.Minute)
+							continue
+						}
+					} else if err != nil {
+						log.Println("edge.json.gz errored, skipping", err)
+						time.Sleep(time.Minute)
+						continue
+					}
+
 					// cat append all finished edge files to master.json.gz
 					log.Println("starting procmaster iter")
 
