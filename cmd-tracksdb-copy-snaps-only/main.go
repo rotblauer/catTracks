@@ -16,10 +16,10 @@ func main() {
 	log.Println("target", *flagTargetDB)
 
 	// open source db
-	source, err := bolt.Open(*flagSourceDB, 0666, nil)
+	_, err := bolt.Open(*flagSourceDB, 0666, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer source.Close()
+	// defer source.Close()
 
 }
