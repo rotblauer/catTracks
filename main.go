@@ -140,6 +140,7 @@ func main() {
 	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(dbpath), "cat-cells")
 	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
 	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
+	os.MkdirAll(tilesetsDir, 0755)
 
 	if procmaster {
 		go func() {

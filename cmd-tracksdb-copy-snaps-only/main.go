@@ -15,15 +15,13 @@ var flagTargetDB = flag.String("target", "catTracks-new.db", "target database")
 func main() {
 	flag.Parse()
 
-	log.Println("source", *flagSourceDB)
-	log.Println("target", *flagTargetDB)
-
 	// open source db
 	source, err := bolt.Open(*flagSourceDB, 0666, nil)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer source.Close()
+	log.Println("source", *flagSourceDB)
 
 	// open target db
 	target, err := bolt.Open(*flagTargetDB, 0666, nil)
@@ -31,6 +29,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer target.Close()
+	log.Println("target", *flagTargetDB)
 
 	// copy snaps
 	err = source.View(func(stx *bolt.Tx) error {
@@ -40,13 +39,14 @@ func main() {
 		}
 		c := b.Cursor()
 		for k, v := c.First(); k != nil; k, v = c.Next() {
+
 			err := target.Update(func(ttx *bolt.Tx) error {
-				b, err := ttx.CreateBucketIfNotExists(snapBucketKey)
+				bb, err := ttx.CreateBucketIfNotExists(snapBucketKey)
 				if err != nil {
 					return err
 				}
 				log.Println("copying", string(k))
-				err = b.Put(k, v)
+				err = bb.Put(k, v)
 				return err
 			})
 			if err != nil {

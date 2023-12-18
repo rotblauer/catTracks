@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
-	github.com/rotblauer/catTrackslib v1.1.0
+	github.com/rotblauer/catTrackslib v1.1.1
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -27,7 +27,6 @@ require (
 	github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255 // indirect
 	github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 // indirect
 	github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630172156-84e70c5d820e // indirect
-	github.com/stretchr/testify v1.8.1 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
