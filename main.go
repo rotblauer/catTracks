@@ -3,7 +3,7 @@ package main
 import (
 	"compress/gzip"
 	"flag"
-	"io/ioutil"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -134,7 +134,12 @@ func main() {
 	// list, so there is a period of time where (while master runs) some (eg. yesterday's) tracks
 	// are not expected to be shown on tiles.
 	var quitChan = make(chan bool)
-	var mu sync.Mutex
+	var edgeMutex sync.Mutex
+
+	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(dbpath), "cat-cells")
+	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
+	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
+
 	if procmaster {
 		go func() {
 			for {
@@ -144,64 +149,70 @@ func main() {
 				default:
 					// cat append all finished edge files to master.json.gz
 					log.Println("starting procmaster iter")
-					mu.Lock()
-					edgeBytesGZ, err := ioutil.ReadFile(tracksjsongzpathEdge)
-					if err != nil {
-						if os.IsNotExist(err) {
-							os.Create(tracksjsongzpathEdge)
-							mu.Unlock()
-							continue
-						} else {
-							log.Fatalln("procmaster/err:", err)
+
+					// handle migrating init run
+					if _, err := os.Stat(splitCatCellsOutputRoot); os.IsNotExist(err) {
+						// run command to split master to cat.json.gz by unique cells
+						// will mkdir -p required output and db dirs
+						// eg.
+						//   ~/tdata/cat-cells/{ia,rye}.json.gz
+						//   ~/tdata/cat-cells/dbs/{ia,rye}.db
+						if err := runCatCellSplitter(tracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+							log.Fatalln(err)
 						}
 					}
-					mu.Unlock()
-					// if len(b) == 0 {
-					// if there are no edge points to append to master, then don't do anything.
-					// if this happens, this means that no points have been added in, say, the last 2-4 hours,
-					// so something has gone terribly wrong
-					// log.Println("procmaster/nonerr-", "continue")
-					// continue
+					// now the master -> cat.json.gz is split into cells
+					// so we can run the edge -> cat.json.gz
+					edgeMutex.Lock()
+
+					if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						log.Fatalln(err)
+					}
+
+					// append edge tracks to master
+					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster))
+
+					// rename edge.json.gz -> devop.json.gz (roll)
+					_ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+					// touch edge.json.gz
+					_, _ = os.Create(tracksjsongzpathEdge) // create or truncate
+					// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
+					_ = os.Rename(filepath.Join(filepath.Dir(dbpath), "tilesets", "edge.mbtiles"), filepath.Join(filepath.Dir(dbpath), "tilesets", "devop.mbtiles"))
+
+					edgeMutex.Unlock()
+
+					// run tippe on split cat cells
+					// eg.
+					//  ~/tdata/cat-cells/mbtiles
+					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
+					_ = bashExec(fmt.Sprintf(`tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath))
+
+					// TODO we have now TWO copies of relatively fresh mbtiles dirs,
+					// we need to keep the genMBTilesPath so we can avoid re-genning stale json.gz->tiles,
+					// and we need to keep tilesets/ clean so we can avoid trouble (.mbtiles-journals) with the mbtiles server
+					// good news is these .mbtiles dbs are relatively small, < 10GB
+					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
+					// Expect live-reload (consbio/mbtileserver --enable-fs-watch) to pick them up.
+					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
+					_ = bashExec(fmt.Sprintf("cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir))
+
+					// // run tippe and undump on master
+					// // again, output should be to wip file, then mv
+					// // runTippe(out, in string, tilesetname string, bolttilesout string)
+					// out := filepath.Join(filepath.Dir(dbpath), "master.mbtiles")
+					// in := tracksjsongzpathMaster
+					// log.Println("running master tippe")
+					// if err := runTippe(out, in, "catTrack"); err != nil {
+					// 	panic(err.Error())
+					// 	// log.Println("TIPPERR master db tipp err:", err)
+					// 	// return
 					// }
-					fi, fe := os.OpenFile(tracksjsongzpathMaster, os.O_WRONLY|os.O_APPEND, 0660)
-					if fe != nil {
-						if os.IsNotExist(fe) {
-							os.Create(tracksjsongzpathMaster) // should be only for dev
-							log.Println("procmaster/err:", "created tracksjsongzpath")
-							continue
-						}
-						panic(fe.Error())
-					}
-					if _, e := fi.Write(edgeBytesGZ); e != nil {
-						panic(e)
-					}
-					fi.Close()
-
-					mu.Lock()
-					// os.Truncate(tracksjsongzpathedge, 0)
-
-					// move tracks-edge.db (mbtiles in bolty) -> tracks-devop.db
-					os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
-					os.Rename(filepath.Join(filepath.Dir(dbpath), "tilesets", "edge.mbtiles"), filepath.Join(filepath.Dir(dbpath), "tilesets", "devop.mbtiles"))
-					os.Create(tracksjsongzpathEdge)
-
-					mu.Unlock()
-
-					// run tippe and undump on master
-					// again, output should be to wip file, then mv
-					// runTippe(out, in string, tilesetname string, bolttilesout string)
-					out := filepath.Join(filepath.Dir(dbpath), "master.mbtiles")
-					in := tracksjsongzpathMaster
-					log.Println("running master tippe")
-					if err := runTippe(out, in, "catTrack"); err != nil {
-						panic(err.Error())
-						// log.Println("TIPPERR master db tipp err:", err)
-						// return
-					}
-
-					// os.Rename(out+".json.gz", filepath.Join(filepath.Dir(dbpath), "master.json.gz"))
-
-					os.Rename(out, filepath.Join(filepath.Dir(dbpath), "tilesets", "master.mbtiles"))
+					//
+					// // splitterCmd.Stdin =
+					//
+					// // os.Rename(out+".json.gz", filepath.Join(filepath.Dir(dbpath), "master.json.gz"))
+					//
+					// os.Rename(out, filepath.Join(tilesetsDir, "master.mbtiles"))
 					// os.Remove(out + ".mbtiles")
 				}
 			}
@@ -217,70 +228,79 @@ func main() {
 				case <-catTrackslib.NotifyNewEdge:
 
 					// look for any finished edge geojson gz files
-					mu.Lock()
+					edgeMutex.Lock()
 					d := filepath.Dir(tracksjsongzpathEdge)
-					matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
-					if err != nil {
-						panic("bad glob pattern:" + err.Error())
-					}
-					log.Printf("procedge matchesN=%d", len(matches))
-					if len(matches) == 0 {
-						mu.Unlock()
-						continue
-					}
 
-					// cat and append all -fin- edges to edge.json.gz
-					for _, m := range matches {
-						b, err := ioutil.ReadFile(m)
-						if err != nil {
-							log.Println("err:", err)
-							continue
-						}
-						fi, fe := os.OpenFile(tracksjsongzpathEdge, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
-						if fe != nil {
-							log.Println("fe:", fe)
-							if fi != nil {
-								fi.Close()
-							}
-							continue
-						}
-						_, e := fi.Write(b)
-						fi.Close()
-						if e != nil {
-							log.Println("errappend:", e)
-							continue
-						}
-						os.Remove(m)
-					}
-					// run tippe, note that this should lockmu and copy edge.json.gz to .snap
-					// make a copy of edge.json.gz to edge.snap.json.gz
-					b, e := ioutil.ReadFile(tracksjsongzpathEdge)
-					if e != nil {
-						if os.IsNotExist(e) {
-							os.Create(tracksjsongzpathEdge)
-							mu.Unlock()
-							continue
-						}
-						panic(e)
-					}
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", d, tracksjsongzpathEdge))
+					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", d))
+
 					snapEdgePath := filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.snap.json.gz")
-					if e := ioutil.WriteFile(snapEdgePath, b, 0660); e != nil {
-						panic(e)
-					}
-					mu.Unlock()
-					err = runTippe(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), snapEdgePath, "catTrackEdge")
+					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath))
+
+					// matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
+					// if err != nil {
+					// 	panic("bad glob pattern:" + err.Error())
+					// }
+					// log.Printf("procedge matchesN=%d", len(matches))
+					// if len(matches) == 0 {
+					// 	edgeMutex.Unlock()
+					// 	continue
+					// }
+					//
+					// // cat and append all -fin- edges to edge.json.gz
+					// for _, m := range matches {
+					// 	b, err := ioutil.ReadFile(m)
+					// 	if err != nil {
+					// 		log.Println("err:", err)
+					// 		continue
+					// 	}
+					// 	fi, fe := os.OpenFile(tracksjsongzpathEdge, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
+					// 	if fe != nil {
+					// 		log.Println("fe:", fe)
+					// 		if fi != nil {
+					// 			fi.Close()
+					// 		}
+					// 		continue
+					// 	}
+					// 	_, e := fi.Write(b)
+					// 	fi.Close()
+					// 	if e != nil {
+					// 		log.Println("errappend:", e)
+					// 		continue
+					// 	}
+					// 	os.Remove(m)
+					// }
+					// // run tippe, note that this should lockmu and copy edge.json.gz to .snap
+					// // make a copy of edge.json.gz to edge.snap.json.gz
+					// b, e := ioutil.ReadFile(tracksjsongzpathEdge)
+					// if e != nil {
+					// 	if os.IsNotExist(e) {
+					// 		os.Create(tracksjsongzpathEdge)
+					// 		edgeMutex.Unlock()
+					// 		continue
+					// 	}
+					// 	panic(e)
+					// }
+					// if e := ioutil.WriteFile(snapEdgePath, b, 0660); e != nil {
+					// 	panic(e)
+					// }
+
+					edgeMutex.Unlock()
+
+					var err error
+					err = runTippe(filepath.Join(d, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
 						log.Println("TIPPERR:", err)
 						continue
 					}
 					os.Remove(snapEdgePath)
 					log.Println("waiting for lock ege for migrating")
-					mu.Lock()
+					edgeMutex.Lock()
 					log.Println("got lOCK")
-					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(filepath.Dir(tracksjsongzpathEdge), "tilesets", "edge.mbtiles"))
+					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
 					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
-					mu.Unlock()
+					edgeMutex.Unlock()
 				}
 			}
 		}()
@@ -344,6 +364,37 @@ func main() {
 	quitChan <- true
 	quitChan <- true
 	quitChan <- true
+}
+
+func bashExec(cmd string) error {
+	log.Println("bash executing:", cmd)
+	bashCmd := exec.Command("bash", "-c", cmd)
+	bashCmd.Stdout = os.Stdout
+	bashCmd.Stderr = os.Stderr
+	return bashCmd.Run()
+}
+
+func runCatCellSplitter(sourceGZ, outputRoot, dbRoot string) error {
+	/*
+		time cat ~/tdata/master.json.gz | zcat |\
+		    go run . \
+		    --workers 8 \
+		    --cell-level 23 \
+		    --batch-size 100000 \
+		    --cache-size 50000000 \
+		    --compression-level 9
+	*/
+	c := fmt.Sprintf(`zcat %s | cattracks-split-cats-uniqcell-gz \
+--workers 4 \
+--cell-level 23 \
+--batch-size 100000 \
+--cache-size 5000000 \
+--compression-level 9 \
+--output %s \
+--db-root %s`,
+		sourceGZ, outputRoot, dbRoot)
+
+	return bashExec(c)
 }
 
 func runTippeLite(out, in string, tilesetname string) error {
