@@ -11,6 +11,7 @@ import (
 	"path"
 	"path/filepath"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -186,6 +187,62 @@ func main() {
 					//  ~/tdata/cat-cells/mbtiles
 					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
 					_ = bashExec(fmt.Sprintf(`tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath))
+
+					// collect all .mbtiles for cats who are not ia or rye
+					// then run tile-join on them to make genpop.mbtiles
+					// genpop is expected to be much smaller than either ia or rye
+					// only do this if any one of the genpop people have pushed tracks and have new tiles
+					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.mbtiles")
+					var genPopTilesModTime time.Time // modtime of genpop.tiles
+					if fi, err := os.Stat(genPopTilesPath); err == nil {
+						genPopTilesModTime = fi.ModTime()
+					}
+
+					// genPopDidUpdate tells us if any of the .mbtiles for the genpop has updated more
+					// recently than the modtime on genpop.mbtiles
+					var genPopDidUpdate bool
+
+					genPopTilePaths := []string{} // will be all tile paths EXCEPT those matching any of notGenPop
+					notGenPop := []string{
+						"ia",
+						"rye",
+					}
+
+					// get the glob list of all generated .mbtiles
+					allpopTiles, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					if err != nil {
+						log.Fatalln(err)
+					}
+
+				genPopLoop:
+					for _, tilesFile := range allpopTiles {
+						for _, reservedName := range notGenPop {
+							// path/to/ia.level-23.mbtiles => ia
+							// path/to/bob.mbtiles => bob
+							if strings.Contains(strings.Split(filepath.Base(tilesFile), ".")[0], reservedName) {
+								continue genPopLoop
+							}
+						}
+
+						// no hit; is unreserved genpop mbtiles
+						genPopTilePaths = append(genPopTilePaths, tilesFile)
+
+						// mark if this mbtiles has been update more recently than genpop.mbtiles
+						if fi, err := os.Stat(tilesFile); err == nil {
+							if fi.ModTime().After(genPopTilesModTime) {
+								genPopDidUpdate = true
+							}
+						}
+					}
+
+					if genPopDidUpdate {
+						log.Println("genpop tiles updated, running tile-join")
+						// run tile-join on them to make genpop.mbtiles
+						genPopTilePathsString := strings.Join(genPopTilePaths, " ")
+						_ = bashExec(fmt.Sprintf("tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString))
+					} else {
+						log.Println("genpop tiles not updated, skipping tile-join")
+					}
 
 					// TODO we have now TWO copies of relatively fresh mbtiles dirs,
 					// we need to keep the genMBTilesPath so we can avoid re-genning stale json.gz->tiles,
