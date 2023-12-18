@@ -26,6 +26,14 @@ things i want to change to make it lighter:
   - currently the procmaster tippe takes... a long time; 24hrs+, maybe even 48..72..96hrs+ (this is `master.json.gz -> master.mbtiles`)
   - i can run (w/ same tippe config) tippe on cat:uniqcells for all cats in 44m minutes on my laptop 
 
+
+so, what i want to do is:
+- [ ] get rid of _places_, they are disused and cluttery
+- [ ] don't store tracks in bolt except for ONLY track-snaps
+- [ ] save snaps locally, as well as S3
+- [ ] use a more meaningful key for the snaps, like `catname_timestamp_lat_long.png`
+- 
+
 ---
 pre-202312
 
