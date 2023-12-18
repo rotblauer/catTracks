@@ -28,7 +28,7 @@ func main() {
 	var testesRun bool
 	var buildIndexes bool
 	var forwardurl string
-	var tracksjsongzpath, tracksjsongzpathdevop, tracksjsongzpathedge string
+	var tracksjsongzpathMaster, tracksjsongzpathDevop, tracksjsongzpathEdge string
 	var dbpath, devopdbpath, edgedbpath string
 	var masterlock, devlock, edgelock string
 
@@ -45,9 +45,9 @@ func main() {
 
 	flag.StringVar(&forwardurl, "forward-url", "", "forward populate POST requests to this endpoint")
 
-	flag.StringVar(&tracksjsongzpath, "tracks-gz-path", "", "path to appendable json.gz tracks (used by tippe)")
-	flag.StringVar(&tracksjsongzpathdevop, "devop-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for devop tipping")
-	flag.StringVar(&tracksjsongzpathedge, "edge-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for edge tipping")
+	flag.StringVar(&tracksjsongzpathMaster, "tracks-gz-path", "", "path to appendable json.gz tracks (used by tippe)")
+	flag.StringVar(&tracksjsongzpathDevop, "devop-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for devop tipping")
+	flag.StringVar(&tracksjsongzpathEdge, "edge-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for edge tipping")
 
 	flag.StringVar(&dbpath, "db-path-master", path.Join("db", "tracks.db"), "path to master tracks bolty db")
 	// these don't go to a bolt db, just straight to .json.gz
@@ -67,9 +67,9 @@ func main() {
 	flag.Parse()
 
 	catTrackslib.SetForwardPopulate(forwardurl)
-	catTrackslib.SetLiveTracksGZ(tracksjsongzpath)
-	catTrackslib.SetLiveTracksGZDevop(tracksjsongzpathdevop)
-	catTrackslib.SetLiveTracksGZEdge(tracksjsongzpathedge)
+	catTrackslib.SetLiveTracksGZ(tracksjsongzpathMaster)
+	catTrackslib.SetLiveTracksGZDevop(tracksjsongzpathDevop)
+	catTrackslib.SetLiveTracksGZEdge(tracksjsongzpathEdge)
 	catTrackslib.SetDBPath("master", dbpath)
 	catTrackslib.SetDBPath("devop", devopdbpath)
 	catTrackslib.SetDBPath("edge", edgedbpath)
@@ -145,10 +145,10 @@ func main() {
 					// cat append all finished edge files to master.json.gz
 					log.Println("starting procmaster iter")
 					mu.Lock()
-					b, err := ioutil.ReadFile(tracksjsongzpathedge)
+					edgeBytesGZ, err := ioutil.ReadFile(tracksjsongzpathEdge)
 					if err != nil {
 						if os.IsNotExist(err) {
-							os.Create(tracksjsongzpathedge)
+							os.Create(tracksjsongzpathEdge)
 							mu.Unlock()
 							continue
 						} else {
@@ -163,16 +163,16 @@ func main() {
 					// log.Println("procmaster/nonerr-", "continue")
 					// continue
 					// }
-					fi, fe := os.OpenFile(tracksjsongzpath, os.O_WRONLY|os.O_APPEND, 0660)
+					fi, fe := os.OpenFile(tracksjsongzpathMaster, os.O_WRONLY|os.O_APPEND, 0660)
 					if fe != nil {
 						if os.IsNotExist(fe) {
-							os.Create(tracksjsongzpath) // should be only for dev
+							os.Create(tracksjsongzpathMaster) // should be only for dev
 							log.Println("procmaster/err:", "created tracksjsongzpath")
 							continue
 						}
 						panic(fe.Error())
 					}
-					if _, e := fi.Write(b); e != nil {
+					if _, e := fi.Write(edgeBytesGZ); e != nil {
 						panic(e)
 					}
 					fi.Close()
@@ -181,9 +181,9 @@ func main() {
 					// os.Truncate(tracksjsongzpathedge, 0)
 
 					// move tracks-edge.db (mbtiles in bolty) -> tracks-devop.db
-					os.Rename(tracksjsongzpathedge, tracksjsongzpathdevop)
+					os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
 					os.Rename(filepath.Join(filepath.Dir(dbpath), "tilesets", "edge.mbtiles"), filepath.Join(filepath.Dir(dbpath), "tilesets", "devop.mbtiles"))
-					os.Create(tracksjsongzpathedge)
+					os.Create(tracksjsongzpathEdge)
 
 					mu.Unlock()
 
@@ -191,7 +191,7 @@ func main() {
 					// again, output should be to wip file, then mv
 					// runTippe(out, in string, tilesetname string, bolttilesout string)
 					out := filepath.Join(filepath.Dir(dbpath), "master.mbtiles")
-					in := tracksjsongzpath
+					in := tracksjsongzpathMaster
 					log.Println("running master tippe")
 					if err := runTippe(out, in, "catTrack"); err != nil {
 						panic(err.Error())
@@ -218,7 +218,7 @@ func main() {
 
 					// look for any finished edge geojson gz files
 					mu.Lock()
-					d := filepath.Dir(tracksjsongzpathedge)
+					d := filepath.Dir(tracksjsongzpathEdge)
 					matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
 					if err != nil {
 						panic("bad glob pattern:" + err.Error())
@@ -236,7 +236,7 @@ func main() {
 							log.Println("err:", err)
 							continue
 						}
-						fi, fe := os.OpenFile(tracksjsongzpathedge, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
+						fi, fe := os.OpenFile(tracksjsongzpathEdge, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
 						if fe != nil {
 							log.Println("fe:", fe)
 							if fi != nil {
@@ -254,21 +254,21 @@ func main() {
 					}
 					// run tippe, note that this should lockmu and copy edge.json.gz to .snap
 					// make a copy of edge.json.gz to edge.snap.json.gz
-					b, e := ioutil.ReadFile(tracksjsongzpathedge)
+					b, e := ioutil.ReadFile(tracksjsongzpathEdge)
 					if e != nil {
 						if os.IsNotExist(e) {
-							os.Create(tracksjsongzpathedge)
+							os.Create(tracksjsongzpathEdge)
 							mu.Unlock()
 							continue
 						}
 						panic(e)
 					}
-					snapEdgePath := filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.snap.json.gz")
+					snapEdgePath := filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.snap.json.gz")
 					if e := ioutil.WriteFile(snapEdgePath, b, 0660); e != nil {
 						panic(e)
 					}
 					mu.Unlock()
-					err = runTippe(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.mbtiles"), snapEdgePath, "catTrackEdge")
+					err = runTippe(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
 						log.Println("TIPPERR:", err)
 						continue
@@ -277,7 +277,7 @@ func main() {
 					log.Println("waiting for lock ege for migrating")
 					mu.Lock()
 					log.Println("got lOCK")
-					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.mbtiles"), filepath.Join(filepath.Dir(tracksjsongzpathedge), "tilesets", "edge.mbtiles"))
+					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(filepath.Dir(tracksjsongzpathEdge), "tilesets", "edge.mbtiles"))
 					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
 					mu.Unlock()
@@ -302,7 +302,7 @@ func main() {
 					if lenp := len(places); lenp > 0 {
 						log.Println("processing", lenp, "places: ", places)
 						// eg. /var/tdata/places.json.gz
-						baseDataDir := filepath.Dir(tracksjsongzpathedge)
+						baseDataDir := filepath.Dir(tracksjsongzpathEdge)
 						placesJSONGZ := filepath.Join(baseDataDir, "places.json.gz")
 
 						placesProcLock.Lock() // might be unnecessary
