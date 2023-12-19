@@ -128,13 +128,9 @@ func main() {
 	// These are our always-on workers.
 	// They are go routines running `tippecanoe` commands
 	// to generate .mbtiles (mapbox tiles) map tiles.
-	// The 'master' routine generates map tiles for all cat tracks
-	// for the whole world. It takes a long time, around 24 hours.
-	// The 'edge' routines generates tiles for the latest
-	// cat tracks.
-	// IIRC, the master routine loop truncates the edge tracks
-	// list, so there is a period of time where (while master runs) some (eg. yesterday's) tracks
-	// are not expected to be shown on tiles.
+	// The 'master' routine generates .mbtiles for each cats' tracks.
+	// The 'master' routine ingests the latest tracks from the 'edge' routine, and then truncates that data.
+	// The 'edge' routines generates tiles for only the latest tracks (everyone included).
 	var quitChan = make(chan bool)
 	var edgeMutex sync.Mutex
 
@@ -165,6 +161,7 @@ func main() {
 					fmrJSONGZs.record()
 					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
 					fmrMBTiles.record()
+					var mbTilesExist = len(fmrMBTiles.files) > 0
 
 					var recovery = false // if spurious .mbtiles-journals files exist (tippecanoe interrupted)
 
@@ -191,7 +188,7 @@ func main() {
 						}
 					}
 
-					if !recovery {
+					if !recovery && mbTilesExist {
 						if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 							if fi.Size() < 100 {
 								log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", fi.Size())
@@ -249,7 +246,7 @@ func main() {
 					// or were they all dupes?
 					// if they were all dupes, we can skip the rest of this procmaster iter
 					fmrJSONGZs.stop()
-					if len(fmrJSONGZs.updated()) == 0 {
+					if len(fmrJSONGZs.updated()) == 0 && mbTilesExist {
 						log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
 						continue procmasterloop
 					}
