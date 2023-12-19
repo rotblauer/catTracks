@@ -194,7 +194,7 @@ func main() {
 					edgeSize := int64(0)
 					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 						edgeSize = fi.Size()
-						if edgeSize < 100 && !recovery {
+						if edgeSize < 100 && !recovery && mbTilesExist {
 							log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", edgeSize)
 							time.Sleep(time.Minute)
 							continue procmasterloop
