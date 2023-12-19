@@ -139,6 +139,8 @@ func main() {
 
 	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(dbpath), "cat-cells")
 	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
+	genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
+
 	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
 	os.MkdirAll(tilesetsDir, 0755)
 
@@ -158,18 +160,44 @@ func main() {
 				default:
 					log.Println("[procmaster] starting iter")
 
-					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
-						if fi.Size() < 100 {
-							log.Println("procmaster: edge.json.gz is too small, skipping")
+					var recovery = false
+					// recover corrupted mbtiles in case something got fucked, like killed or something
+					// any .mbtiles-journal files in the genMBTilesDir are considered indicators of corrupted .mbtiles files
+					// if there, we delete both the .mbtiles and .mbtiles-journals files, and touch the corresponding .json.gz file to update modtime, allowing a rebuild
+					mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles-journal"))
+					if len(mbtilesJournals) > 0 {
+					} else {
+						log.Println("[procmaster] 0 .mbtiles-journal files found, no recovery needed")
+					}
+					for _, journalFilepath := range mbtilesJournals {
+						if _, err := os.Stat(journalFilepath); os.IsNotExist(err) {
+							// probably impossible
+						} else if err == nil {
+							// this is actually what we don't want; if any .mbtiles-journal exist, the corresponding .mbtiles file should be considered corrupted
+							recovery = true
+							corruptedFilePath := strings.ReplaceAll(journalFilepath, ".mbtiles-journal", ".mbtiles")
+							log.Println("[procmaster] WARN: found ", journalFilepath, ", considering corrupted: ", corruptedFilePath)
+							_ = bashExec(fmt.Sprintf("rm %s", journalFilepath), "")
+							_ = bashExec(fmt.Sprintf("rm %s", corruptedFilePath), "")
+							geoJSONGZFilepath := filepath.Join(splitCatCellsOutputRoot, strings.ReplaceAll(filepath.Base(journalFilepath), ".mbtiles-journal", ".json.gz"))
+							_ = bashExec(fmt.Sprintf("touch %s", geoJSONGZFilepath), "") // touch to update modtime
+						}
+					}
+
+					if !recovery {
+						if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
+							if fi.Size() < 100 {
+								log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", fi.Size())
+								time.Sleep(time.Minute)
+								continue
+							}
+						} else if err != nil {
+							log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
 							time.Sleep(time.Minute)
 							continue
+						} else {
+							log.Printf("procmaster: edge.json.gz is %d bytes, running\n", fi.Size())
 						}
-					} else if err != nil {
-						log.Println("procmaster: edge.json.gz errored, skipping", err)
-						time.Sleep(time.Minute)
-						continue
-					} else {
-						log.Println("procmaster: edge.json.gz is %d bytes, running", fi.Size())
 					}
 
 					// cat append all finished edge files to master.json.gz
@@ -189,20 +217,24 @@ func main() {
 					// so we can run the edge -> cat.json.gz
 					edgeMutex.Lock()
 
+					// split the edge into cats
 					if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 						log.Fatalln(err)
 					}
 
 					// append edge tracks to master
-					_ = bashExec(fmt.Sprintf("time cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
+					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
 
 					log.Println("rolling edge to develop")
 					// rename edge.json.gz -> devop.json.gz (roll)
-					_ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+					_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), "")
+					// _ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
 					// touch edge.json.gz
-					_, _ = os.Create(tracksjsongzpathEdge) // create or truncate
+					_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), "")
+					// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
 					// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
-					_ = os.Rename(filepath.Join(filepath.Dir(dbpath), "tilesets", "edge.mbtiles"), filepath.Join(filepath.Dir(dbpath), "tilesets", "devop.mbtiles"))
+					_ = bashExec(fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")), "")
+					// _ = os.Rename(filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles"))
 
 					edgeMutex.Unlock()
 
@@ -230,10 +262,9 @@ func main() {
 						_catsJSONGZLastModTime = catsJSONGZLastModTime
 					}
 
-					// run tippe on split cat cells
+					// run tippe on all cat cells .json.gzs.
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
-					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
 					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
@@ -310,11 +341,11 @@ func main() {
 					}
 
 					if !genPopDidUpdate {
-						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp")
+						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp .mbtiles")
 						continue procmasterloop
 					}
+					log.Println("[procmaster] genpop tiles updated, running tile-join")
 
-					log.Println("genpop tiles updated, running tile-join")
 					// run tile-join on them to make genpop.mbtiles
 					genPopTilePathsString := strings.Join(genPopTilePaths, " ")
 					_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
@@ -328,7 +359,7 @@ func main() {
 					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
 					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
 
-					log.Println("finished procmaster iter")
+					log.Println("[procmaster] finished iter")
 
 					// // run tippe and undump on master
 					// // again, output should be to wip file, then mv
@@ -365,19 +396,19 @@ func main() {
 
 					// look for any finished edge geojson gz files
 					edgeMutex.Lock()
-					d := filepath.Dir(tracksjsongzpathEdge)
+					rootDir := filepath.Dir(tracksjsongzpathEdge)
 
-					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", d, tracksjsongzpathEdge), "procedge: ")
-					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", d), "procedge: ")
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), "procedge: ")
+					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), "procedge: ")
 
-					snapEdgePath := filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.snap.json.gz")
+					snapEdgePath := filepath.Join(rootDir, "edge.snap.json.gz")
 					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), "procedge: ")
 
-					// matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
+					// matches, err := filepath.Glob(filepath.Join(rootDir, "*-fin-*"))
 					// if err != nil {
 					// 	panic("bad glob pattern:" + err.Error())
 					// }
-					// log.Printf("procedge matchesN=%d", len(matches))
+					// log.Printf("procedge matchesN=%rootDir", len(matches))
 					// if len(matches) == 0 {
 					// 	edgeMutex.Unlock()
 					// 	continue
@@ -424,16 +455,19 @@ func main() {
 					edgeMutex.Unlock()
 
 					var err error
-					err = runTippe(filepath.Join(d, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
+					err = runTippe(filepath.Join(rootDir, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
-						log.Println("TIPPERR:", err)
+						log.Println("[procedge] tippecanoe errored:", err)
 						continue
 					}
-					os.Remove(snapEdgePath)
+					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), "")
+					// os.Remove(snapEdgePath)
 					log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
 					log.Println("[procedge] got lock")
-					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
+					_ = bashExec(fmt.Sprintf("mv %s %s",
+						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")), "")
+					// os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
 					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
 					edgeMutex.Unlock()
