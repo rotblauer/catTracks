@@ -242,14 +242,14 @@ func main() {
 
 					edgeMutex.Unlock()
 
-					// did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
-					// or were they all dupes?
-					// if they were all dupes, we can skip the rest of this procmaster iter
-					fmrJSONGZs.stop()
-					if len(fmrJSONGZs.updated()) == 0 && mbTilesExist {
-						log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
-						continue procmasterloop
-					}
+					// // did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
+					// // or were they all dupes?
+					// // if they were all dupes, we can skip the rest of this procmaster iter
+					// fmrJSONGZs.stop()
+					// if len(fmrJSONGZs.updated()) == 0 && mbTilesExist {
+					// 	log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
+					// 	continue procmasterloop
+					// }
 
 					// run tippe on all cat cells .json.gzs.
 					// eg.
