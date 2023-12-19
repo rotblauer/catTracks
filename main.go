@@ -277,7 +277,7 @@ func main() {
 					// then run tile-join on them to make genpop.mbtiles
 					// genpop is expected to be much smaller than either ia or rye
 					// only do this if any one of the genpop people have pushed tracks and have new tiles
-					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.mbtiles")
+					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.level-23.mbtiles")
 
 					// get the modtime of genpop.tiles
 					// we'll use this to compare to the modtime of all the .mbtiles.
@@ -314,7 +314,7 @@ func main() {
 					// }
 
 					// get the glob list of all generated .mbtiles
-					allpopTiles, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					allpopTiles, err := filepath.Glob(filepath.Join(genMBTilesPath, "*level-23.mbtiles"))
 					if err != nil {
 						log.Fatalln(err)
 					}
@@ -392,84 +392,44 @@ func main() {
 					return
 				case <-catTrackslib.NotifyNewEdge:
 
-					log.Println("[procedge] starting iter")
+					// this function processes the edge.json.gz file.
+					// these are tracks which have not yet been included in master.json.gz.
+					// this function is only allowed to append to edge.json.gz file, and to copy it;
+					// it should NEVER delete or truncate the edge.json.file, that is the job of procmaster
+					// when it ingests the edge.json.gz file into master.json.gz.
 
-					// look for any finished edge geojson gz files
-					edgeMutex.Lock()
+					log.Println("[procedge] starting iter")
 					rootDir := filepath.Dir(tracksjsongzpathEdge)
 
+					// lock the edge file, competing with prcmaster
+					edgeMutex.Lock()
+
+					// look for any _fin_ished partial edge files, and dump them into edge.json.gz
 					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), "procedge: ")
+					// then remove all _fin_ished partial edge files
 					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), "procedge: ")
 
+					// copy edge.json.gz to edge.snap.json.gz, for use as a snapshot with tippecanoe
 					snapEdgePath := filepath.Join(rootDir, "edge.snap.json.gz")
 					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), "procedge: ")
 
-					// matches, err := filepath.Glob(filepath.Join(rootDir, "*-fin-*"))
-					// if err != nil {
-					// 	panic("bad glob pattern:" + err.Error())
-					// }
-					// log.Printf("procedge matchesN=%rootDir", len(matches))
-					// if len(matches) == 0 {
-					// 	edgeMutex.Unlock()
-					// 	continue
-					// }
-					//
-					// // cat and append all -fin- edges to edge.json.gz
-					// for _, m := range matches {
-					// 	b, err := ioutil.ReadFile(m)
-					// 	if err != nil {
-					// 		log.Println("err:", err)
-					// 		continue
-					// 	}
-					// 	fi, fe := os.OpenFile(tracksjsongzpathEdge, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0660)
-					// 	if fe != nil {
-					// 		log.Println("fe:", fe)
-					// 		if fi != nil {
-					// 			fi.Close()
-					// 		}
-					// 		continue
-					// 	}
-					// 	_, e := fi.Write(b)
-					// 	fi.Close()
-					// 	if e != nil {
-					// 		log.Println("errappend:", e)
-					// 		continue
-					// 	}
-					// 	os.Remove(m)
-					// }
-					// // run tippe, note that this should lockmu and copy edge.json.gz to .snap
-					// // make a copy of edge.json.gz to edge.snap.json.gz
-					// b, e := ioutil.ReadFile(tracksjsongzpathEdge)
-					// if e != nil {
-					// 	if os.IsNotExist(e) {
-					// 		os.Create(tracksjsongzpathEdge)
-					// 		edgeMutex.Unlock()
-					// 		continue
-					// 	}
-					// 	panic(e)
-					// }
-					// if e := ioutil.WriteFile(snapEdgePath, b, 0660); e != nil {
-					// 	panic(e)
-					// }
-
 					edgeMutex.Unlock()
 
+					// run tippecanoe on the snapshotted edge data
 					var err error
 					err = runTippe(filepath.Join(rootDir, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
 						log.Println("[procedge] tippecanoe errored:", err)
 						continue
 					}
+					// remove the snapshot after use
 					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), "")
-					// os.Remove(snapEdgePath)
 					log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
 					log.Println("[procedge] got lock")
+					// move the new edge mbtiles to the tilesets dir for serving
 					_ = bashExec(fmt.Sprintf("mv %s %s",
 						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")), "")
-					// os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
-					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
-					// send req to tileserver to refresh edge db
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
