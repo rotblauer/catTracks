@@ -191,6 +191,9 @@ func main() {
 						}
 					}
 
+					// edgeSize is the initial size of the edge file.
+					// we don't need the lock here because we only care about its minimum size, and mutating
+					// processes are still locked.
 					edgeSize := int64(0)
 					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 						edgeSize = fi.Size()
@@ -206,8 +209,6 @@ func main() {
 						time.Sleep(time.Minute)
 						continue procmasterloop
 					}
-
-					// cat append all finished edge files to master.json.gz
 
 					// handle migrating init run
 					if _, err := os.Stat(splitCatCellsOutputRoot); os.IsNotExist(err) {
@@ -230,7 +231,8 @@ func main() {
 						if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
-
+						
+						// cat append all finished edge files to master.json.gz
 						// append edge tracks to master
 						_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
 
