@@ -231,7 +231,7 @@ func main() {
 						if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
-						
+
 						// cat append all finished edge files to master.json.gz
 						// append edge tracks to master
 						_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
@@ -348,6 +348,13 @@ func main() {
 
 					log.Printf("%sstarting iter\n", procEdgePrefix)
 					rootDir := filepath.Dir(tracksjsongzpathEdge)
+
+					// if no fin files, then this is a re-run trigger after a short interval from previous.
+					// channel can be like that.
+					if matches, _ := filepath.Glob(filepath.Join(rootDir, "*-fin-*")); len(matches) == 0 {
+						log.Printf("%sno fin files, skipping\n", procEdgePrefix)
+						continue
+					}
 
 					// lock the edge file, competing with prcmaster
 					edgeMutex.Lock()
