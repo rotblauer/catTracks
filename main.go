@@ -451,7 +451,10 @@ func (pw prefixedWriter) Write(p []byte) (n int, err error) {
 }
 
 func bashExec(cmd, logPrefix string) error {
-	log.Printf("%s bash: %s\n", logPrefix, cmd)
+	if strings.LastIndex(logPrefix, " ") != len(logPrefix)-1 {
+		logPrefix = logPrefix + " "
+	}
+	log.Printf("%sbash: %s\n", logPrefix, cmd)
 	bashCmd := exec.Command("bash", "-c", cmd)
 	stdout := prefixedWriter{log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)}
 	bashCmd.Stdout = stdout
