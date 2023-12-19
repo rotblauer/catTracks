@@ -436,11 +436,22 @@ func main() {
 	quitChan <- true
 }
 
+type prefixedWriter struct {
+	*log.Logger
+}
+
+func (pw prefixedWriter) Write(p []byte) (n int, err error) {
+	pw.Logger.Println(string(p))
+	return len(p), nil
+}
+
 func bashExec(cmd, logPrefix string) error {
-	log.Println("bash executing:", cmd)
+	log.Printf("%s bash: %s\n", logPrefix, cmd)
 	bashCmd := exec.Command("bash", "-c", cmd)
-	bashCmd.Stdout = log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix).Writer()
-	bashCmd.Stderr = log.New(os.Stderr, logPrefix, log.LstdFlags|log.Lmsgprefix).Writer()
+	stdout := prefixedWriter{log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix)}
+	bashCmd.Stdout = stdout
+	stderr := prefixedWriter{log.New(os.Stderr, logPrefix, log.LstdFlags|log.Lmsgprefix)}
+	bashCmd.Stderr = stderr
 	return bashCmd.Run()
 }
 
@@ -498,8 +509,12 @@ func runTippe(out, in string, tilesetname string) error {
 
 	log.Println("> [", tilesetname, "]", tippCmd, tippargs)
 	tippmycanoe := exec.Command(tippCmd, tippargs...)
-	tippmycanoe.Stdout = os.Stdout
-	tippmycanoe.Stderr = os.Stderr
+
+	prefix := fmt.Sprintf("[%s] ", tilesetname)
+	stdout := prefixedWriter{log.New(os.Stdout, prefix, log.LstdFlags|log.Lmsgprefix)}
+	tippmycanoe.Stdout = stdout
+	stderr := prefixedWriter{log.New(os.Stderr, prefix, log.LstdFlags|log.Lmsgprefix)}
+	tippmycanoe.Stderr = stderr
 
 	err := tippmycanoe.Start()
 	if err != nil {
