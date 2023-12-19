@@ -167,7 +167,7 @@ func main() {
 					mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles-journal"))
 					if len(mbtilesJournals) > 0 {
 					} else {
-						log.Println("[procmaster] 0 .mbtiles-journal files found, no recovery needed")
+						log.Println("[procmaster] zero .mbtiles-journal files found, no recovery needed")
 					}
 					for _, journalFilepath := range mbtilesJournals {
 						if _, err := os.Stat(journalFilepath); os.IsNotExist(err) {
@@ -189,14 +189,14 @@ func main() {
 							if fi.Size() < 100 {
 								log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", fi.Size())
 								time.Sleep(time.Minute)
-								continue
+								continue procmasterloop
+							} else {
+								log.Printf("procmaster: edge.json.gz is %d bytes, running\n", fi.Size())
 							}
-						} else if err != nil {
+						} else {
 							log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
 							time.Sleep(time.Minute)
-							continue
-						} else {
-							log.Printf("procmaster: edge.json.gz is %d bytes, running\n", fi.Size())
+							continue procmasterloop
 						}
 					}
 
