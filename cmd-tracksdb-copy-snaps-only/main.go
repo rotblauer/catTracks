@@ -33,26 +33,29 @@ func main() {
 
 	// copy snaps
 	err = source.View(func(stx *bolt.Tx) error {
-		b := stx.Bucket(snapBucketKey)
-		if b == nil {
+		sourceBucket := stx.Bucket(snapBucketKey)
+		if sourceBucket == nil {
 			log.Fatalln("no snaps bucket in source db")
 		}
-		c := b.Cursor()
-		for k, v := c.First(); k != nil; k, v = c.Next() {
-
-			err := target.Update(func(ttx *bolt.Tx) error {
-				bb, err := ttx.CreateBucketIfNotExists(snapBucketKey)
-				if err != nil {
-					return err
+		sourceBucket.ForEach(func(k, v []byte) error {
+			updateErr := target.Update(func(ttx *bolt.Tx) error {
+				targetBucket, targetErr := ttx.CreateBucketIfNotExists(snapBucketKey)
+				if targetErr != nil {
+					return targetErr
 				}
 				log.Println("copying", string(k))
-				err = bb.Put(k, v)
-				return err
+				targetErr = targetBucket.Put(k, v)
+				return targetErr
 			})
-			if err != nil {
-				return err
+			if updateErr != nil {
+				return updateErr
 			}
-		}
+			return nil
+		})
+
 		return nil
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 }

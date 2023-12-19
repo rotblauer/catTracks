@@ -142,6 +142,10 @@ func main() {
 	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
 	os.MkdirAll(tilesetsDir, 0755)
 
+	procMasterPrefixed := func(label string) string {
+		return fmt.Sprintf("[proc-master: %s] ", label)
+	}
+
 	if procmaster {
 		go func() {
 			for {
@@ -149,21 +153,21 @@ func main() {
 				case <-quitChan:
 					return
 				default:
+					log.Println("starting procmaster iter")
 
 					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 						if fi.Size() < 100 {
-							log.Println("edge.json.gz is too small, skipping")
+							log.Println("procmaster: edge.json.gz is too small, skipping")
 							time.Sleep(time.Minute)
 							continue
 						}
 					} else if err != nil {
-						log.Println("edge.json.gz errored, skipping", err)
+						log.Println("procmaster: edge.json.gz errored, skipping", err)
 						time.Sleep(time.Minute)
 						continue
 					}
 
 					// cat append all finished edge files to master.json.gz
-					log.Println("starting procmaster iter")
 
 					// handle migrating init run
 					if _, err := os.Stat(splitCatCellsOutputRoot); os.IsNotExist(err) {
@@ -185,8 +189,9 @@ func main() {
 					}
 
 					// append edge tracks to master
-					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster))
+					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
 
+					log.Println("rolling edge to develop")
 					// rename edge.json.gz -> devop.json.gz (roll)
 					_ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
 					// touch edge.json.gz
@@ -200,14 +205,22 @@ func main() {
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
 					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
-					_ = bashExec(fmt.Sprintf(`tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath))
+					_ = bashExec(fmt.Sprintf(`tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
+					// genpop cats long naps low lats
+					//
+					// genpop.mbtiles will be the union of all .mbtiles for cats who are not ia or rye
+					//
 					// collect all .mbtiles for cats who are not ia or rye
 					// then run tile-join on them to make genpop.mbtiles
 					// genpop is expected to be much smaller than either ia or rye
 					// only do this if any one of the genpop people have pushed tracks and have new tiles
 					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.mbtiles")
-					var genPopTilesModTime time.Time // modtime of genpop.tiles
+
+					// get the modtime of genpop.tiles
+					// we'll use this to compare to the modtime of all the .mbtiles.
+					// stale .mbtiles belonging to genpop cats will be tile-joined with genpop.mbtiles
+					var genPopTilesModTime time.Time
 					if fi, err := os.Stat(genPopTilesPath); err == nil {
 						genPopTilesModTime = fi.ModTime()
 					}
@@ -253,7 +266,7 @@ func main() {
 						log.Println("genpop tiles updated, running tile-join")
 						// run tile-join on them to make genpop.mbtiles
 						genPopTilePathsString := strings.Join(genPopTilePaths, " ")
-						_ = bashExec(fmt.Sprintf("tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString))
+						_ = bashExec(fmt.Sprintf("tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
 					} else {
 						log.Println("genpop tiles not updated, skipping tile-join")
 					}
@@ -265,7 +278,9 @@ func main() {
 					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
 					// Expect live-reload (consbio/mbtileserver --enable-fs-watch) to pick them up.
 					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
-					_ = bashExec(fmt.Sprintf("cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir))
+					_ = bashExec(fmt.Sprintf("cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
+
+					log.Println("finished procmaster iter")
 
 					// // run tippe and undump on master
 					// // again, output should be to wip file, then mv
@@ -275,7 +290,7 @@ func main() {
 					// log.Println("running master tippe")
 					// if err := runTippe(out, in, "catTrack"); err != nil {
 					// 	panic(err.Error())
-					// 	// log.Println("TIPPERR master db tipp err:", err)
+					// 	// log.Println("TIPPERR master db tipp err:", err)h
 					// 	// return
 					// }
 					//
@@ -298,15 +313,17 @@ func main() {
 					return
 				case <-catTrackslib.NotifyNewEdge:
 
+					log.Println("[procedge] starting iter")
+
 					// look for any finished edge geojson gz files
 					edgeMutex.Lock()
 					d := filepath.Dir(tracksjsongzpathEdge)
 
-					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", d, tracksjsongzpathEdge))
-					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", d))
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", d, tracksjsongzpathEdge), "procedge: ")
+					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", d), "procedge: ")
 
 					snapEdgePath := filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.snap.json.gz")
-					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath))
+					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), "procedge: ")
 
 					// matches, err := filepath.Glob(filepath.Join(d, "*-fin-*"))
 					// if err != nil {
@@ -365,13 +382,15 @@ func main() {
 						continue
 					}
 					os.Remove(snapEdgePath)
-					log.Println("waiting for lock ege for migrating")
+					log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
-					log.Println("got lOCK")
+					log.Println("[procedge] got lock")
 					os.Rename(filepath.Join(filepath.Dir(tracksjsongzpathEdge), "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
 					// os.Remove(filepath.Join(filepath.Dir(tracksjsongzpathedge), "edge.out.mbtiles"))
 					// send req to tileserver to refresh edge db
 					edgeMutex.Unlock()
+
+					log.Println("[procedge] finished iter")
 				}
 			}
 		}()
@@ -437,11 +456,11 @@ func main() {
 	quitChan <- true
 }
 
-func bashExec(cmd string) error {
+func bashExec(cmd, logPrefix string) error {
 	log.Println("bash executing:", cmd)
 	bashCmd := exec.Command("bash", "-c", cmd)
-	bashCmd.Stdout = os.Stdout
-	bashCmd.Stderr = os.Stderr
+	bashCmd.Stdout = log.New(os.Stdout, logPrefix, log.LstdFlags).Writer()
+	bashCmd.Stderr = log.New(os.Stderr, logPrefix, log.LstdFlags).Writer()
 	return bashCmd.Run()
 }
 
