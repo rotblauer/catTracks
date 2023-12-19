@@ -148,7 +148,8 @@ func main() {
 		return fmt.Sprintf("[proc-master: %s] ", label)
 	}
 
-	var _catsJSONGZLastModTime = time.Time{}
+	var catsJSONGZLastModTime = time.Time{}
+	var catsMBTiles23LastModTime = time.Time{}
 
 	if procmaster {
 		go func() {
@@ -247,25 +248,45 @@ func main() {
 						log.Fatalln(err)
 					}
 					if len(catsGZMatches) > 0 {
-						catsJSONGZLastModTime := time.Time{}
+						_catsJSONGZLastModTime := time.Time{}
 						for _, catGZ := range catsGZMatches {
 							if fi, err := os.Stat(catGZ); err == nil {
-								if fi.ModTime().After(catsJSONGZLastModTime) {
-									catsJSONGZLastModTime = fi.ModTime()
+								if fi.ModTime().After(_catsJSONGZLastModTime) {
+									_catsJSONGZLastModTime = fi.ModTime()
 								}
 							}
 						}
-						if !catsJSONGZLastModTime.After(_catsJSONGZLastModTime) {
+						if !_catsJSONGZLastModTime.After(catsJSONGZLastModTime) {
 							log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
 							continue procmasterloop
 						}
-						_catsJSONGZLastModTime = catsJSONGZLastModTime
+						catsJSONGZLastModTime = _catsJSONGZLastModTime
 					}
 
 					// run tippe on all cat cells .json.gzs.
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
+
+					catMBTilesMatches, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					if err != nil {
+						log.Fatalln(err)
+					}
+					if len(catMBTilesMatches) > 0 {
+						_catsMBTiles23LastModTime := time.Time{}
+						for _, catMBTiles := range catMBTilesMatches {
+							if fi, err := os.Stat(catMBTiles); err == nil {
+								if fi.ModTime().After(_catsMBTiles23LastModTime) {
+									_catsMBTiles23LastModTime = fi.ModTime()
+								}
+							}
+						}
+						if !_catsMBTiles23LastModTime.After(catsMBTiles23LastModTime) {
+							log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
+							continue procmasterloop
+						}
+						catsMBTiles23LastModTime = _catsMBTiles23LastModTime
+					}
 
 					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
 
