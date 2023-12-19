@@ -189,7 +189,7 @@ func main() {
 					}
 
 					// append edge tracks to master
-					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
+					_ = bashExec(fmt.Sprintf("time cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
 
 					log.Println("rolling edge to develop")
 					// rename edge.json.gz -> devop.json.gz (roll)
@@ -205,7 +205,7 @@ func main() {
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
 					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
-					_ = bashExec(fmt.Sprintf(`tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
+					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
 					// genpop cats long naps low lats
 					//
@@ -266,7 +266,7 @@ func main() {
 						log.Println("genpop tiles updated, running tile-join")
 						// run tile-join on them to make genpop.mbtiles
 						genPopTilePathsString := strings.Join(genPopTilePaths, " ")
-						_ = bashExec(fmt.Sprintf("tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
+						_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
 					} else {
 						log.Println("genpop tiles not updated, skipping tile-join")
 					}
@@ -278,7 +278,7 @@ func main() {
 					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
 					// Expect live-reload (consbio/mbtileserver --enable-fs-watch) to pick them up.
 					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
-					_ = bashExec(fmt.Sprintf("cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
+					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
 
 					log.Println("finished procmaster iter")
 
@@ -474,7 +474,7 @@ func runCatCellSplitter(sourceGZ, outputRoot, dbRoot string) error {
 		    --cache-size 50000000 \
 		    --compression-level 9
 	*/
-	c := fmt.Sprintf(`zcat %s | cattracks-split-cats-uniqcell-gz \
+	c := fmt.Sprintf(`time zcat %s | cattracks-split-cats-uniqcell-gz \
 --workers 4 \
 --cell-level 23 \
 --batch-size 100000 \
