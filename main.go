@@ -284,7 +284,7 @@ func main() {
 					// 	// and exclude cats from genpop with scapegoat algorithms
 					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.level-23.mbtiles")
 
-					genPopTilePaths := []string{} // will be all tile paths EXCEPT those matching any of notGenPop
+					genPopCatMBTiles := []string{} // will be all tile paths EXCEPT those matching any of notGenPop
 					notGenPop := []string{
 						"ia",
 						"rye",
@@ -297,17 +297,17 @@ func main() {
 								continue
 							}
 						}
-						genPopTilePaths = append(genPopTilePaths, u)
+						genPopCatMBTiles = append(genPopCatMBTiles, u)
 					}
 
-					if len(genPopTilePaths) == 0 {
+					if len(genPopCatMBTiles) == 0 {
 						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp .mbtiles")
 						continue procmasterloop
 					}
 					log.Println("[procmaster] genpop tiles updated, running tile-join")
 
 					// run tile-join on them to make genpop.mbtiles
-					genPopTilePathsString := strings.Join(genPopTilePaths, " ")
+					genPopTilePathsString := strings.Join(genPopCatMBTiles, " ")
 					_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
 
 					// TODO we have now TWO copies of relatively fresh mbtiles dirs,
@@ -317,7 +317,7 @@ func main() {
 					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
 					// Expect live-reload (consbio/mbtileserver --enable-fs-watch) to pick them up.
 					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
-					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
+					_ = bashExec(fmt.Sprintf("time cp %s %s/", genPopTilesPath, tilesetsDir), "")
 
 					log.Println("[procmaster] finished iter")
 				}
