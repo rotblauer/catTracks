@@ -242,7 +242,6 @@ func main() {
 					// did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
 					// or were they all dupes?
 					// if they were all dupes, we can skip the rest of this procmaster iter
-					// TODO
 					catsGZMatches, err := filepath.Glob(filepath.Join(splitCatCellsOutputRoot, "*.json.gz"))
 					if err != nil {
 						log.Fatalln(err)
@@ -268,6 +267,7 @@ func main() {
 					//  ~/tdata/cat-cells/mbtiles
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
+					// if tippe on the tracks didn't change any mbtiles, we can skip the rest
 					catMBTilesMatches, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
 					if err != nil {
 						log.Fatalln(err)
