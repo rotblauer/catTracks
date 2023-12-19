@@ -634,6 +634,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// "--minimum-detail", "12",
 		"--minimum-zoom", "3",
 		"--maximum-zoom", "18",
+		"--json-progress", "--progress-interval", "30",
 		"-l", tilesetname, // TODO: what's difference layer vs name?
 		"-n", tilesetname,
 		"-o", out,
