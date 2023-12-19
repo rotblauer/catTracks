@@ -146,14 +146,17 @@ func main() {
 		return fmt.Sprintf("[proc-master: %s] ", label)
 	}
 
+	var _catsJSONGZLastModTime = time.Time{}
+
 	if procmaster {
 		go func() {
+		procmasterloop:
 			for {
 				select {
 				case <-quitChan:
 					return
 				default:
-					log.Println("starting procmaster iter")
+					log.Println("[procmaster] starting iter")
 
 					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 						if fi.Size() < 100 {
@@ -165,6 +168,8 @@ func main() {
 						log.Println("procmaster: edge.json.gz errored, skipping", err)
 						time.Sleep(time.Minute)
 						continue
+					} else {
+						log.Println("procmaster: edge.json.gz is %d bytes, running", fi.Size())
 					}
 
 					// cat append all finished edge files to master.json.gz
@@ -201,11 +206,37 @@ func main() {
 
 					edgeMutex.Unlock()
 
+					// did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
+					// or were they all dupes?
+					// if they were all dupes, we can skip the rest of this procmaster iter
+					// TODO
+					catsGZMatches, err := filepath.Glob(filepath.Join(splitCatCellsOutputRoot, "*.json.gz"))
+					if err != nil {
+						log.Fatalln(err)
+					}
+					if len(catsGZMatches) > 0 {
+						catsJSONGZLastModTime := time.Time{}
+						for _, catGZ := range catsGZMatches {
+							if fi, err := os.Stat(catGZ); err == nil {
+								if fi.ModTime().After(catsJSONGZLastModTime) {
+									catsJSONGZLastModTime = fi.ModTime()
+								}
+							}
+						}
+						if !catsJSONGZLastModTime.After(_catsJSONGZLastModTime) {
+							log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
+							continue procmasterloop
+						}
+						_catsJSONGZLastModTime = catsJSONGZLastModTime
+					}
+
 					// run tippe on split cat cells
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
 					genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
+
+					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
 
 					// genpop cats long naps low lats
 					//
@@ -235,6 +266,22 @@ func main() {
 						"rye",
 					}
 
+					// TODO
+					// problems: need to skip genpop.mbtiles,
+					// and exclude cats from genpop with scapegoat algorithms
+					//
+					// isGenPopException := func(fi os.FileInfo) bool {
+					// 	// path/to/ia.level-23.mbtiles => ia
+					// 	// path/to/bob.mbtiles => bob
+					// 	// for _, reservedName := range notGenPop {
+					// 	// 	if strings.Contains(strings.Split(filepath.Base(fi.Name()), ".")[0], reservedName) {
+					// 	// 		return true
+					// 	// 	}
+					// 	// }
+					// 	return fi.Size() > 100000000 // 100MB (100000000)
+					// 	return false
+					// }
+
 					// get the glob list of all generated .mbtiles
 					allpopTiles, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
 					if err != nil {
@@ -262,14 +309,15 @@ func main() {
 						}
 					}
 
-					if genPopDidUpdate {
-						log.Println("genpop tiles updated, running tile-join")
-						// run tile-join on them to make genpop.mbtiles
-						genPopTilePathsString := strings.Join(genPopTilePaths, " ")
-						_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
-					} else {
-						log.Println("genpop tiles not updated, skipping tile-join")
+					if !genPopDidUpdate {
+						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp")
+						continue procmasterloop
 					}
+
+					log.Println("genpop tiles updated, running tile-join")
+					// run tile-join on them to make genpop.mbtiles
+					genPopTilePathsString := strings.Join(genPopTilePaths, " ")
+					_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
 
 					// TODO we have now TWO copies of relatively fresh mbtiles dirs,
 					// we need to keep the genMBTilesPath so we can avoid re-genning stale json.gz->tiles,
@@ -459,8 +507,8 @@ func main() {
 func bashExec(cmd, logPrefix string) error {
 	log.Println("bash executing:", cmd)
 	bashCmd := exec.Command("bash", "-c", cmd)
-	bashCmd.Stdout = log.New(os.Stdout, logPrefix, log.LstdFlags).Writer()
-	bashCmd.Stderr = log.New(os.Stderr, logPrefix, log.LstdFlags).Writer()
+	bashCmd.Stdout = log.New(os.Stdout, logPrefix, log.LstdFlags|log.Lmsgprefix).Writer()
+	bashCmd.Stderr = log.New(os.Stderr, logPrefix, log.LstdFlags|log.Lmsgprefix).Writer()
 	return bashCmd.Run()
 }
 
