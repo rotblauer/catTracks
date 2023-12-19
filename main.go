@@ -10,6 +10,7 @@ import (
 	"os/exec"
 	"path"
 	"path/filepath"
+	"sort"
 	"strconv"
 	"strings"
 	"sync"
@@ -148,9 +149,6 @@ func main() {
 		return fmt.Sprintf("[proc-master: %s] ", label)
 	}
 
-	var catsJSONGZLastModTime = time.Time{}
-	var catsMBTiles23LastModTime = time.Time{}
-
 	if procmaster {
 		go func() {
 		procmasterloop:
@@ -161,7 +159,15 @@ func main() {
 				default:
 					log.Println("[procmaster] starting iter")
 
-					var recovery = false
+					// declare file mod recorders for json and mbtiles
+					// if these directories do not exist, the file recorder will simply be empty
+					var fmrJSONGZs = newFileModRecorder(filepath.Join(splitCatCellsOutputRoot, "*.json.gz"))
+					fmrJSONGZs.record()
+					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					fmrMBTiles.record()
+
+					var recovery = false // if spurious .mbtiles-journals files exist (tippecanoe interrupted)
+
 					// recover corrupted mbtiles in case something got fucked, like killed or something
 					// any .mbtiles-journal files in the genMBTilesDir are considered indicators of corrupted .mbtiles files
 					// if there, we delete both the .mbtiles and .mbtiles-journals files, and touch the corresponding .json.gz file to update modtime, allowing a rebuild
@@ -242,24 +248,10 @@ func main() {
 					// did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
 					// or were they all dupes?
 					// if they were all dupes, we can skip the rest of this procmaster iter
-					catsGZMatches, err := filepath.Glob(filepath.Join(splitCatCellsOutputRoot, "*.json.gz"))
-					if err != nil {
-						log.Fatalln(err)
-					}
-					if len(catsGZMatches) > 0 {
-						_catsJSONGZLastModTime := time.Time{}
-						for _, catGZ := range catsGZMatches {
-							if fi, err := os.Stat(catGZ); err == nil {
-								if fi.ModTime().After(_catsJSONGZLastModTime) {
-									_catsJSONGZLastModTime = fi.ModTime()
-								}
-							}
-						}
-						if !_catsJSONGZLastModTime.After(catsJSONGZLastModTime) {
-							log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
-							continue procmasterloop
-						}
-						catsJSONGZLastModTime = _catsJSONGZLastModTime
+					fmrJSONGZs.stop()
+					if len(fmrJSONGZs.updated()) == 0 {
+						log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
+						continue procmasterloop
 					}
 
 					// run tippe on all cat cells .json.gzs.
@@ -268,27 +260,16 @@ func main() {
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
 					// if tippe on the tracks didn't change any mbtiles, we can skip the rest
-					catMBTilesMatches, err := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles"))
-					if err != nil {
-						log.Fatalln(err)
-					}
-					if len(catMBTilesMatches) > 0 {
-						_catsMBTiles23LastModTime := time.Time{}
-						for _, catMBTiles := range catMBTilesMatches {
-							if fi, err := os.Stat(catMBTiles); err == nil {
-								if fi.ModTime().After(_catsMBTiles23LastModTime) {
-									_catsMBTiles23LastModTime = fi.ModTime()
-								}
-							}
-						}
-						if !_catsMBTiles23LastModTime.After(catsMBTiles23LastModTime) {
-							log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
-							continue procmasterloop
-						}
-						catsMBTiles23LastModTime = _catsMBTiles23LastModTime
+					fmrMBTiles.stop()
+					updatedMBTiles := fmrMBTiles.updated()
+					if len(updatedMBTiles) == 0 {
+						log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
+						continue procmasterloop
 					}
 
-					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
+					for _, u := range updatedMBTiles {
+						_ = bashExec(fmt.Sprintf("time cp %s %s/", u, tilesetsDir), "")
+					}
 
 					// genpop cats long naps low lats
 					//
@@ -298,70 +279,28 @@ func main() {
 					// then run tile-join on them to make genpop.mbtiles
 					// genpop is expected to be much smaller than either ia or rye
 					// only do this if any one of the genpop people have pushed tracks and have new tiles
+					// 	// TODO
+					// 	// problems: need to skip genpop.mbtiles,
+					// 	// and exclude cats from genpop with scapegoat algorithms
 					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.level-23.mbtiles")
-
-					// get the modtime of genpop.tiles
-					// we'll use this to compare to the modtime of all the .mbtiles.
-					// stale .mbtiles belonging to genpop cats will be tile-joined with genpop.mbtiles
-					var genPopTilesModTime time.Time
-					if fi, err := os.Stat(genPopTilesPath); err == nil {
-						genPopTilesModTime = fi.ModTime()
-					}
-
-					// genPopDidUpdate tells us if any of the .mbtiles for the genpop has updated more
-					// recently than the modtime on genpop.mbtiles
-					var genPopDidUpdate bool
 
 					genPopTilePaths := []string{} // will be all tile paths EXCEPT those matching any of notGenPop
 					notGenPop := []string{
 						"ia",
 						"rye",
 					}
-
-					// TODO
-					// problems: need to skip genpop.mbtiles,
-					// and exclude cats from genpop with scapegoat algorithms
-					//
-					// isGenPopException := func(fi os.FileInfo) bool {
-					// 	// path/to/ia.level-23.mbtiles => ia
-					// 	// path/to/bob.mbtiles => bob
-					// 	// for _, reservedName := range notGenPop {
-					// 	// 	if strings.Contains(strings.Split(filepath.Base(fi.Name()), ".")[0], reservedName) {
-					// 	// 		return true
-					// 	// 	}
-					// 	// }
-					// 	return fi.Size() > 100000000 // 100MB (100000000)
-					// 	return false
-					// }
-
-					// get the glob list of all generated .mbtiles
-					allpopTiles, err := filepath.Glob(filepath.Join(genMBTilesPath, "*level-23.mbtiles"))
-					if err != nil {
-						log.Fatalln(err)
-					}
-
-				genPopLoop:
-					for _, tilesFile := range allpopTiles {
+					for _, u := range updatedMBTiles {
+						// path/to/ia.level-23.mbtiles => ia
+						// path/to/bob.mbtiles => bob
 						for _, reservedName := range notGenPop {
-							// path/to/ia.level-23.mbtiles => ia
-							// path/to/bob.mbtiles => bob
-							if strings.Contains(strings.Split(filepath.Base(tilesFile), ".")[0], reservedName) {
-								continue genPopLoop
+							if strings.Contains(strings.Split(filepath.Base(u), ".")[0], reservedName) {
+								continue
 							}
 						}
-
-						// no hit; is unreserved genpop mbtiles
-						genPopTilePaths = append(genPopTilePaths, tilesFile)
-
-						// mark if this mbtiles has been update more recently than genpop.mbtiles
-						if fi, err := os.Stat(tilesFile); err == nil {
-							if fi.ModTime().After(genPopTilesModTime) {
-								genPopDidUpdate = true
-							}
-						}
+						genPopTilePaths = append(genPopTilePaths, u)
 					}
 
-					if !genPopDidUpdate {
+					if len(genPopTilePaths) == 0 {
 						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp .mbtiles")
 						continue procmasterloop
 					}
@@ -381,25 +320,6 @@ func main() {
 					_ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), "")
 
 					log.Println("[procmaster] finished iter")
-
-					// // run tippe and undump on master
-					// // again, output should be to wip file, then mv
-					// // runTippe(out, in string, tilesetname string, bolttilesout string)
-					// out := filepath.Join(filepath.Dir(dbpath), "master.mbtiles")
-					// in := tracksjsongzpathMaster
-					// log.Println("running master tippe")
-					// if err := runTippe(out, in, "catTrack"); err != nil {
-					// 	panic(err.Error())
-					// 	// log.Println("TIPPERR master db tipp err:", err)h
-					// 	// return
-					// }
-					//
-					// // splitterCmd.Stdin =
-					//
-					// // os.Rename(out+".json.gz", filepath.Join(filepath.Dir(dbpath), "master.json.gz"))
-					//
-					// os.Rename(out, filepath.Join(tilesetsDir, "master.mbtiles"))
-					// os.Remove(out + ".mbtiles")
 				}
 			}
 		}()
@@ -793,4 +713,89 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		tippCmd = string(b)
 	}
 	return
+}
+
+type fileMod struct {
+	fpath     string
+	modBefore time.Time // will be 0 if newly created
+	modAfter  time.Time // will be 0 if deleted
+}
+
+type fileModRecorder struct {
+	glob  string
+	files []fileMod
+}
+
+func newFileModRecorder(glob string) *fileModRecorder {
+	return &fileModRecorder{
+		glob: glob,
+	}
+}
+
+func (fmr *fileModRecorder) record() error {
+	fmr.files = []fileMod{}
+	matches, _ := filepath.Glob(fmr.glob)
+	for _, match := range matches {
+		fi, err := os.Stat(match)
+		if err != nil {
+			return err
+		}
+		fmr.files = append(fmr.files, fileMod{
+			fpath:     match,
+			modBefore: fi.ModTime(),
+		})
+	}
+	return nil
+}
+
+func (fmr *fileModRecorder) stop() error {
+	matches, _ := filepath.Glob(fmr.glob)
+	for _, match := range matches {
+		fi, err := os.Stat(match)
+		if err != nil {
+			return err
+		}
+		matchedExisting := false
+		for _, f := range fmr.files {
+			if f.fpath == match {
+				// updated file
+				matchedExisting = true
+				f.modAfter = fi.ModTime()
+			}
+		}
+		// created file
+		if !matchedExisting {
+			fmr.files = append(fmr.files, fileMod{
+				fpath:    match,
+				modAfter: fi.ModTime(),
+			})
+		}
+	}
+	// // deleted files ; UNNECESSARY because zero-value of modAfter is time.Zero
+	// for _, f := range fmr.files {
+	// 	_, err := os.Stat(f.fpath)
+	// 	if os.IsNotExist(err) {
+	// 		f.modAfter = time.Time{}
+	// 	} else {
+	// 		return err
+	// 	}
+	// }
+	return nil
+}
+
+// updated returns all updated filepaths in the order of most recently updated first
+func (fmr *fileModRecorder) updated() []string {
+	ret := []string{}
+	sort.Slice(fmr.files, func(i, j int) bool {
+		return fmr.files[i].modAfter.After(fmr.files[j].modAfter)
+	})
+	for _, f := range fmr.files {
+		updated := f.modAfter.After(f.modBefore)
+		deleted := !f.modAfter.IsZero() && f.modAfter.IsZero()
+		created := f.modBefore.IsZero() && !f.modAfter.IsZero()
+		if (created || updated) && !deleted {
+			ret = append(ret, f.fpath)
+		}
+	}
+	return ret
 }
