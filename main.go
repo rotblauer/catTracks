@@ -191,20 +191,20 @@ func main() {
 						}
 					}
 
-					if !recovery && mbTilesExist {
-						if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
-							if fi.Size() < 100 {
-								log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", fi.Size())
-								time.Sleep(time.Minute)
-								continue procmasterloop
-							} else {
-								log.Printf("procmaster: edge.json.gz is %d bytes, running\n", fi.Size())
-							}
-						} else {
-							log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
+					edgeSize := int64(0)
+					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
+						edgeSize = fi.Size()
+						if edgeSize < 100 && !recovery {
+							log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", edgeSize)
 							time.Sleep(time.Minute)
 							continue procmasterloop
+						} else {
+							log.Printf("procmaster: edge.json.gz is %d bytes, running\n", edgeSize)
 						}
+					} else if !recovery {
+						log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
+						time.Sleep(time.Minute)
+						continue procmasterloop
 					}
 
 					// cat append all finished edge files to master.json.gz
@@ -220,30 +220,33 @@ func main() {
 							log.Fatalln(err)
 						}
 					}
-					// now the master -> cat.json.gz is split into cells
-					// so we can run the edge -> cat.json.gz
-					edgeMutex.Lock()
 
 					// split the edge into cats
-					if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
-						log.Fatalln(err)
+					if edgeSize > 0 {
+						// now the master -> cat.json.gz is split into cells
+						// so we can run the edge -> cat.json.gz
+						edgeMutex.Lock()
+
+						if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+							log.Fatalln(err)
+						}
+
+						// append edge tracks to master
+						_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
+
+						log.Println("rolling edge to develop")
+						// rename edge.json.gz -> devop.json.gz (roll)
+						_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), procMasterPrefixed(""))
+						// _ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+						// touch edge.json.gz
+						_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), procMasterPrefixed(""))
+						// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
+						// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
+						_ = bashExec(fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")), "")
+						// _ = os.Rename(filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles"))
+
+						edgeMutex.Unlock()
 					}
-
-					// append edge tracks to master
-					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
-
-					log.Println("rolling edge to develop")
-					// rename edge.json.gz -> devop.json.gz (roll)
-					_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), procMasterPrefixed(""))
-					// _ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
-					// touch edge.json.gz
-					_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), procMasterPrefixed(""))
-					// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
-					// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
-					_ = bashExec(fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")), "")
-					// _ = os.Rename(filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles"))
-
-					edgeMutex.Unlock()
 
 					// // did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
 					// // or were they all dupes?
