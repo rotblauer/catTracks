@@ -484,7 +484,7 @@ func runCatCellSplitter(sourceGZ, outputRoot, dbRoot string) error {
 --db-root %s`,
 		sourceGZ, outputRoot, dbRoot)
 
-	return bashExec(c)
+	return bashExec(c, "cattracks-split-cats-uniqcell-gz: ")
 }
 
 func runTippeLite(out, in string, tilesetname string) error {
