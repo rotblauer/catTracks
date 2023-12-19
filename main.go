@@ -142,7 +142,10 @@ func main() {
 	os.MkdirAll(tilesetsDir, 0755)
 
 	procMasterPrefixed := func(label string) string {
-		return fmt.Sprintf("[proc-master: %s] ", label)
+		if label == "" {
+			return "[procmaster] "
+		}
+		return fmt.Sprintf("[procmaster: %s] ", label)
 	}
 
 	if procmaster {
@@ -181,10 +184,10 @@ func main() {
 							recovery = true
 							corruptedFilePath := strings.ReplaceAll(journalFilepath, ".mbtiles-journal", ".mbtiles")
 							log.Println("[procmaster] WARN: found ", journalFilepath, ", considering corrupted: ", corruptedFilePath)
-							_ = bashExec(fmt.Sprintf("rm %s", journalFilepath), "")
-							_ = bashExec(fmt.Sprintf("rm %s", corruptedFilePath), "")
+							_ = bashExec(fmt.Sprintf("rm %s", journalFilepath), procMasterPrefixed(""))
+							_ = bashExec(fmt.Sprintf("rm %s", corruptedFilePath), procMasterPrefixed(""))
 							geoJSONGZFilepath := filepath.Join(splitCatCellsOutputRoot, strings.ReplaceAll(filepath.Base(journalFilepath), ".mbtiles-journal", ".json.gz"))
-							_ = bashExec(fmt.Sprintf("touch %s", geoJSONGZFilepath), "") // touch to update modtime
+							_ = bashExec(fmt.Sprintf("touch %s", geoJSONGZFilepath), procMasterPrefixed("")) // touch to update modtime
 						}
 					}
 
@@ -227,14 +230,14 @@ func main() {
 					}
 
 					// append edge tracks to master
-					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), "")
+					_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
 
 					log.Println("rolling edge to develop")
 					// rename edge.json.gz -> devop.json.gz (roll)
-					_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), "")
+					_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), procMasterPrefixed(""))
 					// _ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
 					// touch edge.json.gz
-					_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), "")
+					_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), procMasterPrefixed(""))
 					// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
 					// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
 					_ = bashExec(fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")), "")
@@ -265,7 +268,7 @@ func main() {
 					}
 
 					for _, u := range updatedMBTiles {
-						_ = bashExec(fmt.Sprintf("time cp %s %s/", u, tilesetsDir), "")
+						_ = bashExec(fmt.Sprintf("time cp %s %s/", u, tilesetsDir), procMasterPrefixed(""))
 					}
 
 					// genpop cats long naps low lats
@@ -314,7 +317,7 @@ func main() {
 					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
 					// Expect live-reload (consbio/mbtileserver --enable-fs-watch) to pick them up.
 					// cp ~/tdata/cat-cells/mbtiles/*.mbtiles ~/tdata/tilesets/
-					_ = bashExec(fmt.Sprintf("time cp %s %s/", genPopTilesPath, tilesetsDir), "")
+					_ = bashExec(fmt.Sprintf("time cp %s %s/", genPopTilesPath, tilesetsDir), procMasterPrefixed(""))
 
 					log.Println("[procmaster] finished iter")
 				}
@@ -330,26 +333,28 @@ func main() {
 					return
 				case <-catTrackslib.NotifyNewEdge:
 
+					procEdgePrefix := "[procedge] "
+
 					// this function processes the edge.json.gz file.
 					// these are tracks which have not yet been included in master.json.gz.
 					// this function is only allowed to append to edge.json.gz file, and to copy it;
 					// it should NEVER delete or truncate the edge.json.file, that is the job of procmaster
 					// when it ingests the edge.json.gz file into master.json.gz.
 
-					log.Println("[procedge] starting iter")
+					log.Printf("%sstarting iter\n", procEdgePrefix)
 					rootDir := filepath.Dir(tracksjsongzpathEdge)
 
 					// lock the edge file, competing with prcmaster
 					edgeMutex.Lock()
 
 					// look for any _fin_ished partial edge files, and dump them into edge.json.gz
-					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), "procedge: ")
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), procEdgePrefix)
 					// then remove all _fin_ished partial edge files
-					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), "procedge: ")
+					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), procEdgePrefix)
 
 					// copy edge.json.gz to edge.snap.json.gz, for use as a snapshot with tippecanoe
 					snapEdgePath := filepath.Join(rootDir, "edge.snap.json.gz")
-					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), "procedge: ")
+					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), procEdgePrefix)
 
 					edgeMutex.Unlock()
 
@@ -361,13 +366,13 @@ func main() {
 						continue
 					}
 					// remove the snapshot after use
-					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), "")
+					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), procEdgePrefix)
 					log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
 					log.Println("[procedge] got lock")
 					// move the new edge mbtiles to the tilesets dir for serving
 					_ = bashExec(fmt.Sprintf("mv %s %s",
-						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")), "")
+						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")), procEdgePrefix)
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
