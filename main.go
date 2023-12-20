@@ -418,7 +418,7 @@ func main() {
 						defer func() {
 							debounceFireProcMaster = false
 						}()
-						time.Sleep(10 * time.Second)
+						time.Sleep(60 * time.Second)
 						select {
 						case procmasterCh <- true:
 							log.Println("[procedge] procmasterCh <- true")
