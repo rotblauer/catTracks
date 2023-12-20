@@ -264,18 +264,26 @@ func main() {
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
 					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
-					fmrMBTiles.record()
 
+					fmrMBTiles.record()
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
+					fmrMBTiles.mark()
 
 					// if tippe on the tracks didn't change any mbtiles, we can skip the rest
-					fmrMBTiles.mark()
 					updatedMBTiles := fmrMBTiles.updated()
 					if len(updatedMBTiles) == 0 {
 						log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
 						continue procmasterloop
 					}
 
+					// copy changed files individually to save time,
+					// at the expense of being a more brittle approach.
+					// copying all files takes about 40 seconds
+					/*
+						root@rottor:~/go/src/github.com/rotblauer/catTracks# du -sh ~/tdata/cat-cells/mbtiles
+						6.4G    /root/tdata/cat-cells/mbtiles
+					*/
+					// _ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), procMasterPrefixed(""))
 					for _, u := range updatedMBTiles {
 						_ = bashExec(fmt.Sprintf("time cp %s %s/", u, tilesetsDir), procMasterPrefixed(""))
 					}
