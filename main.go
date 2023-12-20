@@ -138,6 +138,7 @@ func main() {
 	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
 	genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
 
+	// tilesetsDir is where consbio/mbtileserver -d serves from, with --enable-fs-watch on.
 	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
 	os.MkdirAll(tilesetsDir, 0755)
 
@@ -158,36 +159,35 @@ func main() {
 				default:
 					log.Println("[procmaster] starting iter")
 
-					// declare file mod recorders for json and mbtiles
-					// if these directories do not exist, the file recorder will simply be empty
-					var fmrJSONGZs = newFileModRecorder(filepath.Join(splitCatCellsOutputRoot, "*.json.gz"))
-					fmrJSONGZs.record()
-					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
-					fmrMBTiles.record()
-					var mbTilesExist = len(fmrMBTiles.files) > 0
-
-					var recovery = false // if spurious .mbtiles-journals files exist (tippecanoe interrupted)
+					// tileRecovery:
+					// - if spurious .mbtiles-journals files exist (tippecanoe interrupted)
+					// - if no target .mbtiles directory exists (first run)
+					var tileRecovery = false
+					if _, err := os.Stat(genMBTilesPath); os.IsNotExist(err) {
+						log.Printf("[procmaster] WARN: no genMBTilesPath found: %s, recovering\n", genMBTilesPath)
+						tileRecovery = true
+					}
 
 					// recover corrupted mbtiles in case something got fucked, like killed or something
 					// any .mbtiles-journal files in the genMBTilesDir are considered indicators of corrupted .mbtiles files
 					// if there, we delete both the .mbtiles and .mbtiles-journals files, and touch the corresponding .json.gz file to update modtime, allowing a rebuild
-					mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles-journal"))
-					if len(mbtilesJournals) > 0 {
-					} else {
-						log.Println("[procmaster] zero .mbtiles-journal files found, no recovery needed")
-					}
-					for _, journalFilepath := range mbtilesJournals {
-						if _, err := os.Stat(journalFilepath); os.IsNotExist(err) {
-							// probably impossible
-						} else if err == nil {
-							// this is actually what we don't want; if any .mbtiles-journal exist, the corresponding .mbtiles file should be considered corrupted
-							recovery = true
-							corruptedFilePath := strings.ReplaceAll(journalFilepath, ".mbtiles-journal", ".mbtiles")
-							log.Println("[procmaster] WARN: found ", journalFilepath, ", considering corrupted: ", corruptedFilePath)
-							_ = bashExec(fmt.Sprintf("rm %s", journalFilepath), procMasterPrefixed(""))
-							_ = bashExec(fmt.Sprintf("rm %s", corruptedFilePath), procMasterPrefixed(""))
-							geoJSONGZFilepath := filepath.Join(splitCatCellsOutputRoot, strings.ReplaceAll(filepath.Base(journalFilepath), ".mbtiles-journal", ".json.gz"))
-							_ = bashExec(fmt.Sprintf("touch %s", geoJSONGZFilepath), procMasterPrefixed("")) // touch to update modtime
+					if !tileRecovery {
+						mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles-journal"))
+						if len(mbtilesJournals) > 0 {
+						} else {
+							log.Println("[procmaster] zero .mbtiles-journal files found, no recovery needed")
+						}
+						for _, journalFilepath := range mbtilesJournals {
+							if _, err := os.Stat(journalFilepath); os.IsNotExist(err) {
+								// probably impossible
+							} else if err == nil {
+								// this is actually what we don't want; if any .mbtiles-journal exist, the corresponding .mbtiles file should be considered corrupted
+								tileRecovery = true
+								tilesFilepath := strings.ReplaceAll(journalFilepath, ".mbtiles-journal", ".mbtiles")
+								log.Println("[procmaster] WARN: found ", journalFilepath, ", considering corrupted: ", tilesFilepath)
+								_ = bashExec(fmt.Sprintf("rm %s", journalFilepath), procMasterPrefixed(""))
+								_ = bashExec(fmt.Sprintf("rm %s", tilesFilepath), procMasterPrefixed(""))
+							}
 						}
 					}
 
@@ -197,17 +197,18 @@ func main() {
 					edgeSize := int64(0)
 					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
 						edgeSize = fi.Size()
-						if edgeSize < 100 && !recovery && mbTilesExist {
-							log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", edgeSize)
-							time.Sleep(time.Minute)
-							continue procmasterloop
-						} else {
-							log.Printf("procmaster: edge.json.gz is %d bytes, running\n", edgeSize)
-						}
-					} else if !recovery {
+					} else if !tileRecovery {
 						log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
 						time.Sleep(time.Minute)
 						continue procmasterloop
+					}
+
+					if edgeSize < 100 && !tileRecovery {
+						log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", edgeSize)
+						time.Sleep(time.Minute)
+						continue procmasterloop
+					} else {
+						log.Printf("procmaster: edge.json.gz is %d bytes, running\n", edgeSize)
 					}
 
 					// handle migrating init run
@@ -223,7 +224,7 @@ func main() {
 					}
 
 					// split the edge into cats
-					if edgeSize > 0 {
+					if edgeSize > 100 {
 						// now the master -> cat.json.gz is split into cells
 						// so we can run the edge -> cat.json.gz
 						edgeMutex.Lock()
@@ -250,10 +251,10 @@ func main() {
 						edgeMutex.Unlock()
 					}
 
-					// // did the cattracks-split-cats-uniqcell-gz command generate any new .mbtiles?
+					// // did the cattracks-split-cats-uniqcell-gz command generate any new tracks?
 					// // or were they all dupes?
 					// // if they were all dupes, we can skip the rest of this procmaster iter
-					// fmrJSONGZs.stop()
+					// fmrJSONGZs.mark()
 					// if len(fmrJSONGZs.updated()) == 0 && mbTilesExist {
 					// 	log.Println("[procmaster] cat-cells/*.json.gz unmodified, short-circuiting")
 					// 	continue procmasterloop
@@ -262,10 +263,13 @@ func main() {
 					// run tippe on all cat cells .json.gzs.
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
+					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					fmrMBTiles.record()
+
 					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
 
 					// if tippe on the tracks didn't change any mbtiles, we can skip the rest
-					fmrMBTiles.stop()
+					fmrMBTiles.mark()
 					updatedMBTiles := fmrMBTiles.updated()
 					if len(updatedMBTiles) == 0 {
 						log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
@@ -754,6 +758,10 @@ type fileMod struct {
 	modAfter  time.Time // will be 0 if deleted
 }
 
+func (f fileMod) String() string {
+	return fmt.Sprintf("%s: %s -> %s", f.fpath, f.modBefore, f.modAfter)
+}
+
 type fileModRecorder struct {
 	glob  string
 	files []fileMod
@@ -781,7 +789,7 @@ func (fmr *fileModRecorder) record() error {
 	return nil
 }
 
-func (fmr *fileModRecorder) stop() error {
+func (fmr *fileModRecorder) mark() error {
 	matches, _ := filepath.Glob(fmr.glob)
 	for _, match := range matches {
 		fi, err := os.Stat(match)
@@ -789,11 +797,12 @@ func (fmr *fileModRecorder) stop() error {
 			return err
 		}
 		matchedExisting := false
-		for _, f := range fmr.files {
+		for i, f := range fmr.files {
 			if f.fpath == match {
 				// updated file
 				matchedExisting = true
-				f.modAfter = fi.ModTime()
+				fmr.files[i].modAfter = fi.ModTime()
+				break
 			}
 		}
 		// created file
