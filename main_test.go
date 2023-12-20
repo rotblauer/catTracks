@@ -1,6 +1,7 @@
 package main
 
 import (
+	"log"
 	"os"
 	"path/filepath"
 	"testing"
@@ -35,4 +36,35 @@ func TestFMR(t *testing.T) {
 		t.Log(f.String())
 	}
 	t.Log(updated)
+}
+
+func TestProcmasterCHanPattern(t *testing.T) {
+	masterCh := make(chan bool, 1)
+	masterCh <- true
+	defer close(masterCh)
+
+	runMaster := func() {
+		t.Log("running master...")
+		time.Sleep(5 * time.Second)
+	}
+
+	go func() {
+		for {
+			select {
+			case <-masterCh:
+				runMaster()
+			}
+		}
+	}()
+
+	for i := 0; i < 15; i++ {
+		time.Sleep(1 * time.Second)
+		log.Println("running edge...")
+		select {
+		case masterCh <- true:
+			log.Println("masterCh <- true")
+		default:
+			log.Println("master is busy")
+		}
+	}
 }

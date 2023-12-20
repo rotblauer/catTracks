@@ -149,6 +149,11 @@ func main() {
 		return fmt.Sprintf("[procmaster: %s] ", label)
 	}
 
+	// procmasterCh is a channel which is used to trigger the procmaster routine.
+	// The edge routine will trigger the procmaster routine when it has finished processing the latest tracks.
+	procmasterCh := make(chan bool, 1)
+	defer close(procmasterCh)
+
 	if procmaster {
 		go func() {
 		procmasterloop:
@@ -156,7 +161,7 @@ func main() {
 				select {
 				case <-quitChan:
 					return
-				default:
+				case <-procmasterCh:
 					log.Println("[procmaster] starting iter")
 
 					// tileRecovery:
@@ -199,13 +204,13 @@ func main() {
 						edgeSize = fi.Size()
 					} else if !tileRecovery {
 						log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
-						time.Sleep(time.Minute)
+						// time.Sleep(time.Minute)
 						continue procmasterloop
 					}
 
 					if edgeSize < 100 && !tileRecovery {
 						log.Printf("procmaster: edge.json.gz is too small (%d < 100 bytes), skipping (sleep 1m)\n", edgeSize)
-						time.Sleep(time.Minute)
+						// time.Sleep(time.Minute)
 						continue procmasterloop
 					} else {
 						log.Printf("procmaster: edge.json.gz is %d bytes, running\n", edgeSize)
@@ -342,7 +347,7 @@ func main() {
 		}()
 	}
 
-	if procedge {
+	if procmaster && procedge {
 		go func() {
 			for {
 				select {
@@ -400,6 +405,12 @@ func main() {
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
+					select {
+					case procmasterCh <- true:
+						log.Println("[procedge] procmasterCh <- true")
+					default:
+						log.Println("[procedge] procmasterCh full, skipping")
+					}
 				}
 			}
 		}()
