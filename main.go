@@ -349,6 +349,7 @@ func main() {
 
 	if procmaster && procedge {
 		go func() {
+			debounceFireProcMaster := false
 			for {
 				select {
 				case <-quitChan:
@@ -405,12 +406,26 @@ func main() {
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
-					select {
-					case procmasterCh <- true:
-						log.Println("[procedge] procmasterCh <- true")
-					default:
-						log.Println("[procedge] procmasterCh full, skipping")
-					}
+
+					// debounce for when many tracks are posted in batches,
+					// so there'll be many of these fired in succession,
+					// and we want to trigger master for the latest of these
+					go func() {
+						if debounceFireProcMaster {
+							return
+						}
+						debounceFireProcMaster = true
+						defer func() {
+							debounceFireProcMaster = false
+						}()
+						time.Sleep(10 * time.Second)
+						select {
+						case procmasterCh <- true:
+							log.Println("[procedge] procmasterCh <- true")
+						default:
+							log.Println("[procedge] procmasterCh full, skipping")
+						}
+					}()
 				}
 			}
 		}()
