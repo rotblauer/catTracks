@@ -73,8 +73,8 @@ github.com/olahol/melody v1.1.4/go.mod h1:GgkTl6Y7yWj/HtfD48Q5vLKPVoZOH+Qqgfa7Cv
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
-github.com/rotblauer/catTrackslib v1.1.5 h1:Jg28pKcFbdlTge5xpjWnLQ46MzsrKlXBPsQboRARkIY=
-github.com/rotblauer/catTrackslib v1.1.5/go.mod h1:Gyi13I+VV3u+3lnUuphvPcl+9rkgnWxOLUl8a3VQjI0=
+github.com/rotblauer/catTrackslib v1.1.6 h1:V8BGja4Bp0gI0+a+vQvQsEgNFjZaUDzZqIgn7Tg/N/4=
+github.com/rotblauer/catTrackslib v1.1.6/go.mod h1:Gyi13I+VV3u+3lnUuphvPcl+9rkgnWxOLUl8a3VQjI0=
 github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255 h1:Y0ZPdNEXrTxQA5prYMXr7+saw2OGqYUWa0fI8VKVw0s=
 github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255/go.mod h1:Qn4suWYDvnPynJf8AfAKXBxfp6Gh12JovEGejNUOAlg=
 github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 h1:7lBQ00WVvFPHe66X+8rplAtZR5CI/odv0F8iy0mQWSI=

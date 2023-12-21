@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
-	github.com/rotblauer/catTrackslib v1.1.5
+	github.com/rotblauer/catTrackslib v1.1.6
 	go.etcd.io/bbolt v1.3.8
 )
 
