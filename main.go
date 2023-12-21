@@ -389,7 +389,7 @@ func main() {
 					// lock the edge file, competing with prcmaster
 					edgeMutex.Lock()
 
-					directMasterGZPath := filepath.Join(rootDir, "direct-" + filepath.Base(tracksjsongzpathMaster))
+					directMasterGZPath := filepath.Join(rootDir, "direct-"+filepath.Base(tracksjsongzpathMaster))
 					if _, err := os.Stat(directMasterGZPath); err != nil {
 						// copy master.json.gz to direct-master.json.gz
 						log.Println("[procedge] copying master.json.gz to direct-master.json.gz")
@@ -412,7 +412,7 @@ func main() {
 
 					// run tippecanoe on the snapshotted edge data
 
-					var tippeStart := time.Now()
+					tippeStart := time.Now()
 
 					var err error
 					err = runTippe(filepath.Join(rootDir, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
@@ -423,7 +423,6 @@ func main() {
 
 					tippeTook := time.Since(tippeStart)
 					log.Printf("[procedge] tippecanoe took %s\n", tippeTook.Round(time.Microsecond))
-
 
 					// remove the snapshot after use
 					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), procEdgePrefix)
@@ -437,12 +436,10 @@ func main() {
 
 					log.Println("[procedge] finished iter")
 
-
-					if tippeTook < time.Second * 30 {
+					if tippeTook < time.Second*30 {
 						log.Println("[procedge] tippecanoe took less than 30 seconds, skipping procmaster trigger")
 						continue
 					}
-
 
 					// debounce for when many tracks are posted in batches,
 					// so there'll be many of these fired in succession,
