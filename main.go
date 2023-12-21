@@ -305,24 +305,29 @@ func main() {
 					// 	// problems: need to skip genpop.mbtiles,
 					// 	// and exclude cats from genpop with scapegoat algorithms
 					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.level-23.mbtiles")
+					genPopTilesExist := false
+					if _, err := os.Stat(genPopTilesPath); err == nil {
+						genPopTilesExist = true
+					}
 
 					genPopCatMBTiles := []string{} // will be all tile paths EXCEPT those matching any of notGenPop
 					notGenPop := []string{
 						"ia",
 						"rye",
 					}
+				genpoploop:
 					for _, u := range updatedMBTiles {
 						// path/to/ia.level-23.mbtiles => ia
 						// path/to/bob.mbtiles => bob
 						for _, reservedName := range notGenPop {
 							if strings.Contains(strings.Split(filepath.Base(u), ".")[0], reservedName) {
-								continue
+								continue genpoploop
 							}
 						}
 						genPopCatMBTiles = append(genPopCatMBTiles, u)
 					}
 
-					if len(genPopCatMBTiles) == 0 {
+					if len(genPopCatMBTiles) == 0 && genPopTilesExist {
 						log.Println("[procmaster] genpop tiles not updated, skipping tile-join and cp .mbtiles")
 						continue procmasterloop
 					}
