@@ -154,6 +154,8 @@ func main() {
 	procmasterCh := make(chan bool, 1)
 	defer close(procmasterCh)
 
+	procmasterCh <- true // init run
+
 	if procmaster {
 		go func() {
 		procmasterloop:
@@ -361,6 +363,11 @@ func main() {
 					return
 				case <-catTrackslib.NotifyNewEdge:
 
+					// drain buffered chan, just in case
+					for len(catTrackslib.NotifyNewEdge) > 0 {
+						<-catTrackslib.NotifyNewEdge
+					}
+
 					procEdgePrefix := "[procedge] "
 
 					// this function processes the edge.json.gz file.
@@ -394,12 +401,20 @@ func main() {
 					edgeMutex.Unlock()
 
 					// run tippecanoe on the snapshotted edge data
+
+					var tippeStart := time.Now()
+
 					var err error
 					err = runTippe(filepath.Join(rootDir, "edge.mbtiles"), snapEdgePath, "catTrackEdge")
 					if err != nil {
 						log.Println("[procedge] tippecanoe errored:", err)
 						continue
 					}
+
+					tippeTook := time.Since(tippeStart)
+					log.Printf("[procedge] tippecanoe took %s\n", tippeTook.Round(time.Microsecond))
+
+
 					// remove the snapshot after use
 					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), procEdgePrefix)
 					log.Println("[procedge] waiting for lock ege for migrating")
@@ -411,6 +426,13 @@ func main() {
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
+
+
+					if tippeTook < time.Second * 30 {
+						log.Println("[procedge] tippecanoe took less than 30 seconds, skipping procmaster trigger")
+						continue
+					}
+
 
 					// debounce for when many tracks are posted in batches,
 					// so there'll be many of these fired in succession,
