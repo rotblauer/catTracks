@@ -41,3 +41,8 @@ tippecanoe's tile-join, what does 'merge tiles' mean?
  - catona: put cats on tiles
 - serve the stats
 
+---
+
+- [ ] cattracks-names: package provides cat aliases for cat names
+- [ ] cattracks-structs: package provides data structures for cat tracks
+- [ ] cattracks-m2: 

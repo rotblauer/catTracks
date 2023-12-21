@@ -4,7 +4,7 @@ go 1.18
 
 require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
-	github.com/rotblauer/catTrackslib v1.1.6
+	github.com/rotblauer/catTrackslib v1.1.7
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -16,6 +16,7 @@ require (
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/deet/simpleline v0.0.0-20140919022041-9d297ff784a2 // indirect
 	github.com/golang/geo v0.0.0-20230421003525-6adc56603217 // indirect
+	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
 	github.com/google/uuid v1.5.0 // indirect
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/schema v1.2.1 // indirect
