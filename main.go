@@ -389,8 +389,18 @@ func main() {
 					// lock the edge file, competing with prcmaster
 					edgeMutex.Lock()
 
+					directMasterGZPath := filepath.Join(rootDir, "direct-" + filepath.Base(tracksjsongzpathMaster))
+					if _, err := os.Stat(directMasterGZPath); err != nil {
+						// copy master.json.gz to direct-master.json.gz
+						log.Println("[procedge] copying master.json.gz to direct-master.json.gz")
+						_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathMaster, directMasterGZPath), procEdgePrefix)
+					}
+
 					// look for any _fin_ished partial edge files, and dump them into edge.json.gz
 					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), procEdgePrefix)
+					// then dump these new tracks directly to direct-master.json.gz
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, directMasterGZPath), procEdgePrefix)
+
 					// then remove all _fin_ished partial edge files
 					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), procEdgePrefix)
 
