@@ -246,14 +246,17 @@ func main() {
 
 						log.Println("rolling edge to develop")
 						// rename edge.json.gz -> devop.json.gz (roll)
-						_ = bashExec(fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop), procMasterPrefixed(""))
-						// _ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+						log.Println(procMasterPrefixed(""), fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop))
+						_ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+
 						// touch edge.json.gz
-						_ = bashExec(fmt.Sprintf("touch %s", tracksjsongzpathEdge), procMasterPrefixed(""))
+						log.Println(procMasterPrefixed(""), fmt.Sprintf("touch %s", tracksjsongzpathEdge))
+						_ = os.Truncate(tracksjsongzpathEdge, 0)
+
 						// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
 						// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
-						_ = bashExec(fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")), "")
-						// _ = os.Rename(filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles"))
+						log.Println(procMasterPrefixed(""), fmt.Sprintf("mv %s %s", filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles")))
+						_ = os.Rename(filepath.Join(tilesetsDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "devop.mbtiles"))
 
 						edgeMutex.Unlock()
 					}
@@ -402,7 +405,11 @@ func main() {
 					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, directMasterGZPath), procEdgePrefix)
 
 					// then remove all _fin_ished partial edge files
-					_ = bashExec(fmt.Sprintf("rm %s/*-fin-*", rootDir), procEdgePrefix)
+					log.Println(procEdgePrefix, fmt.Sprintf("rm %s/*-fin-*", rootDir))
+					fins, _ := filepath.Glob(filepath.Join(rootDir, "*-fin-*"))
+					for _, fin := range fins {
+						os.Remove(fin)
+					}
 
 					// copy edge.json.gz to edge.snap.json.gz, for use as a snapshot with tippecanoe
 					snapEdgePath := filepath.Join(rootDir, "edge.snap.json.gz")
@@ -425,13 +432,16 @@ func main() {
 					log.Printf("[procedge] tippecanoe took %s\n", tippeTook.Round(time.Microsecond))
 
 					// remove the snapshot after use
-					_ = bashExec(fmt.Sprintf("rm %s", snapEdgePath), procEdgePrefix)
+					log.Println(procEdgePrefix, fmt.Sprintf("rm %s", snapEdgePath))
+					os.Remove(snapEdgePath)
+
 					log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
 					log.Println("[procedge] got lock")
 					// move the new edge mbtiles to the tilesets dir for serving
-					_ = bashExec(fmt.Sprintf("mv %s %s",
-						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")), procEdgePrefix)
+					log.Println(procEdgePrefix, fmt.Sprintf("mv %s %s",
+						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")))
+					os.Rename(filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles"))
 					edgeMutex.Unlock()
 
 					log.Println("[procedge] finished iter")
