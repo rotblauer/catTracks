@@ -1,10 +1,10 @@
 module github.com/rotblauer/catTracks
 
-go 1.18
+go 1.21.2
 
 require (
 	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
-	github.com/rotblauer/catTrackslib v1.1.7
+	github.com/rotblauer/catTrackslib v1.1.8
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -25,7 +25,8 @@ require (
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/olahol/melody v1.1.4 // indirect
-	github.com/rotblauer/catnotelib v0.0.0-20220702153144-82b16d17a255 // indirect
+	github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe // indirect
+	github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 // indirect
 	github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 // indirect
 	github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630172156-84e70c5d820e // indirect
 	go.opencensus.io v0.24.0 // indirect

@@ -43,6 +43,14 @@ tippecanoe's tile-join, what does 'merge tiles' mean?
 
 ---
 
-- [ ] cattracks-names: package provides cat aliases for cat names
-- [ ] cattracks-structs: package provides data structures for cat tracks
-- [ ] cattracks-m2: 
+- [ ] cattracks-names: cat aliases for cat names
+- [ ] cattracks-structs: data structures for cat tracks (TrackPoint to Geojson, etc)
+- [ ] cattracks-tippe: some common tippe run configs 
+
+
+- daemon (manager)
+- server
+- line string maker
+- place maker
+- names provider
+- 
