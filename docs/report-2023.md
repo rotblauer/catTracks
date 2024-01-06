@@ -53,4 +53,3 @@ tippecanoe's tile-join, what does 'merge tiles' mean?
 - line string maker
 - place maker
 - names provider
-- 
