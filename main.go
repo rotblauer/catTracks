@@ -446,8 +446,8 @@ func main() {
 
 					log.Println("[procedge] finished iter")
 
-					if tippeTook < time.Second*30 {
-						log.Println("[procedge] tippecanoe took less than 30 seconds, skipping procmaster trigger")
+					if tippeTook < time.Second*100 {
+						log.Println("[procedge] tippecanoe took less than 100 seconds, skipping procmaster trigger")
 						continue
 					}
 
