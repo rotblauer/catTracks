@@ -4,6 +4,25 @@
 
 Tracking Cats and generating data
 
+20240124
+
+- rottor is done and gone. cattracks have move to smaller, dedicated servers -- ansible-cats.
+
+
+- [ ] cattracks `anybatch2geojsonpoints` - transforms trackpoint, geojson fc, [geojson features], ld geojson, csv... to `[]geojson.Point`
+- [ ] api interfaces
+- [ ] simple gzip storage
+- [ ] track processors; cleaners, sifters, sorters. all of these should be AFTER original tracks storage. store them dirty.
+- [ ] tile makers
+- [ ] forward-populate is really nice. it could be improved and extended;
+  - persistent caching
+  - handle multiple targets
+- [ ] api metrics
+  - tracks pushed
+  - aqi queries, errors
+  - tippe run
+
+
 20231214
 
 cattracks is too big, too heavy, and thus too expensive
