@@ -21,64 +21,64 @@ import (
 	"github.com/rotblauer/catTrackslib"
 )
 
-var exportPostGIS = flag.Bool("exportPostGIS", false, "export to postgis")
+var flagExportPostGIS = flag.Bool("flagExportPostGIS", false, "export to postgis")
 
 // Toodle to do , Command line port arg, might mover er to main
 func main() {
-	var porty int
-	var clearDBTestes bool
-	var testesRun bool
-	var buildIndexes bool
-	var forwardurl string
-	var tracksjsongzpathMaster, tracksjsongzpathDevop, tracksjsongzpathEdge string
-	var dbpath, devopdbpath, edgedbpath string
-	var masterlock, devlock, edgelock string
+	var flagPort int
+	var flagclearDBTestes bool
+	var flagTestesRun bool
+	var flagBuildIndexes bool
+	var flagForwardURL string
+	var flagTracksjsongzpathMaster, flagTracksjsongzpathDevop, flagTracksjsongzpathEdge string
+	var flagDBPathMaster, flagDBDevopPath, flagDBPathEdge string
+	var flagMasterLock, flagDevLock, flagEdgeLock string
 
 	var placesLayer bool
 
-	var procmaster, procedge bool
+	var flagProcmster, flagProcedge bool
 
-	var exportTarget string // target postgis endpoint
+	var flagPostGISExportTarget string // target postgis endpoint
 
-	flag.IntVar(&porty, "port", 8080, "port to serve and protect")
-	flag.BoolVar(&clearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") // TODO clear only certain values, ie prefixed with testes based on testesRun
-	flag.BoolVar(&testesRun, "testes", false, "testes run prefixes name with testes-")              // hope that's your phone's name
-	flag.BoolVar(&buildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
+	flag.IntVar(&flagPort, "port", 8080, "port to serve and protect")
+	flag.BoolVar(&flagclearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") // TODO clear only certain values, ie prefixed with testes based on testesRun
+	flag.BoolVar(&flagTestesRun, "testes", false, "testes run prefixes name with testes-")              // hope that's your phone's name
+	flag.BoolVar(&flagBuildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
 
-	flag.StringVar(&forwardurl, "forward-url", "", "forward populate POST requests to this endpoint")
+	flag.StringVar(&flagForwardURL, "forward-url", "", "forward populate POST requests to this endpoint")
 
-	flag.StringVar(&tracksjsongzpathMaster, "tracks-gz-path", "", "path to appendable json.gz tracks (used by tippe)")
-	flag.StringVar(&tracksjsongzpathDevop, "devop-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for devop tipping")
-	flag.StringVar(&tracksjsongzpathEdge, "edge-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for edge tipping")
+	flag.StringVar(&flagTracksjsongzpathMaster, "tracks-gz-path", "", "path to appendable json.gz tracks (used by tippe)")
+	flag.StringVar(&flagTracksjsongzpathDevop, "devop-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for devop tipping")
+	flag.StringVar(&flagTracksjsongzpathEdge, "edge-gz-path", "", "path to appendable json.gz tracks (used by tippe) - for edge tipping")
 
-	flag.StringVar(&dbpath, "db-path-master", path.Join("db", "tracks.db"), "path to master tracks bolty db")
+	flag.StringVar(&flagDBPathMaster, "db-path-master", path.Join("db", "tracks.db"), "path to master tracks bolty db")
 	// these don't go to a bolt db, just straight to .json.gz
-	flag.StringVar(&devopdbpath, "db-path-devop", "", "path to master tracks bolty db")
-	flag.StringVar(&edgedbpath, "db-path-edge", "", "path to edge tracks bolty db")
+	flag.StringVar(&flagDBDevopPath, "db-path-devop", "", "path to master tracks bolty db")
+	flag.StringVar(&flagDBPathEdge, "db-path-edge", "", "path to edge tracks bolty db")
 
-	flag.StringVar(&masterlock, "master-lock", "", "path to master db lock")
-	flag.StringVar(&devlock, "devop-lock", "", "path to devop db lock")
-	flag.StringVar(&edgelock, "edge-lock", "", "path to edge db lock")
+	flag.StringVar(&flagMasterLock, "master-lock", "", "path to master db lock")
+	flag.StringVar(&flagDevLock, "devop-lock", "", "path to devop db lock")
+	flag.StringVar(&flagEdgeLock, "edge-lock", "", "path to edge db lock")
 
-	flag.BoolVar(&procmaster, "proc-master", false, "run getem for master tiles")
-	flag.BoolVar(&procedge, "proc-edge", false, "run getem for edge tiles")
+	flag.BoolVar(&flagProcmster, "proc-master", false, "run getem for master tiles")
+	flag.BoolVar(&flagProcedge, "proc-edge", false, "run getem for edge tiles")
 	flag.BoolVar(&placesLayer, "places-layer", false, "generate layer for valid ios places")
 
-	flag.StringVar(&exportTarget, "export.target", "postgres://postgres:mysecretpassword@localhost:5432/cattracks1?sslmode=prefer", "target postgis endpoint")
+	flag.StringVar(&flagPostGISExportTarget, "export.target", "postgres://postgres:mysecretpassword@localhost:5432/cattracks1?sslmode=prefer", "target postgis endpoint")
 
 	flag.Parse()
 
-	catTrackslib.SetForwardPopulate(forwardurl)
-	catTrackslib.SetLiveTracksGZ(tracksjsongzpathMaster)
-	catTrackslib.SetLiveTracksGZDevop(tracksjsongzpathDevop)
-	catTrackslib.SetLiveTracksGZEdge(tracksjsongzpathEdge)
-	catTrackslib.SetDBPath("master", dbpath)
-	catTrackslib.SetDBPath("devop", devopdbpath)
-	catTrackslib.SetDBPath("edge", edgedbpath)
+	catTrackslib.SetForwardPopulate(flagForwardURL)
+	catTrackslib.SetLiveTracksGZ(flagTracksjsongzpathMaster)
+	catTrackslib.SetLiveTracksGZDevop(flagTracksjsongzpathDevop)
+	catTrackslib.SetLiveTracksGZEdge(flagTracksjsongzpathEdge)
+	catTrackslib.SetDBPath("master", flagDBPathMaster)
+	catTrackslib.SetDBPath("devop", flagDBDevopPath)
+	catTrackslib.SetDBPath("edge", flagDBPathEdge)
 
-	catTrackslib.SetMasterLock(masterlock)
-	catTrackslib.SetDevopLock(devlock)
-	catTrackslib.SetEdgeLock(edgelock)
+	catTrackslib.SetMasterLock(flagMasterLock)
+	catTrackslib.SetDevopLock(flagDevLock)
+	catTrackslib.SetEdgeLock(flagEdgeLock)
 
 	catTrackslib.SetPlacesLayer(placesLayer)
 
@@ -90,13 +90,13 @@ func main() {
 	if bolterr := catTrackslib.InitBoltDB(); bolterr == nil {
 		defer catTrackslib.GetDB("master").Close()
 	}
-	if clearDBTestes {
+	if flagclearDBTestes {
 		e := catTrackslib.DeleteTestes()
 		if e != nil {
 			log.Println(e)
 		}
 	}
-	if buildIndexes {
+	if flagBuildIndexes {
 		catTrackslib.BuildIndexBuckets() // cleverly always returns nil
 	}
 	// if qterr := catTrackslib.InitQT(); qterr != nil {
@@ -104,9 +104,9 @@ func main() {
 	// 	log.Println(qterr)
 	// }
 
-	if exportPostGIS != nil && *exportPostGIS {
+	if flagExportPostGIS != nil && *flagExportPostGIS {
 		log.Println("Exporting PostGIS")
-		catTrackslib.ExportPostGIS(exportTarget)
+		catTrackslib.ExportPostGIS(flagPostGISExportTarget)
 		return
 	}
 
@@ -118,7 +118,7 @@ func main() {
 
 	// Defaults false, causing names prefixed with: ""
 	// Apparently configures a test environment.
-	catTrackslib.SetTestes(testesRun)
+	catTrackslib.SetTestes(flagTestesRun)
 
 	// Does boilerplate for setting up the router.
 	// Configures routes, which are defined in routes.go.
@@ -134,12 +134,12 @@ func main() {
 	var quitChan = make(chan bool)
 	var edgeMutex sync.Mutex
 
-	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(dbpath), "cat-cells")
+	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(flagDBPathMaster), "cat-cells")
 	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
 	genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
 
 	// tilesetsDir is where consbio/mbtileserver -d serves from, with --enable-fs-watch on.
-	tilesetsDir := filepath.Join(filepath.Dir(dbpath), "tilesets")
+	tilesetsDir := filepath.Join(filepath.Dir(flagDBPathMaster), "tilesets")
 	os.MkdirAll(tilesetsDir, 0755)
 
 	procMasterPrefixed := func(label string) string {
@@ -156,7 +156,7 @@ func main() {
 
 	procmasterCh <- true // init run
 
-	if procmaster {
+	if flagProcmster {
 		go func() {
 		procmasterloop:
 			for {
@@ -202,7 +202,7 @@ func main() {
 					// we don't need the lock here because we only care about its minimum size, and mutating
 					// processes are still locked.
 					edgeSize := int64(0)
-					if fi, err := os.Stat(tracksjsongzpathEdge); err == nil {
+					if fi, err := os.Stat(flagTracksjsongzpathEdge); err == nil {
 						edgeSize = fi.Size()
 					} else if !tileRecovery {
 						log.Println("procmaster: edge.json.gz errored, skipping (sleep 1m)", err)
@@ -225,7 +225,7 @@ func main() {
 						// eg.
 						//   ~/tdata/cat-cells/{ia,rye}.json.gz
 						//   ~/tdata/cat-cells/dbs/{ia,rye}.db
-						if err := runCatCellSplitter(tracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter(flagTracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
 					}
@@ -236,22 +236,22 @@ func main() {
 						// so we can run the edge -> cat.json.gz
 						edgeMutex.Lock()
 
-						if err := runCatCellSplitter(tracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter(flagTracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
 
 						// cat append all finished edge files to master.json.gz
 						// append edge tracks to master
-						_ = bashExec(fmt.Sprintf("cat %s >> %s", tracksjsongzpathEdge, tracksjsongzpathMaster), procMasterPrefixed(""))
+						_ = bashExec(fmt.Sprintf("cat %s >> %s", flagTracksjsongzpathEdge, flagTracksjsongzpathMaster), procMasterPrefixed(""))
 
 						log.Println("rolling edge to develop")
 						// rename edge.json.gz -> devop.json.gz (roll)
-						log.Println(procMasterPrefixed(""), fmt.Sprintf("mv %s %s", tracksjsongzpathEdge, tracksjsongzpathDevop))
-						_ = os.Rename(tracksjsongzpathEdge, tracksjsongzpathDevop)
+						log.Println(procMasterPrefixed(""), fmt.Sprintf("mv %s %s", flagTracksjsongzpathEdge, flagTracksjsongzpathDevop))
+						_ = os.Rename(flagTracksjsongzpathEdge, flagTracksjsongzpathDevop)
 
 						// touch edge.json.gz
-						log.Println(procMasterPrefixed(""), fmt.Sprintf("touch %s", tracksjsongzpathEdge))
-						_ = os.Truncate(tracksjsongzpathEdge, 0)
+						log.Println(procMasterPrefixed(""), fmt.Sprintf("touch %s", flagTracksjsongzpathEdge))
+						_ = os.Truncate(flagTracksjsongzpathEdge, 0)
 
 						// _, _ = os.Create(tracksjsongzpathEdge) // create or truncate
 						// rename tilesets/edge.mbtiles ->  tilesets/devop.mbtiles (roll)
@@ -357,7 +357,7 @@ func main() {
 		}()
 	}
 
-	if procmaster && procedge {
+	if flagProcmster && flagProcedge {
 		go func() {
 			debounceFireProcMaster := false
 			for {
@@ -380,7 +380,7 @@ func main() {
 					// when it ingests the edge.json.gz file into master.json.gz.
 
 					log.Printf("%sstarting iter\n", procEdgePrefix)
-					rootDir := filepath.Dir(tracksjsongzpathEdge)
+					rootDir := filepath.Dir(flagTracksjsongzpathEdge)
 
 					// if no fin files, then this is a re-run trigger after a short interval from previous.
 					// channel can be like that.
@@ -392,15 +392,15 @@ func main() {
 					// lock the edge file, competing with prcmaster
 					edgeMutex.Lock()
 
-					directMasterGZPath := filepath.Join(rootDir, "direct-"+filepath.Base(tracksjsongzpathMaster))
+					directMasterGZPath := filepath.Join(rootDir, "direct-"+filepath.Base(flagTracksjsongzpathMaster))
 					if _, err := os.Stat(directMasterGZPath); err != nil {
 						// copy master.json.gz to direct-master.json.gz
 						log.Println("[procedge] copying master.json.gz to direct-master.json.gz")
-						_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathMaster, directMasterGZPath), procEdgePrefix)
+						_ = bashExec(fmt.Sprintf("cp %s %s", flagTracksjsongzpathMaster, directMasterGZPath), procEdgePrefix)
 					}
 
 					// look for any _fin_ished partial edge files, and dump them into edge.json.gz
-					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, tracksjsongzpathEdge), procEdgePrefix)
+					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, flagTracksjsongzpathEdge), procEdgePrefix)
 					// then dump these new tracks directly to direct-master.json.gz
 					_ = bashExec(fmt.Sprintf("cat %s/*-fin-* >> %s", rootDir, directMasterGZPath), procEdgePrefix)
 
@@ -413,7 +413,7 @@ func main() {
 
 					// copy edge.json.gz to edge.snap.json.gz, for use as a snapshot with tippecanoe
 					snapEdgePath := filepath.Join(rootDir, "edge.snap.json.gz")
-					_ = bashExec(fmt.Sprintf("cp %s %s", tracksjsongzpathEdge, snapEdgePath), procEdgePrefix)
+					_ = bashExec(fmt.Sprintf("cp %s %s", flagTracksjsongzpathEdge, snapEdgePath), procEdgePrefix)
 
 					edgeMutex.Unlock()
 
@@ -491,7 +491,7 @@ func main() {
 					if lenp := len(places); lenp > 0 {
 						log.Println("processing", lenp, "places: ", places)
 						// eg. /var/tdata/places.json.gz
-						baseDataDir := filepath.Dir(tracksjsongzpathEdge)
+						baseDataDir := filepath.Dir(flagTracksjsongzpathEdge)
 						placesJSONGZ := filepath.Join(baseDataDir, "places.json.gz")
 
 						placesProcLock.Lock() // might be unnecessary
@@ -529,7 +529,7 @@ func main() {
 		}()
 	}
 
-	http.ListenAndServe(":"+strconv.Itoa(porty), nil)
+	http.ListenAndServe(":"+strconv.Itoa(flagPort), nil)
 	quitChan <- true
 	quitChan <- true
 	quitChan <- true
