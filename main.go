@@ -157,7 +157,7 @@ func main() {
 	procmasterCh := make(chan bool, 1)
 	defer close(procmasterCh)
 
-	procmasterCh <- true // init run
+	// procmasterCh <- true // init procmaster run
 
 	if flagProcmster {
 		go func() {
