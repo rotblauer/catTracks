@@ -3,7 +3,7 @@ module github.com/rotblauer/catTracks
 go 1.21.2
 
 require (
-	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41
+	github.com/paulmach/orb v0.11.0
 	github.com/rotblauer/catTrackslib v1.1.8
 	go.etcd.io/bbolt v1.3.8
 )
@@ -22,6 +22,7 @@ require (
 	github.com/gorilla/schema v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
+	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/olahol/melody v1.1.4 // indirect
@@ -29,6 +30,7 @@ require (
 	github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 // indirect
 	github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 // indirect
 	github.com/rotblauer/trackpoints/trackPoint v0.0.0-20220630172156-84e70c5d820e // indirect
+	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
@@ -36,4 +38,4 @@ require (
 	googlemaps.github.io/maps v1.7.0 // indirect
 )
 
-//replace github.com/rotblauer/catTrackslib v1.1.2 => /home/ia/go/src/github.com/rotblauer/catTrackslib
+replace github.com/rotblauer/catTrackslib v1.1.8 => /home/ia/go/src/github.com/rotblauer/catTrackslib

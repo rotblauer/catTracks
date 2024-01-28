@@ -16,7 +16,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/kpawlik/geojson"
+	"github.com/paulmach/orb/geojson"
 
 	"github.com/rotblauer/catTrackslib"
 )
@@ -28,7 +28,7 @@ func main() {
 	var flagPort int
 	var flagclearDBTestes bool
 	var flagTestesRun bool
-	var flagBuildIndexes bool
+	// var flagBuildIndexes bool
 	var flagForwardURL string
 	var flagTracksjsongzpathMaster, flagTracksjsongzpathDevop, flagTracksjsongzpathEdge string
 	var flagDBPathMaster, flagDBDevopPath, flagDBPathEdge string
@@ -43,7 +43,7 @@ func main() {
 	flag.IntVar(&flagPort, "port", 8080, "port to serve and protect")
 	flag.BoolVar(&flagclearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") // TODO clear only certain values, ie prefixed with testes based on testesRun
 	flag.BoolVar(&flagTestesRun, "testes", false, "testes run prefixes name with testes-")              // hope that's your phone's name
-	flag.BoolVar(&flagBuildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
+	// flag.BoolVar(&flagBuildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
 
 	flag.StringVar(&flagForwardURL, "forward-url", "", "forward populate POST requests to this endpoint")
 
@@ -96,9 +96,9 @@ func main() {
 			log.Println(e)
 		}
 	}
-	if flagBuildIndexes {
-		catTrackslib.BuildIndexBuckets() // cleverly always returns nil
-	}
+	// if flagBuildIndexes {
+	// 	catTrackslib.BuildIndexBuckets() // cleverly always returns nil
+	// }
 	// if qterr := catTrackslib.InitQT(); qterr != nil {
 	// 	log.Println("Error initing QT.")
 	// 	log.Println(qterr)
