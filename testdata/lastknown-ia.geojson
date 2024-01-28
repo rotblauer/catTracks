@@ -1,0 +1,36 @@
+[
+    {
+      "type": "Feature",
+      "id": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-111.6902838, 45.5710573]
+      },
+      "properties": {
+        "AccelerometerX": 0.02,
+        "AccelerometerY": 0.91,
+        "AccelerometerZ": 9.79,
+        "Accuracy": 4.9,
+        "Activity": "Stationary",
+        "ActivityConfidence": 100,
+        "CurrentTripStart": "2024-01-28T02:25:48.37207Z",
+        "Elevation": 1463.3,
+        "GyroscopeX": 0,
+        "GyroscopeY": 0,
+        "GyroscopeZ": 0,
+        "Heading": -1,
+        "Name": "tonga-moto-63b2",
+        "NumberOfSteps": 4953,
+        "Pressure": 859.39,
+        "Speed": 0.01,
+        "Time": "2024-01-28T15:25:07.122Z",
+        "UUID": "63b2bab96ca49573",
+        "UnixTime": 1706455507,
+        "UserAccelerometerX": 0,
+        "UserAccelerometerY": 0.01,
+        "UserAccelerometerZ": 0.03,
+        "Version": "gcps/v0.0.0+4",
+        "vAccuracy": 1
+      }
+    }
+  ]

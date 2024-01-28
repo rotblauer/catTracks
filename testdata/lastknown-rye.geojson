@@ -1,0 +1,31 @@
+[
+    {
+      "type": "Feature",
+      "id": 1,
+      "geometry": {
+        "type": "Point",
+        "coordinates": [-92.39954376220703, 46.89632034301758]
+      },
+      "properties": {
+        "Accuracy": 4.719039440155029,
+        "Activity": "Unknown",
+        "AverageActivePace": 0.62,
+        "CurrentCadence": 1.38,
+        "CurrentPace": 1.11,
+        "CurrentTripStart": "2024-01-25T03:22:52.586Z",
+        "Distance": 36903.88,
+        "Elevation": 428.4293212890625,
+        "FloorsAscended": 31,
+        "FloorsDescended": 16,
+        "Heading": 92.8917465209961,
+        "Name": "Rye13",
+        "NumberOfSteps": 36263,
+        "Pressure": 97.05,
+        "Speed": 1.7934373617172241,
+        "Time": "2024-01-28T15:42:41Z",
+        "UUID": "05C63745-BFA3-4DE3-AF2F-CDE2173C0E11",
+        "UnixTime": 1706456561,
+        "Version": "V.customizableCatTrackHat"
+      }
+    }
+  ]
