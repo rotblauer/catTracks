@@ -4,7 +4,7 @@ go 1.21.2
 
 require (
 	github.com/paulmach/orb v0.11.0
-	github.com/rotblauer/catTrackslib v1.1.8
+	github.com/rotblauer/catTrackslib v1.2.1
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -22,7 +22,6 @@ require (
 	github.com/gorilla/schema v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
-	github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/olahol/melody v1.1.4 // indirect
@@ -37,5 +36,3 @@ require (
 	golang.org/x/time v0.5.0 // indirect
 	googlemaps.github.io/maps v1.7.0 // indirect
 )
-
-replace github.com/rotblauer/catTrackslib v1.1.8 => /home/ia/go/src/github.com/rotblauer/catTrackslib

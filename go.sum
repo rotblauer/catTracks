@@ -66,8 +66,6 @@ github.com/jmespath/go-jmespath/internal/testify v1.5.1/go.mod h1:L3OGu8Wl2/fWfC
 github.com/kisielk/errcheck v1.5.0/go.mod h1:pFxgyoBC7bSaBwPgfKdkLd5X25qrDl4LWUI2bnpBCr8=
 github.com/kisielk/gotool v1.0.0/go.mod h1:XhKaO+MFFWcvkIS/tQcRk01m1F5IRFswLeQ+oQHNcck=
 github.com/klauspost/compress v1.13.6/go.mod h1:/3/Vjq9QcHkK5uEr5lBEmyoZ1iFhe47etQ6QUkpK6sk=
-github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41 h1:hmhQApZRZctFnYW02XZBC9jKR31R7c4QbXbqBtQGZeg=
-github.com/kpawlik/geojson v0.0.0-20171201195549-1a4f120c6b41/go.mod h1:qKaqI0FuzSzLI6RtBrhVXqM5wjknuGYU2e8KVG+Z1MM=
 github.com/kr/pretty v0.1.0/go.mod h1:dAy3ld7l9f0ibDNOQOHHMYYIIbhfbHSm3C4ZsoJORNo=
 github.com/kr/pretty v0.2.0/go.mod h1:ipq/a2n7PKx3OHsz4KJII5eveXtPO4qwEXGdVfWzfnI=
 github.com/kr/pty v1.1.1/go.mod h1:pFQYn66WHrOpPYNljwOMqo10TkYh1fy3cYio2l3bCsQ=
@@ -86,8 +84,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
-github.com/rotblauer/catTrackslib v1.1.8 h1:/Lw6dOBlaVC+vMido/XSHeFyVCwL+HfE8ivALTCXk2M=
-github.com/rotblauer/catTrackslib v1.1.8/go.mod h1:E0Sd+wWEGb0sJzpXlCKykeyHUZ7XOI+IV5OkRo+JgtU=
+github.com/rotblauer/catTrackslib v1.2.1 h1:h1wusdSn5H2iNK1NtZXO6MlUTrsPKdg85FWvGOfRSWc=
+github.com/rotblauer/catTrackslib v1.2.1/go.mod h1:XmJBbSUUQb0FMLjuBxgmK6VCrJEHZOpaLGzcsq2Bkyc=
 github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe h1:vQx8WqhtZ+wEb1gevc4OB9/+EE4Q9+Q2o/FsJdzt5Ik=
 github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe/go.mod h1:Qn4suWYDvnPynJf8AfAKXBxfp6Gh12JovEGejNUOAlg=
 github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 h1:2fXI9amb4PJ1th/5Ke8HmjiC8xjEG+bhnKJPoe9Xsw4=
