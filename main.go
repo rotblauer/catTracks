@@ -37,6 +37,7 @@ func main() {
 	var placesLayer bool
 
 	var flagProcmster, flagProcedge bool
+	var flagTippeEdgeMaxSeconds int64
 
 	var flagPostGISExportTarget string // target postgis endpoint
 
@@ -62,6 +63,8 @@ func main() {
 
 	flag.BoolVar(&flagProcmster, "proc-master", false, "run getem for master tiles")
 	flag.BoolVar(&flagProcedge, "proc-edge", false, "run getem for edge tiles")
+	flag.Int64Var(&flagTippeEdgeMaxSeconds, "tippe-edge-max-seconds", 60, "max seconds to run tippe on edge tiles")
+
 	flag.BoolVar(&placesLayer, "places-layer", false, "generate layer for valid ios places")
 
 	flag.StringVar(&flagPostGISExportTarget, "export.target", "postgres://postgres:mysecretpassword@localhost:5432/cattracks1?sslmode=prefer", "target postgis endpoint")
@@ -446,8 +449,8 @@ func main() {
 
 					log.Println("[procedge] finished iter")
 
-					if tippeTook < time.Second*100 {
-						log.Println("[procedge] tippecanoe took less than 100 seconds, skipping procmaster trigger")
+					if tippeTook < time.Second*time.Duration(flagTippeEdgeMaxSeconds) {
+						log.Printf("[procedge] tippecanoe took less than %d seconds, skipping procmaster trigger\n", flagTippeEdgeMaxSeconds)
 						continue
 					}
 
