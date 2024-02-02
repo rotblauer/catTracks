@@ -2,27 +2,30 @@
 
 set -x
 
-TDATA_ROOT=${HOME}/tdata
-TDATA_ROOT_TEST=/tmp/tdata-tests
+PORT=${PORT:-3001}
 
-rm -rf ${TDATA_ROOT_TEST}
-mkdir -p ${TDATA_ROOT_TEST}
+TDATA_CANON=${HOME}/tdata
+
+TDATA_TEMP=${TDATA_TEMP:-$(mktemp -d)}
+
+rm -rf ${TDATA_TEMP}
+mkdir -p ${TDATA_TEMP}
 
 # Copy the origin tracks.db because it contains cat snaps, which I want
 # to check, but not post.
-cp "${TDATA_ROOT}/tracks.db" "${TDATA_ROOT_TEST}/tracks.db"
+cp "${TDATA_CANON}/tracks.db" "${TDATA_TEMP}/tracks.db"
 
 env COTOKEN=mytoken \
 ./build/bin/cattracks \
-    --port 3001 \
-    --db-path-master ${TDATA_ROOT_TEST}/tracks.db \
-    --db-path-devop ${TDATA_ROOT_TEST}/devop.db \
-    --db-path-edge ${TDATA_ROOT_TEST}/edge.db \
-    --tracks-gz-path ${TDATA_ROOT_TEST}/master.json.gz \
-    --devop-gz-path ${TDATA_ROOT_TEST}/devop.json.gz \
-    --edge-gz-path ${TDATA_ROOT_TEST}/edge.json.gz \
-    --master-lock ${TDATA_ROOT_TEST}/MASTERLOCK \
-    --devop-lock ${TDATA_ROOT_TEST}/DEVOPLOCK \
-    --edge-lock ${TDATA_ROOT_TEST}/EDGELOCK \
+    --port ${PORT} \
+    --db-path-master ${TDATA_TEMP}/tracks.db \
+    --db-path-devop ${TDATA_TEMP}/devop.db \
+    --db-path-edge ${TDATA_TEMP}/edge.db \
+    --tracks-gz-path ${TDATA_TEMP}/master.json.gz \
+    --devop-gz-path ${TDATA_TEMP}/devop.json.gz \
+    --edge-gz-path ${TDATA_TEMP}/edge.json.gz \
+    --master-lock ${TDATA_TEMP}/MASTERLOCK \
+    --devop-lock ${TDATA_TEMP}/DEVOPLOCK \
+    --edge-lock ${TDATA_TEMP}/EDGELOCK \
     --proc-master \
-    --proc-edge
+    --proc-edge $*
