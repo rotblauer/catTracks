@@ -21,6 +21,7 @@ require (
 	github.com/gorilla/mux v1.8.1 // indirect
 	github.com/gorilla/schema v1.2.1 // indirect
 	github.com/gorilla/websocket v1.5.1 // indirect
+	github.com/jellydator/ttlcache/v3 v3.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
@@ -32,7 +33,11 @@ require (
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
 	go.opencensus.io v0.24.0 // indirect
 	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.15.0 // indirect
 	golang.org/x/time v0.5.0 // indirect
 	googlemaps.github.io/maps v1.7.0 // indirect
 )
+
+// Development:
+replace github.com/rotblauer/catTrackslib => ../catTrackslib
