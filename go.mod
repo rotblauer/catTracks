@@ -4,7 +4,7 @@ go 1.21.2
 
 require (
 	github.com/paulmach/orb v0.11.0
-	github.com/rotblauer/catTrackslib v1.2.4
+	github.com/rotblauer/catTrackslib v1.2.5
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -42,4 +42,4 @@ require (
 )
 
 // Development:
-replace github.com/rotblauer/catTrackslib => ../catTrackslib
+//replace github.com/rotblauer/catTrackslib => ../catTrackslib

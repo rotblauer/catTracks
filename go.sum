@@ -90,6 +90,8 @@ github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINE
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/prometheus/client_model v0.0.0-20190812154241-14fe0d1b01d4/go.mod h1:xMI15A0UPsDsEKsMN9yxemIoYk6Tm2C1GtYGdfGttqA=
+github.com/rotblauer/catTrackslib v1.2.5 h1:7c12xSFbGzIUzAZsc3YIuVJ0e4dkiiW+S0xNySC+NFs=
+github.com/rotblauer/catTrackslib v1.2.5/go.mod h1:IoPzIPWlDUKB/kGQzyGHwsH19fiOEsfRl7fOKAqCY20=
 github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe h1:vQx8WqhtZ+wEb1gevc4OB9/+EE4Q9+Q2o/FsJdzt5Ik=
 github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe/go.mod h1:Qn4suWYDvnPynJf8AfAKXBxfp6Gh12JovEGejNUOAlg=
 github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 h1:2fXI9amb4PJ1th/5Ke8HmjiC8xjEG+bhnKJPoe9Xsw4=
