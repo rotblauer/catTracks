@@ -4,11 +4,14 @@ set -x
 
 PORT=${PORT:-3001}
 
+# TDATA_CANON is the canonical location of the actual cat tracks.
+# This script copies the tracks.db to the ephemeral TDATA_TEMP
+# because I want to test cattracks on top of real data.
 TDATA_CANON=${HOME}/tdata
 
+# TDATA_TEMP is the ephemeral location of the cat track datadir for this test instance.
 TDATA_TEMP=${TDATA_TEMP:-$(mktemp -d)}
-
-rm -rf ${TDATA_TEMP}
+trap "rm -rf ${TDATA_TEMP}" EXIT
 mkdir -p ${TDATA_TEMP}
 
 # Copy the origin tracks.db because it contains cat snaps, which I want
