@@ -4,7 +4,7 @@ go 1.21.2
 
 require (
 	github.com/paulmach/orb v0.11.0
-	github.com/rotblauer/catTrackslib v1.2.6
+	github.com/rotblauer/catTrackslib v1.2.7
 	go.etcd.io/bbolt v1.3.8
 )
 
@@ -26,6 +26,7 @@ require (
 	github.com/jellydator/ttlcache/v3 v3.1.1 // indirect
 	github.com/jmespath/go-jmespath v0.4.0 // indirect
 	github.com/lib/pq v1.10.9 // indirect
+	github.com/mitchellh/hashstructure/v2 v2.0.2 // indirect
 	github.com/montanaflynn/stats v0.7.1 // indirect
 	github.com/olahol/melody v1.1.4 // indirect
 	github.com/rotblauer/catnotelib v0.0.0-20231228161446-d583a3a29cfe // indirect
