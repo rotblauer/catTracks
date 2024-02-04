@@ -374,7 +374,7 @@ func main() {
 						<-catTrackslib.NotifyNewEdge
 					}
 
-					procEdgePrefix := "[procedge] "
+					procEdgePrefix := "[procedge]"
 
 					// this function processes the edge.json.gz file.
 					// these are tracks which have not yet been included in master.json.gz.

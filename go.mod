@@ -4,7 +4,7 @@ go 1.21.2
 
 require (
 	github.com/paulmach/orb v0.11.0
-	github.com/rotblauer/catTrackslib v1.2.8
+	github.com/rotblauer/catTrackslib v1.2.9
 	go.etcd.io/bbolt v1.3.8
 )
 
