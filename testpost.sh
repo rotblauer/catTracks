@@ -8,13 +8,13 @@ PORT=${PORT:-3001}
 curl -X POST \
     -H "Content-Type: application/json" \
     -H "AuthorizationOfCats: mytoken" \
-    -d @testdata/ia.geojsonfc \
+    -d @testdata/ia.json \
     http://localhost:3001/populate/
 
 curl -X POST \
     -H "Content-Type: application/json" \
     -H "AuthorizationOfCats: mytoken" \
-    -d @testdata/rye.geojsonfc \
+    -d @testdata/rye.json \
     http://localhost:3001/populate
 
 

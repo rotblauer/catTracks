@@ -11,7 +11,7 @@ require (
 require (
 	github.com/asim/quadtree v0.1.0 // indirect
 	github.com/aws/aws-sdk-go v1.49.5 // indirect
-	github.com/creack/httpreq v0.1.1 // indirect
+	github.com/creack/httpreq v0.1.1 // indirecte
 	github.com/cridenour/go-postgis v1.0.0 // indirect
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/felixge/httpsnoop v1.0.3 // indirect
