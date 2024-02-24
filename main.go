@@ -732,6 +732,7 @@ func getTippyProcess(out string, in string, tilesetname string) (tippCmd string,
 		// // "-EActivity:concat", // might get huge
 		// "-EPressure:mean",
 		// "--include", "UnixTime",
+		"--include", "Alias",
 		"--include", "UUID",
 		"--include", "Name",
 		"--include", "Activity",
