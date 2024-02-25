@@ -113,12 +113,6 @@ func main() {
 		return
 	}
 
-	// FIXME: This is deprecated/dilapidated because
-	// we don't actually use websockets for anything.
-	// But if we did, this would be a way and place to start
-	// hacking something in there.
-	catTrackslib.InitMelody()
-
 	// Defaults false, causing names prefixed with: ""
 	// Apparently configures a test environment.
 	catTrackslib.SetTestes(flagTestesRun)
