@@ -17,7 +17,7 @@ pushd $HOME/track.areteh.co/;
 ./linux.trackermain \
   --port=3001 \
   --forward-url https://api.catonmap.info/populate/ \
-  --tracks-gz-path ./master.json.gz\
+  --tracks-gz-path ./master.json.gz \
   --db-path-master ./tracks.db >> $HOME/track.areteh.co/logs.log 2>&1 &
 # node tile-server.js $mbtiles_file 8080 2>&1 &
 popd;
