@@ -26,10 +26,15 @@ var flagExportPostGIS = flag.Bool("flagExportPostGIS", false, "export to postgis
 // Toodle to do , Command line port arg, might mover er to main
 func main() {
 	var flagPort int
+	var flagDisableWebsocket bool
 	var flagclearDBTestes bool
 	var flagTestesRun bool
-	// var flagBuildIndexes bool
+
+	var flagLogWriter string
+
+	// flagForwardURL can be many urls, comma separated, and will be used to forward POST requests to.
 	var flagForwardURL string
+
 	var flagTracksjsongzpathMaster, flagTracksjsongzpathDevop, flagTracksjsongzpathEdge string
 	var flagDBPathMaster, flagDBDevopPath, flagDBPathEdge string
 	var flagMasterLock, flagDevLock, flagEdgeLock string
@@ -42,9 +47,12 @@ func main() {
 	var flagPostGISExportTarget string // target postgis endpoint
 
 	flag.IntVar(&flagPort, "port", 8080, "port to serve and protect")
+	flag.BoolVar(&flagDisableWebsocket, "disable-websocket", false, "disable websocket")
 	flag.BoolVar(&flagclearDBTestes, "castrate-first", false, "clear out db of testes prefixed points") // TODO clear only certain values, ie prefixed with testes based on testesRun
 	flag.BoolVar(&flagTestesRun, "testes", false, "testes run prefixes name with testes-")              // hope that's your phone's name
 	// flag.BoolVar(&flagBuildIndexes, "build-indexes", false, "build index buckets for original trackpoints")
+
+	flag.StringVar(&flagLogWriter, "log-path", "", "write logs to this file")
 
 	flag.StringVar(&flagForwardURL, "forward-url", "", "forward populate POST requests to this endpoint")
 
@@ -70,6 +78,17 @@ func main() {
 	flag.StringVar(&flagPostGISExportTarget, "export.target", "postgres://postgres:mysecretpassword@localhost:5432/cattracks1?sslmode=prefer", "target postgis endpoint")
 
 	flag.Parse()
+
+	if flagLogWriter != "" {
+		f, err := os.OpenFile(flagLogWriter, os.O_RDWR|os.O_CREATE|os.O_APPEND, 0666)
+		if err != nil {
+			log.Fatalf("error opening file: %v", err)
+		}
+		log.Println("writing subsequent logs to", flagLogWriter)
+		defer f.Close()
+		log.SetOutput(f)
+		log.Printf("first log line with log writer: %s\n", flagLogWriter)
+	}
 
 	catTrackslib.SetForwardPopulate(flagForwardURL)
 	catTrackslib.SetLiveTracksGZ(flagTracksjsongzpathMaster)
@@ -119,7 +138,9 @@ func main() {
 
 	// Does boilerplate for setting up the router.
 	// Configures routes, which are defined in routes.go.
-	router := catTrackslib.NewRouter()
+	router := catTrackslib.NewRouter(&catTrackslib.RouterOpts{
+		DisableWebsocket: flagDisableWebsocket,
+	})
 	http.Handle("/", router)
 
 	// These are our always-on workers.
@@ -526,7 +547,10 @@ func main() {
 		}()
 	}
 
-	http.ListenAndServe(":"+strconv.Itoa(flagPort), nil)
+	log.Println("To serve and protest", "port", flagPort)
+	if err := http.ListenAndServe(":"+strconv.Itoa(flagPort), nil); err != nil {
+		log.Fatal(err)
+	}
 	quitChan <- true
 	quitChan <- true
 	quitChan <- true

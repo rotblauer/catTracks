@@ -13,16 +13,14 @@ kill $(ps aux | grep trackermain | awk '{print $2}') # kill trackermain
 #mbtiles_file=tiles-world-vector.mbtiles
 
 
-pushd $HOME/track.areteh.co/;
 ./linux.trackermain \
   --port=3001 \
   --disable-websocket \
   --forward-url https://api.catonmap.info/populate/ \
   --tracks-gz-path ./master.json.gz \
-  --log-path $HOME/track.areteh.co/logs.log \
+  --log-path ./logs.log \
   --db-path-master ./tracks.db &
 # node tile-server.js $mbtiles_file 8080 2>&1 &
-popd;
 
 # This one may work too, but chat still won't turn on, probably.
 # nohup $HOME/goggable.areteh.co/gogs/linux.gogs web -c $HOME/goggable.areteh.co/gogs/custom/conf/prod.app.ini &
