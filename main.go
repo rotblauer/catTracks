@@ -87,6 +87,7 @@ func main() {
 		log.Println("writing subsequent logs to", flagLogWriter)
 		defer f.Close()
 		log.SetOutput(f)
+		catTrackslib.SetLogOutput(f)
 		log.Printf("first log line with log writer: %s\n", flagLogWriter)
 	}
 
