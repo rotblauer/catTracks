@@ -52,8 +52,8 @@ github.com/paulmach/protoscan v0.2.1/go.mod h1:SpcSwydNLrxUGSDvXvO0P7g7AuhJ7lcKf
 github.com/pkg/errors v0.9.1/go.mod h1:bwawxfHBFNV+L2hUp1rHADufV3IMtnDRdf1r5NINEl0=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
-github.com/rotblauer/catTrackslib v1.2.22 h1:C7XLYrlo2iT6GH8UOn0iVtSzm77XdmEn4M35oZ4AhzI=
-github.com/rotblauer/catTrackslib v1.2.22/go.mod h1:+0YZ+fXgHDUGtzCthmzKcyWosMx07NhWbw52v9Wc3Gg=
+github.com/rotblauer/catTrackslib v1.2.23 h1:gBPcIKttWeGDtL8D7et1Hm6hzQXTebmQvDJKDlKYK/g=
+github.com/rotblauer/catTrackslib v1.2.23/go.mod h1:+0YZ+fXgHDUGtzCthmzKcyWosMx07NhWbw52v9Wc3Gg=
 github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 h1:2fXI9amb4PJ1th/5Ke8HmjiC8xjEG+bhnKJPoe9Xsw4=
 github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2/go.mod h1:y+O8zm/ddZ1AxsTmaahK+eNYZdLuy0NdIeiNeUMpo4s=
 github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 h1:7lBQ00WVvFPHe66X+8rplAtZR5CI/odv0F8iy0mQWSI=
