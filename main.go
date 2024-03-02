@@ -398,7 +398,7 @@ func main() {
 					// it should NEVER delete or truncate the edge.json.file, that is the job of procmaster
 					// when it ingests the edge.json.gz file into master.json.gz.
 
-					log.Printf("%sstarting iter\n", procEdgePrefix)
+					log.Printf("%s starting iter\n", procEdgePrefix)
 					rootDir := filepath.Dir(flagTracksjsongzpathEdge)
 
 					// if no fin files, then this is a re-run trigger after a short interval from previous.
@@ -454,9 +454,9 @@ func main() {
 					log.Println(procEdgePrefix, fmt.Sprintf("rm %s", snapEdgePath))
 					os.Remove(snapEdgePath)
 
-					log.Println("[procedge] waiting for lock ege for migrating")
+					// log.Println("[procedge] waiting for lock ege for migrating")
 					edgeMutex.Lock()
-					log.Println("[procedge] got lock")
+					// log.Println("[procedge] got lock")
 					// move the new edge mbtiles to the tilesets dir for serving
 					log.Println(procEdgePrefix, fmt.Sprintf("mv %s %s",
 						filepath.Join(rootDir, "edge.mbtiles"), filepath.Join(tilesetsDir, "edge.mbtiles")))

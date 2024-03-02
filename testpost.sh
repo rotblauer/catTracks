@@ -5,6 +5,8 @@ set -x
 
 PORT=${PORT:-3001}
 
+cp ~/tdata/lastpushes/* testdata/
+
 curl -X POST \
     -H "Content-Type: application/json" \
     -H "AuthorizationOfCats: mytoken" \
@@ -15,7 +17,7 @@ curl -X POST \
     -H "Content-Type: application/json" \
     -H "AuthorizationOfCats: mytoken" \
     -d @testdata/rye.json \
-    http://localhost:3001/populate
+    http://localhost:3001/populate/
 
 
 # ! FIXME: This doesn't work:

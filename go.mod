@@ -33,4 +33,4 @@ require (
 )
 
 // Development:
-// replace github.com/rotblauer/catTrackslib => ../catTrackslib
+replace github.com/rotblauer/catTrackslib => ../catTrackslib

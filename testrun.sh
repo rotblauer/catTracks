@@ -1,5 +1,20 @@
 #!/usr/bin/env bash
 
+# This script provides a base configuration and setup for running cattracks
+# on a development machine for testing.
+# This script uses an ephemeral datadir seeded with data from the canonical data dir.
+# Additional hardcoded configuration decisions:
+# - 'mytoken' is used as the Cat Owners Token
+# 
+# Customized the run:
+# - additional cattracks CLI flags can be passed as arguments ($*)
+#
+# USAGE:
+#
+#   env PORT=3001 ./testrun.sh --forward-url='http://localhost:3002' --disable-websocket
+#   env PORT=3002 ./testrun.sh --disable-websocket
+
+set -e
 set -x
 
 PORT=${PORT:-3001}
@@ -17,6 +32,9 @@ mkdir -p ${TDATA_TEMP}
 # Copy the origin tracks.db because it contains cat snaps, which I want
 # to check, but not post.
 cp "${TDATA_CANON}/tracks.db" "${TDATA_TEMP}/tracks.db"
+
+mkdir -p ./build/bin
+go build -o ./build/bin/cattracks .
 
 env COTOKEN=mytoken \
 ./build/bin/cattracks \
