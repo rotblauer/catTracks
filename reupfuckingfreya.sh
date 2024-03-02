@@ -13,6 +13,8 @@ go build -o /tmp/linux.trackermain .
 rsync -avz /tmp/linux.trackermain freya:~/track.areteh.co/
 rsync -avz ./kickstart freya:~/track.areteh.co/
 
+ssh freya 'cd track.areteh.co; pkill trackermain; ./kickstart'
+
 # Make sure `kickstart` script is executable on Freya.
 # She has a cron (trackalivecheckerkeeper) that will regularly restart
 # this process if not already running. Another awesome workaround
