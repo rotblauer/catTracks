@@ -27,9 +27,9 @@ require (
 	github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 // indirect
 	github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
-	golang.org/x/net v0.19.0 // indirect
+	golang.org/x/net v0.23.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.15.0 // indirect
+	golang.org/x/sys v0.18.0 // indirect
 )
 
 // Development:
