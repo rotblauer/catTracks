@@ -1,3 +1,13 @@
+/*
+package main coerces RideWithGPS GPX data (for a ride) into CatTracks data,
+printing the resulting GeoJSON FeatureCollection to stdout.
+The RideWithGPS GPX data has a single LineString geometry, with a name, time, and coordTimes properties.
+The LineString geometry is expected to have the same number of points as the coordTimes property.
+The coordTimes property is expected to be an array of RFC3339 timestamps.
+The GPX track points sometimes have 3 entries in their arrays, where the last entry is an elevation value.
+The output is a GeoJSON FeatureCollection with a TrackPoint feature for each point in the LineString.
+Novel CatTracks properties, like Name, UUID, and Activity are applied hard-coded in the TrackPoint struct.
+*/
 package main
 
 import (
@@ -13,7 +23,7 @@ import (
 )
 
 func main() {
-	// Read stdin and then parse it as a GeoJSON feature.
+	// Read (all of) stdin and then parse it as a GeoJSON feature.
 	read, err := io.ReadAll(os.Stdin)
 	if err != nil {
 		log.Fatalln(err)
@@ -61,6 +71,8 @@ func main() {
 		log.Fatalf("Mismatch between number of points in LineString (%d) and coordTimes (%d)\n", len(lineStringOrb), lenCoordTimes)
 	}
 
+	// Re-read the input as a JSON object, and extract the raw coordinates
+	// in order to have easier access to the optional elevation entries.
 	res := gjson.ParseBytes(read)
 	rawCoords := res.Get("features.0.geometry.coordinates").Array()
 	if len(rawCoords) != len(lineStringOrb) {
@@ -70,6 +82,7 @@ func main() {
 	output := geojson.NewFeatureCollection()
 
 	for i, coord := range lineStringOrb {
+		// Cross-reference and parse the time for the current point.
 		coordTimeStr := feature.Properties["coordTimes"].([]interface{})[i].(string)
 		trackTime, err := time.Parse(time.RFC3339, coordTimeStr)
 		if err != nil {
@@ -104,11 +117,6 @@ func main() {
 			Notes:           `{"activity": "Bike"}`,
 		}
 		cattrackFeature := catTrackslib.TrackToFeature(&tp)
-		//jm, err := json.Marshal(cattrackFeature)
-		//if err != nil {
-		//	log.Fatalln(err)
-		//}
-		//log.Printf("TrackPoint: %s\n", jm)
 		output.Features = append(output.Features, cattrackFeature)
 	}
 	outputBytes, err := output.MarshalJSON()
@@ -116,10 +124,4 @@ func main() {
 		log.Fatalln(err)
 	}
 	fmt.Println(string(outputBytes))
-
-	//res.Get("features.0.geometry.coordinates").ForEach(func(key, value gjson.Result) bool {
-	//	coords := value.Array()
-	//	log.Printf("Point: %v\n", coords)
-	//	return true
-	//})
 }
