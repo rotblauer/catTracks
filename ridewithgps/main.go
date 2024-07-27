@@ -87,7 +87,7 @@ func main() {
 			PushToken:       "thecattokenthatunlockstheworldtrackyourcats",
 			Version:         "1",
 			ID:              0,
-			Name:            "ia ELEMNT ROAM",
+			Name:            "Isaac's ELEMNT ROAM",
 			Lat:             coord.Lat(),
 			Lng:             coord.Lon(),
 			Accuracy:        0,
