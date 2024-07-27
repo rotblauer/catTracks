@@ -244,7 +244,7 @@ func main() {
 						// eg.
 						//   ~/tdata/cat-cells/{ia,rye}.json.gz
 						//   ~/tdata/cat-cells/dbs/{ia,rye}.db
-						if err := runCatCellSplitter(flagTracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter23(flagTracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
 					}
@@ -255,7 +255,7 @@ func main() {
 						// so we can run the edge -> cat.json.gz
 						edgeMutex.Lock()
 
-						if err := runCatCellSplitter(flagTracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter23(flagTracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
 							log.Fatalln(err)
 						}
 
@@ -579,7 +579,7 @@ func bashExec(cmd, logPrefix string) error {
 	return bashCmd.Run()
 }
 
-func runCatCellSplitter(sourceGZ, outputRoot, dbRoot string) error {
+func runCatCellSplitter23(sourceGZ, outputRoot, dbRoot string) error {
 	/*
 		time cat ~/tdata/master.json.gz | zcat |\
 		    go run . \

@@ -4,6 +4,25 @@
 
 Tracking Cats and generating data
 
+## Troubleshooting
+
+Check the status of the cattracks program instances and servers.
+- https://grafana.metrics.catonmap.info/d/Nz-RZfgMk/prometheus-prometheus?orgId=1&refresh=10s
+- https://grafana.metrics.catonmap.info/d/rYdddlPWk/03-prometheus-node-exporter-full?orgId=1&refresh=10s
+
+SSH to rotblauer.cattracks (find IP and SSH creds via Ansible).
+Run `tmux a -t cats`. This will show you a system log of the cattracks program.
+
+Still no errors?
+
+SSH to Freya. `ps aux | grep trackermain`.
+If Freya is down or this cattracks instance, the cat trackers
+won't be able to post their tracks. 
+Freya forwards the tracks to the cattracks server,
+which again forwards tracks to the Google App Engine
+cattracks.cc server, which does Influx metrics and linestrings
+extraction and a few other experimental things.
+
 20240124
 
 - rottor is done and gone. cattracks have move to smaller, dedicated servers -- ansible-cats.

@@ -5,7 +5,13 @@ go 1.21.2
 require (
 	github.com/paulmach/orb v0.11.0
 	github.com/rotblauer/catTrackslib v1.2.27
+	github.com/tidwall/gjson v1.17.0
 	go.etcd.io/bbolt v1.3.8
+)
+
+require (
+	github.com/tidwall/match v1.1.1 // indirect
+	github.com/tidwall/pretty v1.2.0 // indirect
 )
 
 require (
