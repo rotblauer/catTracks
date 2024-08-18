@@ -153,11 +153,15 @@ func main() {
 	var quitChan = make(chan bool)
 	var edgeMutex sync.Mutex
 
-	splitCatCellsOutputRoot := filepath.Join(filepath.Dir(flagDBPathMaster), "cat-cells")
-	splitCatCellsDBRoot := filepath.Join(splitCatCellsOutputRoot, "dbs")
-	genMBTilesPath := filepath.Join(splitCatCellsOutputRoot, "mbtiles")
+	splitCatCellsOutputRoot23 := filepath.Join(filepath.Dir(flagDBPathMaster), "cat-cells")             // DISUSED: Changed to use a '-23' suffix when we added level 16.
+	os.Rename(splitCatCellsOutputRoot23, filepath.Join(filepath.Dir(flagDBPathMaster), "cat-cells-23")) // Rename any existing dir with the disused path to the new path.
+	splitCatCellsOutputRoot23 = filepath.Join(filepath.Dir(flagDBPathMaster), "cat-cells-23")           // Reassign the variable to the new path.
+
+	splitCatCellsDBRoot23 := filepath.Join(splitCatCellsOutputRoot23, "dbs")
+	genMBTilesPath23 := filepath.Join(splitCatCellsOutputRoot23, "mbtiles")
 
 	// tilesetsDir is where consbio/mbtileserver -d serves from, with --enable-fs-watch on.
+	// All mbtiles files will live in this directory (flatly; no subdirectories).
 	tilesetsDir := filepath.Join(filepath.Dir(flagDBPathMaster), "tilesets")
 	os.MkdirAll(tilesetsDir, 0755)
 
@@ -189,8 +193,8 @@ func main() {
 					// - if spurious .mbtiles-journals files exist (tippecanoe interrupted)
 					// - if no target .mbtiles directory exists (first run)
 					var tileRecovery = false
-					if _, err := os.Stat(genMBTilesPath); os.IsNotExist(err) {
-						log.Printf("[procmaster] WARN: no genMBTilesPath found: %s, recovering\n", genMBTilesPath)
+					if _, err := os.Stat(genMBTilesPath23); os.IsNotExist(err) {
+						log.Printf("[procmaster] WARN: no genMBTilesPath23 found: %s, recovering\n", genMBTilesPath23)
 						tileRecovery = true
 					}
 
@@ -198,7 +202,7 @@ func main() {
 					// any .mbtiles-journal files in the genMBTilesDir are considered indicators of corrupted .mbtiles files
 					// if there, we delete both the .mbtiles and .mbtiles-journals files, and touch the corresponding .json.gz file to update modtime, allowing a rebuild
 					if !tileRecovery {
-						mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath, "*.mbtiles-journal"))
+						mbtilesJournals, _ := filepath.Glob(filepath.Join(genMBTilesPath23, "*.mbtiles-journal"))
 						if len(mbtilesJournals) > 0 {
 						} else {
 							log.Println("[procmaster] zero .mbtiles-journal files found, no recovery needed")
@@ -238,13 +242,13 @@ func main() {
 					}
 
 					// handle migrating init run
-					if _, err := os.Stat(splitCatCellsOutputRoot); os.IsNotExist(err) {
+					if _, err := os.Stat(splitCatCellsOutputRoot23); os.IsNotExist(err) {
 						// run command to split master to cat.json.gz by unique cells
 						// will mkdir -p required output and db dirs
 						// eg.
 						//   ~/tdata/cat-cells/{ia,rye}.json.gz
 						//   ~/tdata/cat-cells/dbs/{ia,rye}.db
-						if err := runCatCellSplitter23(flagTracksjsongzpathMaster, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter23(flagTracksjsongzpathMaster, splitCatCellsOutputRoot23, splitCatCellsDBRoot23); err != nil {
 							log.Fatalln(err)
 						}
 					}
@@ -255,7 +259,7 @@ func main() {
 						// so we can run the edge -> cat.json.gz
 						edgeMutex.Lock()
 
-						if err := runCatCellSplitter23(flagTracksjsongzpathEdge, splitCatCellsOutputRoot, splitCatCellsDBRoot); err != nil {
+						if err := runCatCellSplitter23(flagTracksjsongzpathEdge, splitCatCellsOutputRoot23, splitCatCellsDBRoot23); err != nil {
 							log.Fatalln(err)
 						}
 
@@ -292,27 +296,30 @@ func main() {
 					// run tippe on all cat cells .json.gzs.
 					// eg.
 					//  ~/tdata/cat-cells/mbtiles
-					var fmrMBTiles = newFileModRecorder(filepath.Join(genMBTilesPath, "*.mbtiles"))
+					// File Modification Recorder (FMR)
+					var fmrMBTiles23 = newFileModRecorder(filepath.Join(genMBTilesPath23, "*.mbtiles"))
 
-					fmrMBTiles.record()
-					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot, genMBTilesPath), procMasterPrefixed("tippecanoe-walk-dir"))
-					fmrMBTiles.mark()
+					fmrMBTiles23.record()
+					_ = bashExec(fmt.Sprintf(`time tippecanoe-walk-dir --source %s --output %s`, splitCatCellsOutputRoot23, genMBTilesPath23), procMasterPrefixed("tippecanoe-walk-dir"))
+					fmrMBTiles23.mark()
 
 					// if tippe on the tracks didn't change any mbtiles, we can skip the rest
-					updatedMBTiles := fmrMBTiles.updated()
+					updatedMBTiles := fmrMBTiles23.updated()
 					if len(updatedMBTiles) == 0 {
 						log.Println("[procmaster] cat-cells/*.mbtiles unmodified, short-circuiting")
 						continue procmasterloop
 					}
 
-					// copy changed files individually to save time,
+					// Copy updated tileset files to the designated tilesets directory,
+					// where mbtileserver will look for them and serve them from.
+					// Copy changed files individually to save time,
 					// at the expense of being a more brittle approach.
-					// copying all files takes about 40 seconds
+					// It takes about 40 seconds to copy ALL files.
 					/*
 						root@rottor:~/go/src/github.com/rotblauer/catTracks# du -sh ~/tdata/cat-cells/mbtiles
 						6.4G    /root/tdata/cat-cells/mbtiles
 					*/
-					// _ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath, tilesetsDir), procMasterPrefixed(""))
+					// _ = bashExec(fmt.Sprintf("time cp %s/*.mbtiles %s/", genMBTilesPath23, tilesetsDir), procMasterPrefixed(""))
 					for _, u := range updatedMBTiles {
 						_ = bashExec(fmt.Sprintf("time cp %s %s/", u, tilesetsDir), procMasterPrefixed(""))
 					}
@@ -328,7 +335,7 @@ func main() {
 					// 	// TODO
 					// 	// problems: need to skip genpop.mbtiles,
 					// 	// and exclude cats from genpop with scapegoat algorithms
-					genPopTilesPath := filepath.Join(genMBTilesPath, "genpop.level-23.mbtiles")
+					genPopTilesPath := filepath.Join(genMBTilesPath23, "genpop.level-23.mbtiles")
 					genPopTilesExist := false
 					if _, err := os.Stat(genPopTilesPath); err == nil {
 						genPopTilesExist = true
@@ -362,7 +369,7 @@ func main() {
 					_ = bashExec(fmt.Sprintf("time tile-join --force --no-tile-size-limit -o %s %s", genPopTilesPath, genPopTilePathsString), procMasterPrefixed("tile-join"))
 
 					// TODO we have now TWO copies of relatively fresh mbtiles dirs,
-					// we need to keep the genMBTilesPath so we can avoid re-genning stale json.gz->tiles,
+					// we need to keep the genMBTilesPath23 so we can avoid re-genning stale json.gz->tiles,
 					// and we need to keep tilesets/ clean so we can avoid trouble (.mbtiles-journals) with the mbtiles server
 					// good news is these .mbtiles dbs are relatively small, < 10GB
 					// Copy the newly-generated (or updated) .mbtiles files to the tilesets/ dir which gets served.
