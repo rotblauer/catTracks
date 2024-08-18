@@ -1,5 +1,5 @@
 When Global Cat Positioning System fails, but there's a RideWithGPS alternative.
-I want to import my Wahoo Element ride tracks into Cat Tracks. 
+I want to import my ride tracks, recorded by my Wahoo Elemnt Roam, into Cat Tracks. 
 
 RideWithGPS exported my ride to a GPX file `07_17_24.gpx`.
 
@@ -12,8 +12,7 @@ This GeoJSON file must now be coerced into the Cat Tracks format.
 
 ```bash
 cat ridewithgps/exports/07_17_24.geojson | go run ridewithgps/main.go > ridewithgps/07_17_24_cattracks.geojson
-cat ridewithgps/exports/07_26_24.geojson | go run ridewithgps/main.go > ridewithgps/07_26_24_cattracks.g
-eojson
+cat ridewithgps/exports/07_26_24.geojson | go run ridewithgps/main.go > ridewithgps/07_26_24_cattracks.geojson
 ```
 
 This GeoJSON file `ridewithgps/07_17_24_cattracks.geojson` is now ready to be imported into Cat Tracks.
