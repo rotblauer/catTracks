@@ -1,6 +1,6 @@
 module github.com/rotblauer/catTracks
 
-go 1.21.2
+go 1.25.0
 
 require (
 	github.com/paulmach/orb v0.11.0
@@ -33,9 +33,9 @@ require (
 	github.com/rotblauer/cattracks-names v0.0.0-20231227161414-4d1ce84a24c2 // indirect
 	github.com/rotblauer/tileTester2 v0.0.0-20220702152828-eeb591040069 // indirect
 	go.mongodb.org/mongo-driver v1.11.4 // indirect
-	golang.org/x/net v0.23.0 // indirect
+	golang.org/x/net v0.55.0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
+	golang.org/x/sys v0.45.0 // indirect
 )
 
 // Development:
